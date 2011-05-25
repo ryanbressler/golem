@@ -94,7 +94,7 @@ func (node Node) SendMsg(msg clientMsg){
 	}
 	
 	node.InUse<-true
-	fmt.Fprint(node.Socket, string(msgjson))
+	fmt.Fprint(node.Socket, string(msgjson)+"\n")
 	<-node.InUse
 }
 
