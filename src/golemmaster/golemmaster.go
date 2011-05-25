@@ -20,6 +20,7 @@
 package main
 
 import (
+	"flag"
 	"http"
 	"fmt"
 	"websocket"
@@ -27,6 +28,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"os"
+	"exec"
 )
 
 //buffered chanel for use as an incrementer to keep track of submissions
@@ -77,6 +79,46 @@ type Node struct {
 	InUse chan bool
 }
 
+func NewNode(Socket *websocket.Conn) *Node{
+	return &Node{Socket:Socket,InUse:make(chan bool)}
+}
+
+func (node Node) SendMsg(msg clientMsg){
+	
+	
+	
+	msgjson, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Printf("error json.Marshaling msg: %v\n", err)
+		return
+	}
+	
+	node.InUse<-true
+	fmt.Fprint(node.Socket, string(msgjson))
+	<-node.InUse
+}
+
+func (node Node) GetMsg() *clientMsg{
+	
+	var msg clientMsg
+	node.InUse<-true
+	msgjson, err := ioutil.ReadAll(node.Socket); 
+	if err != nil && err != os.EOF {
+		fmt.Printf("error recieving client msg: %v\n", err)
+	} 
+	<-node.InUse
+	err = json.Unmarshal(msgjson, &msg); 
+	if err != nil {
+		fmt.Printf("error parseing client msg json: %v\n", err)	
+	}
+	
+	return &msg
+}
+
+
+
+/////////////////////////////////////////////////
+//master
 
 //web handelers
 //Handler for /. Nothing on root so say hello.
@@ -116,7 +158,8 @@ func parseJobSub(reqjson string) {
 
 //start routinges to manage nodes as they conect
 func nodeHandler(ws *websocket.Conn) {
-	go runNode(&Node{Socket: ws, InUse: make(chan bool) })
+	fmt.Printf("Node connectiong.\n")
+	go monitorNode(NewNode( ws ) )
 }
 
 
@@ -124,29 +167,22 @@ func nodeHandler(ws *websocket.Conn) {
 //wait for the Node socket to not be in use then send it to 
 //the client. This may deadlock if the client is waiting for messages
 //so the client checks in. TODO: test if the InUse lock is needed.
-func startJob(n *Node) {
+func sendJob(n *Node) {
 	node := *n
 	job :=<- jobChan
 	jobjson, err := json.Marshal(job)
 	if err != nil {
-		fmt.Printf("error json.Marshaling job: %v", err)
+		fmt.Printf("error json.Marshaling job: %v\n", err)
 		
 	}
 	msg := clientMsg{Type:START,Body:string(jobjson)}
-	msgjson, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Printf("error json.Marshaling msg: %v", err)
-		
-	}
+	node.SendMsg(msg)
 	
-	node.InUse<-true
-	fmt.Fprint(node.Socket, string(msgjson))
-	<-node.InUse
 }
 
 //This waits for a handshake from a node then
 //monitors messages and starts jobs as needed
-func runNode(n *Node) {
+func monitorNode(n *Node) {
 	node := *n
 	
 	//number to run at once
@@ -156,28 +192,20 @@ func runNode(n *Node) {
 	var msg clientMsg
 	
 	//wait for client handshake
-	msgjson, err := ioutil.ReadAll(node.Socket)
-	if err != nil && err != os.EOF {
-			fmt.Printf("error contacting client: %v", err)
-			return
-	}
-	err = json.Unmarshal(msgjson, &msg)
-	if  err != nil {
-		fmt.Printf("error parseing json: %v", err)
-		return
-	}
+	msg = *node.GetMsg()
 	
 	if msg.Type == HELLO {
 		val, err := strconv.Atoi(msg.Body)
 		if err != nil {
-			fmt.Printf("error parseing client hello: %v", err)
+			fmt.Printf("error parseing client hello: %v\n", err)
 			return
 		}
 		atOnce = val
 	} else {
-		fmt.Printf("Client didn't say hello as first message.")
+		fmt.Printf("Client didn't say hello as first message.\n")
 		return
 	}
+	fmt.Printf("Client says hello.\n")
 	
 	
 	
@@ -187,23 +215,12 @@ func runNode(n *Node) {
 		switch {
 		case running < atOnce: 
 			//start a job
-			go startJob(&node)
+			go sendJob(&node)
 			running++
 		default:
 			//this will cause a deadlock where no jobs are started
 			//if client doesn't check in
-			node.InUse<-true
-			msgjson, err := ioutil.ReadAll(node.Socket); 
-			if err != nil && err != os.EOF {
-				fmt.Printf("error recieving client msg: %v", err)
-				continue
-			} 
-			<-node.InUse
-			err = json.Unmarshal(msgjson, &msg); 
-			if err != nil {
-				fmt.Printf("error parseing client msg json: %v", err)
-				continue
-			}
+			msg = *node.GetMsg()
 				
 			switch msg.Type {
 			default: 
@@ -228,18 +245,109 @@ func handleCout() {
 	}
 }
 
-//main methos
-func main() {
-
+func RunMaster(hostname string){
 	//start a server
 	go handleCout()
 	subidChan <- 0
-	fmt.Printf("Starting http Server ... ")
+	fmt.Printf("Running as master at %v\n",hostname)
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/jobs/", jobHandler)
-	http.Handle("/distributor/", websocket.Handler(nodeHandler))
-	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
-		fmt.Printf("ListenAndServe Error :" + err.String())
+	http.Handle("/master/", websocket.Handler(nodeHandler))
+	if err := http.ListenAndServe(hostname, nil); err != nil {
+		fmt.Printf("ListenAndServe Error : %v\n", err)
+	}
+}
+
+//////////////////////////////////////////////
+//node 
+func startJob(replyc chan int, jobid int, jobcmd string) {
+	//make sure the path to the exec is fully qualified
+	cmd, err := exec.LookPath(jobcmd)
+	if err != nil {
+		fmt.Printf("exec %s: %s", jobcmd, err)
+	}
+	
+	jobidarg := fmt.Sprintf("%v", jobid)
+	fmt.Printf("Starting job %v\n", jobidarg)
+	
+	//start the job in test dir pass all stdio back to main.
+	//note that cmd has to be the first thing in the args array
+	c, err := exec.Run(cmd, []string{cmd, jobidarg}, nil, "~/Code/golem/test", exec.PassThrough, exec.PassThrough, exec.PassThrough)
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	
+	//wait for the job to finish
+	w, err := c.Wait(0)
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+
+	fmt.Printf("Finishing job %v\n", jobidarg)
+	//send signal back to main
+	if w.Exited() && w.ExitStatus() == 0 {
+		replyc <- jobid
+	} else {
+		replyc <- -1*jobid
+	}
+
+}
+
+func RunNode(atOnce int, master string){
+	fmt.Printf("Running as %v process node owned by %v\n",atOnce,master)
+	
+	ws, err := websocket.Dial("ws://"+master+"/master/", "", "http://localhost/")
+	if err != nil {
+		fmt.Printf("Error connectiong to master:%v\n", err)
+		return
+	}
+	node := *NewNode(ws)
+	node.SendMsg(clientMsg{Type:HELLO,Body:fmt.Sprintf("%v",atOnce)})
+	
+	/*
+	replyc := make(chan int)
+
+	jobcmd := "~/Code/golem/src/python/samplejob.py"
+	
+	//control loop
+	for {
+		switch {
+		default: 
+			//wait till a job finishes			
+			rv :=<-replyc
+			fmt.Printf("Got 'done' signal: %v\n",rv)
+			finished++
+			running--
+		case finished >= toRun: 
+			//we are done
+			return
+		case run < toRun && running < atOnce: 
+			//start a job
+			go runCommand(replyc, run, jobcmd)
+			run++
+			running++
+		}
+
+	}*/
+	
+}
+
+//////////////////////////////////////////////
+//main method
+func main() {
+	var isMaster bool
+	flag.BoolVar(&isMaster,"m",false,"Start as master node.")
+	var atOnce int
+	flag.IntVar(&atOnce,"n",3,"For client nodes, the number of procceses to allow at once.")
+	var hostname string
+	flag.StringVar(&hostname,"hostname","localhost:8080","The address and port of/at wich to start the master.")
+	flag.Parse()
+	
+	switch isMaster {
+	case true:
+		RunMaster(hostname)
+	default:
+		RunNode(atOnce,hostname)
 	}
 
 }
