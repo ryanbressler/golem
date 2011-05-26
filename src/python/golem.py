@@ -36,6 +36,7 @@ def main():
 		req = urllib2.Request(url)
 		fd = urllib2.urlopen(req, data)
 		print fd.read()
+	
 	if cmd == "runlist":
 		fo = open(sys.argv[3])
 		jobs=[]
@@ -46,6 +47,15 @@ def main():
 		req = urllib2.Request(url)
 		fd = urllib2.urlopen(req, data)
 		print fd.read()
+		
+	if cmd == "ls":
+		print "not yet implemented"
+	
+	if cmd == "status":
+		print "not yet implemented"
+		
+	if cmd == "kill":
+		print "not yet implemented"
 	
 	
 
