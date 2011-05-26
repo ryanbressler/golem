@@ -35,24 +35,23 @@ import (
 var subidChan = make(chan int, 10)
 
 //buffered channel for creating jobs
-var jobChan = make(chan * Job, 1000)
+var jobChan = make(chan *Job, 1000)
 
 //buffered channel for writing to Cout
-var cout= make(chan string, 64)
-var cerr= make(chan string, 64)
-
+var cout = make(chan string, 64)
+var cerr = make(chan string, 64)
 
 
 const (
 	//Message type constants
-	HELLO        = 1
-	DONE         = 2
-	START        = 3
-	CHECKIN      = 4
-	
-	COUT         = 5
-	CERROR       = 6
-	
+	HELLO   = 1
+	DONE    = 2
+	START   = 3
+	CHECKIN = 4
+
+	COUT   = 5
+	CERROR = 6
+
 	MAXMSGLENGTH = 512
 )
 
@@ -122,7 +121,7 @@ func (node Node) GetMsgs() {
 		var msgjson = make([]byte, MAXMSGLENGTH)
 		//n, err := node.Socket.Read(msgjson)
 		n, err := node.Socket.Read(msgjson)
-		switch{
+		switch {
 		case err == os.EOF:
 			fmt.Printf("EOF recieved on websocket.")
 			node.Socket.Close()
@@ -262,9 +261,9 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 		//cout <- msg.Body
 	case CHECKIN:
 	case COUT:
-		fmt.Printf("%v",msg.Body)
+		fmt.Printf("%v", msg.Body)
 	case CERROR:
-		fmt.Printf("Cerror:%v",msg.Body)
+		fmt.Printf("Cerror:%v", msg.Body)
 	case DONE:
 		*running--
 	}
@@ -293,28 +292,29 @@ func RunMaster(hostname string) {
 //////////////////////////////////////////////
 //node 
 
-func sendCio(n *Node){
-	node:=*n
-	for{
-	var msg clientMsg			
-	select{
-	case st<-cout:
-	msg = clientMsg{Type:COUT,Body:st}	
-	case st<-cerror:
-	msg = clientMsg{Type:CERROR,Body:st}
+func sendCio(n *Node) {
+	node := *n
+	for {
+		var msg clientMsg
+		select {
+		case st := <-cout:
+			msg = clientMsg{Type: COUT, Body: st}
+		case st := <-cerr:
+			msg = clientMsg{Type: CERROR, Body: st}
+		}
+		node.OutChan <- msg
 	}
-	node.OutChan<-msg
 }
 
-func pipeToChan(p *os.File,ch chan string){
+func pipeToChan(p *os.File, ch chan string) {
 	for {
-		buffer :=make([]byte,512)
-		n,err:=p.read(&buffer)
-		uif err != nil {
-			return	
+		buffer := make([]byte, 512)
+		n, err := p.Read(buffer)
+		if err != nil {
+			return
+		} else {
+			ch <- string(buffer[0:n])
 		}
-		else
-		ch<-string(buffer[0:n])
 	}
 
 }
@@ -340,11 +340,12 @@ func startJob(replyc chan int, jsonjob string) {
 
 	//start the job in test dir pass all stdio back to main.
 	//note that cmd has to be the first thing in the args array
-	c, err := exec.Run(cmd, args, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
+	c, err := exec.Run(cmd, args, nil, "./", exec.DevNull, exec.Pipe, exec.Pipe)
 	if err != nil {
 		fmt.Printf("%v", err)
 	}
-
+	go pipeToChan(c.Stdout,cout)
+	go pipeToChan(c.Stderr,cerr)
 	//wait for the job to finish
 	w, err := c.Wait(0)
 	if err != nil {
@@ -372,7 +373,7 @@ func RunNode(atOnce int, master string) {
 	}
 	//ws.Write([]byte("h"))
 	mnode := *NewNode(ws)
-	go sendCio(mnode)
+	go sendCio(&mnode)
 	mnode.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 
 	replyc := make(chan int)
