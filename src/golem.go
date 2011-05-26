@@ -27,17 +27,18 @@ import (
 	"json"
 	"strconv"
 	"exec"
+	"os"
 )
 
 //TODO: make these server only
-//buffered chanel for use as an incrementer to keep track of submissions
+//buffered channel for use as an incrementer to keep track of submissions
 var subidChan = make(chan int, 10)
 
-//buffered chanel for creating jobs
+//buffered channel for creating jobs
 var jobChan = make(chan Job, 1000)
 
-//buffered chanel for writing to Cerror
-var coutChan = make(chan string, 1000)
+//buffered channel for writing to Cout
+var cout= make(chan string, 1000)
 
 
 
@@ -101,11 +102,11 @@ func (node Node) SendMsgs() {
 			return
 		}
 
-		fmt.Printf("msg:%v\n", string(msgjson))
+		fmt.Printf("sending:%v\n", string(msgjson))
 		if _, err := node.Socket.Write(msgjson); err != nil {
 			fmt.Printf("Error sending msg: %v\n", err)
 		}
-		fmt.Printf("msg sent\n")
+		//fmt.Printf("msg sent\n")
 	}
 
 }
@@ -115,12 +116,18 @@ func (node Node) GetMsgs() {
 	for {
 		var msg clientMsg
 		var msgjson = make([]byte, MAXMSGLENGTH)
+		//n, err := node.Socket.Read(msgjson)
 		n, err := node.Socket.Read(msgjson)
-		if err != nil {
-			fmt.Printf("error recieving client msg: %v\n", err.String())
+		switch{
+		case err == os.EOF:
+			fmt.Printf("EOF recieved on websocket.")
+			node.Socket.Close()
+			return //TODO: recover
+		case err != nil:
+			fmt.Printf("error recieving msg: %v\n", err.String())
 			continue
 		}
-		fmt.Printf("Got msg: %v\n", string(msgjson[0:n]))
+		fmt.Printf("Got: %v\n", string(msgjson[0:n]))
 
 		err = json.Unmarshal(msgjson[0:n], &msg)
 		if err != nil {
@@ -176,7 +183,7 @@ func parseJobSub(reqjson string) {
 //start routinges to manage nodes as they conect
 func nodeHandler(ws *websocket.Conn) {
 	fmt.Printf("Node connectiong.\n")
-	go monitorNode(NewNode(ws))
+	monitorNode(NewNode(ws))
 }
 
 
@@ -214,7 +221,7 @@ func monitorNode(n *Node) {
 	if msg.Type == HELLO {
 		val, err := strconv.Atoi(msg.Body)
 		if err != nil {
-			fmt.Printf("error parseing client hello: %v\n", err)
+			fmt.Printf("error parsing client hello: %v\n", err)
 			return
 		}
 		atOnce = val
@@ -247,7 +254,7 @@ func monitorNode(n *Node) {
 func clientMsgSwitch(msg *clientMsg, running *int) {
 	switch msg.Type {
 	default:
-		coutChan <- msg.Body
+		cout <- msg.Body
 	case CHECKIN:
 	case DONE:
 		*running--
@@ -257,14 +264,13 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 //this monitors the out end of the coutChan and sends it where you want it
 func handleCout() {
 	for {
-		out := <-coutChan
-		fmt.Printf("cout:%v\n", out)
+		out := <-cout
+		fmt.Printf("%v", out)
 	}
 }
 
 func RunMaster(hostname string) {
 	//start a server
-	go handleCout()
 	subidChan <- 0
 	fmt.Printf("Running as master at %v\n", hostname)
 	http.HandleFunc("/", rootHandler)
@@ -358,6 +364,7 @@ func RunNode(atOnce int, master string) {
 //////////////////////////////////////////////
 //main method
 func main() {
+	go handleCout()
 	var isMaster bool
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	var atOnce int
