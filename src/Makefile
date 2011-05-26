@@ -1,7 +1,7 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=golemmaster
+TARG=golem
 GOFILES=\
-	golemmaster.go\
+	golem.go\
 
 include $(GOROOT)/src/Make.cmd

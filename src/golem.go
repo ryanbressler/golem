@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"websocket"
 	"json"
-	"io/ioutil"
+	//"io/ioutil"
 	"strconv"
 	"os"
 	"exec"
@@ -48,6 +48,7 @@ const (
 	START = 3
 	CHECKIN = 4
 	COUT = 5
+	MAXMSGLENGTH=512
 	
 )
 	
@@ -73,14 +74,14 @@ type Job struct {
 }
 
 //A node as represented by a websocket connection
-//and an unbuffered channel to represent weather the websocket is in use
+//and a buffer 1 channel to represent weather the websocket is in use
 type Node struct {
 	Socket *websocket.Conn
 	InUse chan bool
 }
 
 func NewNode(Socket *websocket.Conn) *Node{
-	return &Node{Socket:Socket,InUse:make(chan bool)}
+	return &Node{Socket:Socket,InUse:make(chan bool, 1)}
 }
 
 func (node Node) SendMsg(msg clientMsg){
@@ -94,24 +95,31 @@ func (node Node) SendMsg(msg clientMsg){
 	}
 	
 	node.InUse<-true
-	fmt.Fprint(node.Socket, string(msgjson)+"\n")
+	fmt.Printf("msg:%v\n",string(msgjson))
+	if _, err := node.Socket.Write(msgjson); err != nil {
+		fmt.Printf("Error sending msg: %v\n", err)
+	}
 	<-node.InUse
 }
 
 func (node Node) GetMsg() *clientMsg{
 	
 	var msg clientMsg
-	node.InUse<-true
-	msgjson, err := ioutil.ReadAll(node.Socket); 
-	if err != nil && err != os.EOF {
-		fmt.Printf("error recieving client msg: %v\n", err)
-	} 
-	<-node.InUse
-	err = json.Unmarshal(msgjson, &msg); 
-	if err != nil {
-		fmt.Printf("error parseing client msg json: %v\n", err)	
+	for {
+		node.InUse<-true
+		var msgjson = make([]byte, MAXMSGLENGTH);
+		n, err := node.Socket.Read(msgjson) 
+		if err != nil && err != os.EOF{
+			fmt.Printf("error recieving client msg: %v\n", err.String())
+		}
+		fmt.Printf("Got msg: %v\n",string(msgjson[0:n]))
+		continue
+		<-node.InUse
+		err = json.Unmarshal(msgjson[0:n], &msg); 
+		if err != nil {
+			fmt.Printf("error parseing client msg json: %v\n", err)	
+		}
 	}
-	
 	return &msg
 }
 
@@ -120,7 +128,7 @@ func (node Node) GetMsg() *clientMsg{
 /////////////////////////////////////////////////
 //master
 
-//web handelers
+//web handlers
 //Handler for /. Nothing on root so say hello.
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hello. This is a golem master node:\n http://code.google.com/p/golem/")
@@ -301,9 +309,10 @@ func RunNode(atOnce int, master string){
 		fmt.Printf("Error connectiong to master:%v\n", err)
 		return
 	}
+	//ws.Write([]byte("hello!"))
 	node := *NewNode(ws)
 	node.SendMsg(clientMsg{Type:HELLO,Body:fmt.Sprintf("%v",atOnce)})
-	
+	node.Socket.Close()
 	/*
 	replyc := make(chan int)
 
@@ -340,7 +349,7 @@ func main() {
 	var atOnce int
 	flag.IntVar(&atOnce,"n",3,"For client nodes, the number of procceses to allow at once.")
 	var hostname string
-	flag.StringVar(&hostname,"hostname","localhost:8080","The address and port of/at wich to start the master.")
+	flag.StringVar(&hostname,"hostname","localhost:8083","The address and port of/at wich to start the master.")
 	flag.Parse()
 	
 	switch isMaster {
