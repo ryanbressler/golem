@@ -36,6 +36,16 @@ def main():
 		req = urllib2.Request(url)
 		fd = urllib2.urlopen(req, data)
 		print fd.read()
+	if cmd == "runlist":
+		fo = open(sys.argv[3])
+		jobs=[]
+		for line in fo:
+			vals = line.split()
+			jobs.append({"Count":int(vals[0]),"Args":vals[1:]})
+		data = urllib.urlencode([('data', json.dumps(jobs))])
+		req = urllib2.Request(url)
+		fd = urllib2.urlopen(req, data)
+		print fd.read()
 	
 	
 
