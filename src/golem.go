@@ -35,10 +35,11 @@ import (
 var subidChan = make(chan int, 10)
 
 //buffered channel for creating jobs
-var jobChan = make(chan Job, 1000)
+var jobChan = make(chan * Job, 1000)
 
 //buffered channel for writing to Cout
-var cout= make(chan string, 1000)
+var cout= make(chan string, 64)
+var cerr= make(chan string, 64)
 
 
 
@@ -48,7 +49,9 @@ const (
 	DONE         = 2
 	START        = 3
 	CHECKIN      = 4
+	
 	COUT         = 5
+	CERROR       = 6
 	
 	MAXMSGLENGTH = 512
 )
@@ -77,7 +80,8 @@ type Job struct {
 ///////////////////////////////////////////////////////////
 //A node as seen from another node
 //ie master to a client, client to a master...used for 
-//sending and reciving
+//sending and reciving...this should be renamed connection
+
 type Node struct {
 	Socket  *websocket.Conn
 	OutChan chan clientMsg
@@ -102,7 +106,7 @@ func (node Node) SendMsgs() {
 			return
 		}
 
-		fmt.Printf("sending:%v\n", string(msgjson))
+		//fmt.Printf("sending:%v\n", string(msgjson))
 		if _, err := node.Socket.Write(msgjson); err != nil {
 			fmt.Printf("Error sending msg: %v\n", err)
 		}
@@ -127,7 +131,7 @@ func (node Node) GetMsgs() {
 			fmt.Printf("error recieving msg: %v\n", err.String())
 			continue
 		}
-		fmt.Printf("Got: %v\n", string(msgjson[0:n]))
+		//fmt.Printf("Got: %v\n", string(msgjson[0:n]))
 
 		err = json.Unmarshal(msgjson[0:n], &msg)
 		if err != nil {
@@ -174,7 +178,8 @@ func parseJobSub(reqjson string) {
 	jobId := 0
 	for lineId, vals := range rJobs {
 		for i := 0; i < vals.Count; i++ {
-			jobChan <- Job{SubId: subId, LineId: lineId, JobId: jobId, Args: vals.Args}
+			jobChan <- &Job{SubId: subId, LineId: lineId, JobId: jobId, Args: vals.Args}
+			jobId++
 		}
 	}
 
@@ -237,7 +242,7 @@ func monitorNode(n *Node) {
 		case running < atOnce:
 			select {
 			case job := <-jobChan:
-				sendJob(&node, &job)
+				sendJob(&node, job)
 				running++
 			case msg = <-node.InChan:
 				clientMsgSwitch(&msg, &running)
@@ -254,8 +259,12 @@ func monitorNode(n *Node) {
 func clientMsgSwitch(msg *clientMsg, running *int) {
 	switch msg.Type {
 	default:
-		cout <- msg.Body
+		//cout <- msg.Body
 	case CHECKIN:
+	case COUT:
+		fmt.Printf("%v",msg.Body)
+	case CERROR:
+		fmt.Printf("Cerror:%v",msg.Body)
 	case DONE:
 		*running--
 	}
@@ -283,6 +292,33 @@ func RunMaster(hostname string) {
 
 //////////////////////////////////////////////
 //node 
+
+func sendCio(n *Node){
+	node:=*n
+	for{
+	var msg clientMsg			
+	select{
+	case st<-cout:
+	msg = clientMsg{Type:COUT,Body:st}	
+	case st<-cerror:
+	msg = clientMsg{Type:CERROR,Body:st}
+	}
+	node.OutChan<-msg
+}
+
+func pipeToChan(p *os.File,ch chan string){
+	for {
+		buffer :=make([]byte,512)
+		n,err:=p.read(&buffer)
+		uif err != nil {
+			return	
+		}
+		else
+		ch<-string(buffer[0:n])
+	}
+
+}
+
 func startJob(replyc chan int, jsonjob string) {
 	var job Job
 
@@ -304,7 +340,7 @@ func startJob(replyc chan int, jsonjob string) {
 
 	//start the job in test dir pass all stdio back to main.
 	//note that cmd has to be the first thing in the args array
-	c, err := exec.Run(cmd, args, nil, "", exec.PassThrough, exec.PassThrough, exec.PassThrough)
+	c, err := exec.Run(cmd, args, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
 	if err != nil {
 		fmt.Printf("%v", err)
 	}
@@ -336,6 +372,7 @@ func RunNode(atOnce int, master string) {
 	}
 	//ws.Write([]byte("h"))
 	mnode := *NewNode(ws)
+	go sendCio(mnode)
 	mnode.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 
 	replyc := make(chan int)

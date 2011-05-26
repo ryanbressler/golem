@@ -2,7 +2,7 @@
 import random
 import sys
 
-id = sys.argv[1]
+id = ".".join(sys.argv[1:])
 print "script entered with id %s"%(id)
 
 fo = open(id+".output.txt","w")
