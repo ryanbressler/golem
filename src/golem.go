@@ -51,8 +51,6 @@ const (
 
 	COUT   = 5
 	CERROR = 6
-
-	MAXMSGLENGTH = 512
 )
 
 //structs
@@ -81,23 +79,23 @@ type Job struct {
 //ie master to a client, client to a master...used for 
 //sending and reciving...this should be renamed connection
 
-type Node struct {
+type Connection struct {
 	Socket  *websocket.Conn
 	OutChan chan clientMsg
 	InChan  chan clientMsg
 }
 
-func NewNode(Socket *websocket.Conn) *Node {
-	n := Node{Socket: Socket, OutChan: make(chan clientMsg, 10), InChan: make(chan clientMsg, 10)}
+func NewConnection(Socket *websocket.Conn) *Connection {
+	n := Connection{Socket: Socket, OutChan: make(chan clientMsg, 10), InChan: make(chan clientMsg, 10)}
 	go n.GetMsgs()
 	go n.SendMsgs()
 	return &n
 }
 
-func (node Node) SendMsgs() {
+func (con Connection) SendMsgs() {
 
 	for {
-		msg := <-node.OutChan
+		msg := <-con.OutChan
 
 		msgjson, err := json.Marshal(msg)
 		if err != nil {
@@ -106,7 +104,7 @@ func (node Node) SendMsgs() {
 		}
 
 		//fmt.Printf("sending:%v\n", string(msgjson))
-		if _, err := node.Socket.Write(msgjson); err != nil {
+		if _, err := con.Socket.Write(msgjson); err != nil {
 			fmt.Printf("Error sending msg: %v\n", err)
 		}
 		//fmt.Printf("msg sent\n")
@@ -114,34 +112,26 @@ func (node Node) SendMsgs() {
 
 }
 
-func (node Node) GetMsgs() {
-
+func (con Connection) GetMsgs() {
+	decoder:=json.NewDecoder(con.Socket)
 	for {
 		var msg clientMsg
-		var msgjson = make([]byte, MAXMSGLENGTH)
-		//n, err := node.Socket.Read(msgjson)
-		n, err := node.Socket.Read(msgjson)
+		err := decoder.Decode(&msg); 
 		switch {
-		case err == os.EOF:
+		case err==os.EOF:
 			fmt.Printf("EOF recieved on websocket.")
-			node.Socket.Close()
+			con.Socket.Close()
 			return //TODO: recover
-		case err != nil:
-			fmt.Printf("error recieving msg: %v\n", err.String())
-			continue
-		}
-		//fmt.Printf("Got: %v\n", string(msgjson[0:n]))
-
-		err = json.Unmarshal(msgjson[0:n], &msg)
-		if err != nil {
+		case err!=nil:
 			fmt.Printf("error parseing client msg json: %v\n", err)
 			continue
 		}
-		node.InChan <- msg
+		con.InChan <- msg
 
 	}
 
 }
+
 
 
 /////////////////////////////////////////////////
@@ -159,7 +149,7 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		fmt.Fprint(w, "Listing of Jobs Not Yet implemented.")
 	case "POST":
-		go parseJobSub(r.FormValue("data"))
+		go parseSub(r.FormValue("data"))
 		fmt.Fprint(w, "Job loaded.")
 	case "DEL":
 		fmt.Fprint(w, "Deleting of jobs not yet implemented.")
@@ -167,7 +157,7 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //interprets a post request of jobs to run
-func parseJobSub(reqjson string) {
+func parseSub(reqjson string) {
 	rJobs := make([]RequestedJob, 0, 100)
 	if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
 		fmt.Printf("%v", err)
@@ -187,16 +177,16 @@ func parseJobSub(reqjson string) {
 //start routinges to manage nodes as they conect
 func nodeHandler(ws *websocket.Conn) {
 	fmt.Printf("Node connectiong.\n")
-	monitorNode(NewNode(ws))
+	monitorNode(NewConnection(ws))
 }
 
 
 //wait for a job from jobChan, turn it into a json messags
-//wait for the Node socket to not be in use then send it to 
+//wait for the Connection socket to not be in use then send it to 
 //the client. This may deadlock if the client is waiting for messages
 //so the client checks in. TODO: test if the InUse lock is needed.
-func sendJob(n *Node, j *Job) {
-	node := *n
+func sendJob(n *Connection, j *Job) {
+	con := *n
 	job := *j
 	jobjson, err := json.Marshal(job)
 	if err != nil {
@@ -204,14 +194,14 @@ func sendJob(n *Node, j *Job) {
 
 	}
 	msg := clientMsg{Type: START, Body: string(jobjson)}
-	node.OutChan <- msg
+	con.OutChan <- msg
 
 }
 
 //This waits for a handshake from a node then
 //monitors messages and starts jobs as needed
-func monitorNode(n *Node) {
-	node := *n
+func monitorNode(n *Connection) {
+	con := *n
 
 	//number to run at once
 	atOnce := 0
@@ -220,7 +210,7 @@ func monitorNode(n *Node) {
 	var msg clientMsg
 
 	//wait for client handshake
-	msg = <-node.InChan
+	msg = <-con.InChan
 
 	if msg.Type == HELLO {
 		val, err := strconv.Atoi(msg.Body)
@@ -241,13 +231,13 @@ func monitorNode(n *Node) {
 		case running < atOnce:
 			select {
 			case job := <-jobChan:
-				sendJob(&node, job)
+				sendJob(&con, job)
 				running++
-			case msg = <-node.InChan:
+			case msg = <-con.InChan:
 				clientMsgSwitch(&msg, &running)
 			}
 		default:
-			msg = <-node.InChan
+			msg = <-con.InChan
 			clientMsgSwitch(&msg, &running)
 		}
 
@@ -263,7 +253,7 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 	case COUT:
 		fmt.Printf("%v", msg.Body)
 	case CERROR:
-		fmt.Printf("Cerror:%v", msg.Body)
+		fmt.Printf("Job error:%v", msg.Body)
 	case DONE:
 		*running--
 	}
@@ -292,8 +282,8 @@ func RunMaster(hostname string) {
 //////////////////////////////////////////////
 //node 
 
-func sendCio(n *Node) {
-	node := *n
+func sendCio(n *Connection) {
+	con := *n
 	for {
 		var msg clientMsg
 		select {
@@ -302,7 +292,7 @@ func sendCio(n *Node) {
 		case st := <-cerr:
 			msg = clientMsg{Type: CERROR, Body: st}
 		}
-		node.OutChan <- msg
+		con.OutChan <- msg
 	}
 }
 
@@ -349,7 +339,7 @@ func startJob(replyc chan int, jsonjob string) {
 	//wait for the job to finish
 	w, err := c.Wait(0)
 	if err != nil {
-		fmt.Printf("%v", err)
+		fmt.Printf("joberror:%v", err)
 	}
 
 	fmt.Printf("Finishing job %v\n", job.JobId)
@@ -372,9 +362,9 @@ func RunNode(atOnce int, master string) {
 		return
 	}
 	//ws.Write([]byte("h"))
-	mnode := *NewNode(ws)
-	go sendCio(&mnode)
-	mnode.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
+	mcon := *NewConnection(ws)
+	go sendCio(&mcon)
+	mcon.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 
 	replyc := make(chan int)
 
@@ -384,10 +374,10 @@ func RunNode(atOnce int, master string) {
 		select {
 		case rv := <-replyc:
 			fmt.Printf("Got 'done' signal: %v\n", rv)
-			mnode.OutChan <- clientMsg{Type: DONE, Body: fmt.Sprintf("%v", rv)}
+			mcon.OutChan <- clientMsg{Type: DONE, Body: fmt.Sprintf("%v", rv)}
 			running--
 
-		case msg := <-mnode.InChan:
+		case msg := <-mcon.InChan:
 			switch msg.Type {
 			case START:
 				go startJob(replyc, msg.Body)
@@ -402,7 +392,7 @@ func RunNode(atOnce int, master string) {
 //////////////////////////////////////////////
 //main method
 func main() {
-	go handleCout()
+	
 	var isMaster bool
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	var atOnce int
