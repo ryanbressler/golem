@@ -28,18 +28,20 @@ import (
 	"strconv"
 	"exec"
 	"os"
+	"bufio"
 )
 
-//TODO: make these server only
+//TODO: move these three global variables into a master object so they aren't decalred
+//when running as a client
 //buffered channel for use as an incrementer to keep track of submissions
-var subidChan = make(chan int, 10)
+var subidChan = make(chan int, 1)
 
 //buffered channel for creating jobs
 var jobChan = make(chan *Job, 1000)
 
-//buffered channel for writing to Cout
-var cout = make(chan string, 64)
-var cerr = make(chan string, 64)
+
+//map of submissions by id
+var subMap = map[int]*Submission{}
 
 
 const (
@@ -56,8 +58,9 @@ const (
 //structs
 //messages sent between server and client
 type clientMsg struct {
-	Type int
-	Body string
+	Type  int
+	SubId int
+	Body  string
 }
 
 //job requested over rest api
@@ -75,9 +78,9 @@ type Job struct {
 }
 
 ///////////////////////////////////////////////////////////
-//A node as seen from another node
-//ie master to a client, client to a master...used for 
-//sending and reciving...this should be renamed connection
+//Connection represents one end of a websocket and has facilities 
+//For sending and recieving connections
+//TODO:Needs code to clean up after it is done...
 
 type Connection struct {
 	Socket  *websocket.Conn
@@ -113,16 +116,16 @@ func (con Connection) SendMsgs() {
 }
 
 func (con Connection) GetMsgs() {
-	decoder:=json.NewDecoder(con.Socket)
+	decoder := json.NewDecoder(con.Socket)
 	for {
 		var msg clientMsg
-		err := decoder.Decode(&msg); 
+		err := decoder.Decode(&msg)
 		switch {
-		case err==os.EOF:
+		case err == os.EOF:
 			fmt.Printf("EOF recieved on websocket.")
 			con.Socket.Close()
 			return //TODO: recover
-		case err!=nil:
+		case err != nil:
 			fmt.Printf("error parseing client msg json: %v\n", err)
 			continue
 		}
@@ -132,6 +135,62 @@ func (con Connection) GetMsgs() {
 
 }
 
+
+////////////////////////////////////////////////////
+/// Submission
+/// TODO: Kill submissions once they finish.
+
+type Submission struct {
+	SubId        int
+	CoutFileChan chan string
+	CerrFileChan chan string
+	Jobs         []RequestedJob
+}
+
+
+func NewSubmission(reqjson string) *Submission {
+	rJobs := make([]RequestedJob, 0, 100)
+	if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
+		fmt.Printf("%v", err)
+	}
+	subId := <-subidChan
+	subidChan <- subId + 1
+	s := Submission{SubId: subId, CoutFileChan: make(chan string, 10), CerrFileChan: make(chan string, 10), Jobs: rJobs}
+	go s.writeIo()
+	jobId := 0
+	for lineId, vals := range rJobs {
+		for i := 0; i < vals.Count; i++ {
+			jobChan <- &Job{SubId: subId, LineId: lineId, JobId: jobId, Args: vals.Args}
+			jobId++
+		}
+	}
+	return &s
+
+}
+
+func (s Submission) writeIo() {
+	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.SubId))
+	if err != nil {
+		fmt.Printf("Error creating output file: %v\n", err)
+	}
+	defer outf.Close()
+	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.SubId))
+	if err != nil {
+		fmt.Printf("Error creating output file: %v\n", err)
+	}
+	defer errf.Close()
+
+	for {
+		select {
+		case msg := <-s.CoutFileChan:
+			fmt.Fprint(outf, msg)
+		case errmsg := <-s.CerrFileChan:
+			fmt.Fprint(errf, errmsg)
+
+		}
+	}
+
+}
 
 
 /////////////////////////////////////////////////
@@ -149,30 +208,15 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		fmt.Fprint(w, "Listing of Jobs Not Yet implemented.")
 	case "POST":
-		go parseSub(r.FormValue("data"))
-		fmt.Fprint(w, "Job loaded.")
+		s := NewSubmission(r.FormValue("data"))
+		subMap[s.SubId] = s
+		fmt.Printf("Created submission: %v\n", s.SubId)
+		fmt.Fprintf(w, "{\"SubId\":%v}", s.SubId)
 	case "DEL":
 		fmt.Fprint(w, "Deleting of jobs not yet implemented.")
 	}
 }
 
-//interprets a post request of jobs to run
-func parseSub(reqjson string) {
-	rJobs := make([]RequestedJob, 0, 100)
-	if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
-		fmt.Printf("%v", err)
-	}
-	subId := <-subidChan
-	subidChan <- subId + 1
-	jobId := 0
-	for lineId, vals := range rJobs {
-		for i := 0; i < vals.Count; i++ {
-			jobChan <- &Job{SubId: subId, LineId: lineId, JobId: jobId, Args: vals.Args}
-			jobId++
-		}
-	}
-
-}
 
 //start routinges to manage nodes as they conect
 func nodeHandler(ws *websocket.Conn) {
@@ -251,21 +295,14 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 		//cout <- msg.Body
 	case CHECKIN:
 	case COUT:
-		fmt.Printf("%v", msg.Body)
+		subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
-		fmt.Printf("Job error:%v", msg.Body)
+		subMap[msg.SubId].CerrFileChan <- msg.Body
 	case DONE:
 		*running--
 	}
 }
 
-//this monitors the out end of the coutChan and sends it where you want it
-func handleCout() {
-	for {
-		out := <-cout
-		fmt.Printf("%v", out)
-	}
-}
 
 func RunMaster(hostname string) {
 	//start a server
@@ -282,36 +319,24 @@ func RunMaster(hostname string) {
 //////////////////////////////////////////////
 //node 
 
-func sendCio(n *Connection) {
-	con := *n
-	for {
-		var msg clientMsg
-		select {
-		case st := <-cout:
-			msg = clientMsg{Type: COUT, Body: st}
-		case st := <-cerr:
-			msg = clientMsg{Type: CERROR, Body: st}
-		}
-		con.OutChan <- msg
-	}
-}
 
-func pipeToChan(p *os.File, ch chan string) {
+func pipeToChan(p *os.File, msgType int, Id int, ch chan clientMsg) {
+	bp := bufio.NewReader(p)
+
 	for {
-		buffer := make([]byte, 512)
-		n, err := p.Read(buffer)
+		line, err := bp.ReadString('\n')
 		if err != nil {
 			return
 		} else {
-			ch <- string(buffer[0:n])
+			ch <- clientMsg{Type: msgType, SubId: Id, Body: line} //string(buffer[0:n])
 		}
 	}
 
 }
 
-func startJob(replyc chan int, jsonjob string) {
+func startJob(cn *Connection, replyc chan int, jsonjob string) {
 	var job Job
-
+	con := *cn
 	err := json.Unmarshal([]byte(jsonjob), &job)
 	if err != nil {
 		fmt.Printf("error parseing job json: %v\n", err)
@@ -334,8 +359,8 @@ func startJob(replyc chan int, jsonjob string) {
 	if err != nil {
 		fmt.Printf("%v", err)
 	}
-	go pipeToChan(c.Stdout,cout)
-	go pipeToChan(c.Stderr,cerr)
+	go pipeToChan(c.Stdout, COUT, job.SubId, con.OutChan)
+	go pipeToChan(c.Stderr, CERROR, job.SubId, con.OutChan)
 	//wait for the job to finish
 	w, err := c.Wait(0)
 	if err != nil {
@@ -363,7 +388,7 @@ func RunNode(atOnce int, master string) {
 	}
 	//ws.Write([]byte("h"))
 	mcon := *NewConnection(ws)
-	go sendCio(&mcon)
+	//go sendCio(&mcon)
 	mcon.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 
 	replyc := make(chan int)
@@ -380,7 +405,7 @@ func RunNode(atOnce int, master string) {
 		case msg := <-mcon.InChan:
 			switch msg.Type {
 			case START:
-				go startJob(replyc, msg.Body)
+				go startJob(&mcon, replyc, msg.Body)
 				running++
 			}
 		}
@@ -392,7 +417,7 @@ func RunNode(atOnce int, master string) {
 //////////////////////////////////////////////
 //main method
 func main() {
-	
+
 	var isMaster bool
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	var atOnce int
