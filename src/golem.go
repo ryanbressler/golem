@@ -345,7 +345,10 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 	//make sure the path to the exec is fully qualified
 	cmd, err := exec.LookPath(jobcmd)
 	if err != nil {
-		fmt.Printf("exec %s: %s", jobcmd, err)
+		con.OutChan <- clientMsg{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
+		fmt.Printf("exec %s: %s\n", jobcmd, err)
+		replyc <- -1 * job.JobId
+		return
 	}
 
 	args := job.Args[:]
