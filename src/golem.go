@@ -29,6 +29,7 @@ import (
 	"exec"
 	"os"
 	"bufio"
+	"crypto/tls"
 )
 
 //TODO: move these three global variables into a master object so they aren't decalred
@@ -304,15 +305,28 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 }
 
 
-func RunMaster(hostname string) {
+func RunMaster(hostname string, useTls bool) {
 	//start a server
 	subidChan <- 0
 	fmt.Printf("Running as master at %v\n", hostname)
+	
+	if useTls {
+		//tls.Listen("tcp", hostname, getTlsConfig()) 
+	}
+	
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/jobs/", jobHandler)
 	http.Handle("/master/", websocket.Handler(nodeHandler))
-	if err := http.ListenAndServe(hostname, nil); err != nil {
-		fmt.Printf("ListenAndServe Error : %v\n", err)
+	if useTls {
+		certf,keyf:=getCertFiles()
+		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
+			fmt.Printf("ListenAndServe Error : %v\n", err)
+		}
+	}else{
+		if err := http.ListenAndServe(hostname, nil); err != nil {
+			fmt.Printf("ListenAndServe Error : %v\n", err)
+		}
+	
 	}
 }
 
@@ -380,11 +394,24 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 
 }
 
-func RunNode(atOnce int, master string) {
+func wsDialToMaster(master string,useTls bool) (ws *websocket.Conn, err os.Error){
+	protocol := "ws"
+	if useTls {
+	protocol ="wss"
+	}
+	ws, err = websocket.Dial(fmt.Sprintf("%v://"+master+"/master/",protocol), "", "http://localhost/")
+	if err != nil {
+		return nil, err
+	}
+	return ws,nil
+}
+
+func RunNode(atOnce int, master string,useTls bool) {
 	running := 0
 	fmt.Printf("Running as %v process node owned by %v\n", atOnce, master)
 
-	ws, err := websocket.Dial("ws://"+master+"/master/", "", "http://localhost/")
+
+	ws, err := wsDialToMaster(master, useTls)
 	if err != nil {
 		fmt.Printf("Error connectiong to master:%v\n", err)
 		return
@@ -417,6 +444,23 @@ func RunNode(atOnce int, master string) {
 
 }
 
+func getCertFiles() (string, string){
+	certf:=os.ShellExpand("$HOME/.golem/certificate.pem")
+	keyf:=os.ShellExpand("$HOME/.golem/key.pem")
+	return certf,keyf
+}
+
+func getTlsConfig() *tls.Config {
+	certf,keyf:=getCertFiles()
+	cert, err := tls.LoadX509KeyPair(certf,keyf)
+	if err != nil {
+		fmt.Printf("Err loading tls keys from %v and %v: %v\n",certf,keyf,err)
+	}
+	
+	return &tls.Config{Certificates:[]tls.Certificate{cert}}
+
+}
+
 //////////////////////////////////////////////
 //main method
 func main() {
@@ -427,13 +471,15 @@ func main() {
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
 	var hostname string
 	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
+	var useTls bool
+	flag.BoolVar(&useTls, "tls", false, "Use tls security.")
 	flag.Parse()
 
 	switch isMaster {
 	case true:
-		RunMaster(hostname)
+		RunMaster(hostname,useTls)
 	default:
-		RunNode(atOnce, hostname)
+		RunNode(atOnce, hostname,useTls)
 	}
 
 }
