@@ -11,7 +11,7 @@ GOFILES=\
 	master.go\
 	node.go\
 	tls.go\
-	golem.go\
+	main.go\
 	
 
 include $(GOROOT)/src/Make.cmd
