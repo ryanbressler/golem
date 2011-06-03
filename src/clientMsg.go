@@ -20,32 +20,12 @@
 package main
 
 import (
-	"flag"
 	
 )
 
-
-
-
-//////////////////////////////////////////////
-//main method
-func main() {
-
-	var isMaster bool
-	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
-	var atOnce int
-	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
-	var hostname string
-	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
-	var useTls bool
-	flag.BoolVar(&useTls, "tls", false, "Use tls security.")
-	flag.Parse()
-
-	switch isMaster {
-	case true:
-		RunMaster(hostname,useTls)
-	default:
-		RunNode(atOnce, hostname,useTls)
-	}
-
+//messages sent between server and client
+type clientMsg struct {
+	Type  int
+	SubId int
+	Body  string
 }

@@ -20,32 +20,29 @@
 package main
 
 import (
-	"flag"
 	
 )
 
+//TODO: make these vars not declared when not needed
+
+//buffered channel for use as an incrementer to keep track of submissions
+var subidChan = make(chan int, 1)
+
+//buffered channel for creating jobs
+var jobChan = make(chan *Job, 1000)
 
 
+//map of submissions by id
+var subMap = map[int]*Submission{}
 
-//////////////////////////////////////////////
-//main method
-func main() {
 
-	var isMaster bool
-	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
-	var atOnce int
-	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
-	var hostname string
-	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
-	var useTls bool
-	flag.BoolVar(&useTls, "tls", false, "Use tls security.")
-	flag.Parse()
+const (
+	//Message type constants
+	HELLO   = 1
+	DONE    = 2
+	START   = 3
+	CHECKIN = 4
 
-	switch isMaster {
-	case true:
-		RunMaster(hostname,useTls)
-	default:
-		RunNode(atOnce, hostname,useTls)
-	}
-
-}
+	COUT   = 5
+	CERROR = 6
+)

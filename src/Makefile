@@ -2,6 +2,15 @@ include $(GOROOT)/src/Make.inc
 
 TARG=golem
 GOFILES=\
+	vars.go\
+	clientMsg.go\
+	RequestedJob.go\
+	Job.go\
+	Connection.go\
+	Submission.go\
+	master.go\
+	node.go\
+	tls.go\
 	golem.go\
 	
 
