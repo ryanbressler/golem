@@ -28,7 +28,9 @@ def main():
 	master = sys.argv[1]
 	cmd = sys.argv[2]
 	
-	url = "http://"+master+"/jobs/"
+	if master[0:4] != "http":
+		master = "http://"+master
+	url = master+"/jobs/"
 	if cmd == "run":
 		print "Submiting run request to %s"%(url)
 		jobs = [{"Count":int(sys.argv[3]),"Args":sys.argv[4:]}]
