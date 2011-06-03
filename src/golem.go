@@ -395,15 +395,48 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 }
 
 func wsDialToMaster(master string,useTls bool) (ws *websocket.Conn, err os.Error){
-	protocol := "ws"
+	//protocol:=""
+	origin:="http://localhost/"
+	prot := "ws"
+	//var client net.Conn
+	
 	if useTls {
-	protocol ="wss"
+		prot ="wss"
+	
 	}
-	ws, err = websocket.Dial(fmt.Sprintf("%v://"+master+"/master/",protocol), "", "http://localhost/")
+	url:= fmt.Sprintf("%v://"+master+"/master/",prot)
+	/*parsedUrl, err := http.ParseURL(url)
+	if err != nil {
+		goto Error
+	}
+	
+	switch prot {
+	case "ws":
+		client, err = net.Dial("tcp", parsedUrl.Host)
+
+	case "wss":
+		client, err = tls.Dial("tcp", parsedUrl.Host, getTlsConfig())
+
+
+	}
+	if err != nil {
+			goto Error
+   	}
+
+	ws, err = websocket.newClient(parsedUrl.RawPath, parsedUrl.Host, origin, url, protocol, client, websocket.handshake)
+	if err != nil {
+		goto Error
+	}
+	return
+   	
+   	Error:
+		return nil, &websocket.DialError{url, protocol, origin, err}*/
+	ws, err = websocket.Dial(url, "", origin)
 	if err != nil {
 		return nil, err
 	}
-	return ws,nil
+	return ws, nil
+
 }
 
 func RunNode(atOnce int, master string,useTls bool) {
