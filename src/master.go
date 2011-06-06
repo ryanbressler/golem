@@ -41,11 +41,14 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 //restfull api for managing jobs handled on /jobs/
 func jobHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Jobs request.\n")
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 	case "GET":
+		fmt.Printf("Method = GET.\n")
 		fmt.Fprint(w, "Listing of Jobs Not Yet implemented.")
 	case "POST":
+		fmt.Printf("Method = POST.\n")
 		s := NewSubmission(r.FormValue("data"))
 		subMap[s.SubId] = s
 		fmt.Printf("Created submission: %v\n", s.SubId)

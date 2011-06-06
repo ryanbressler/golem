@@ -29,13 +29,15 @@ def main():
 	cmd = sys.argv[2]
 	
 	if master[0:4] != "http":
+		print "Using http (unsecure)."
 		master = "http://"+master
 	url = master+"/jobs/"
 	if cmd == "run":
-		print "Submiting run request to %s"%(url)
+		
 		jobs = [{"Count":int(sys.argv[3]),"Args":sys.argv[4:]}]
 		data = urllib.urlencode([('data', json.dumps(jobs))])
 		req = urllib2.Request(url)
+		print "Submiting run request to %s."%(url)
 		fd = urllib2.urlopen(req, data)
 		print fd.read()
 	
@@ -47,6 +49,7 @@ def main():
 			jobs.append({"Count":int(vals[0]),"Args":vals[1:]})
 		data = urllib.urlencode([('data', json.dumps(jobs))])
 		req = urllib2.Request(url)
+		print "Submiting run request to %s."%(url)
 		fd = urllib2.urlopen(req, data)
 		print fd.read()
 		

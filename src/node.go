@@ -47,6 +47,7 @@ func pipeToChan(p *os.File, msgType int, Id int, ch chan clientMsg) {
 }
 
 func startJob(cn *Connection, replyc chan int, jsonjob string) {
+	fmt.Printf("Starting job from json: %v\n", jsonjob)
 	var job Job
 	con := *cn
 	err := json.Unmarshal([]byte(jsonjob), &job)
