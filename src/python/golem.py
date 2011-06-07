@@ -45,7 +45,7 @@ def doPost(url, paramMap):
 	
 	conn=0
 	if u.scheme == "http":
-		conn = httplib.HTTPConnection(u.hostname,u.port,None,2,("localhost","8080"))
+		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
 		conn = httplib.HTTPSConnection(u.hostname,u.port,"/Users/rbressle/.golem/key.pem","/Users/rbressle/.golem/certificate.pem")#,None,2,("localhost","8080"))
 	
