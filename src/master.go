@@ -35,6 +35,7 @@ import (
 //web handlers
 //Handler for /. Nothing on root so say hello.
 func rootHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Root request.\n")
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprint(w, "Hello. This is a golem master node:\n http://code.google.com/p/golem/")
 }
