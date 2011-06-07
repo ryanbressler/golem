@@ -25,6 +25,12 @@ import urllib
 import urllib2
 import httplib
 import urlparse
+supporttls=True
+try: from tlslite.integration.HTTPTLSConnection import HTTPTLSConnection
+except ImportError:
+	supporttls=False
+	print "Error importing tlslite."
+
 
 
 def doPost(url, paramMap):
@@ -47,8 +53,8 @@ def doPost(url, paramMap):
 	if u.scheme == "http":
 		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
-		conn = httplib.HTTPSConnection(u.hostname,u.port,"/Users/rbressle/.golem/key.pem","/Users/rbressle/.golem/certificate.pem")#,None,2,("localhost","8080"))
-	
+		#conn = httplib.HTTPSConnection(u.hostname,u.port,"/Users/rbressle/.golem/key.pem","/Users/rbressle/.golem/certificate.pem")#,None,2,("localhost","8080"))
+		conn = HTTPTLSConnection(u.hostname,u.port)
 	conn.set_debuglevel(100)
 		
 	conn.request("POST", u.path, params, headers)
@@ -69,6 +75,7 @@ def main():
 	master = sys.argv[1]
 	cmd = sys.argv[2]
 	
+	#Todo: default to http when not tls.
 	
 	if master[0:4] != "http":
 		print "Using http (unsecure)."
