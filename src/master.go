@@ -25,8 +25,8 @@ import (
 	"websocket"
 	"json"
 	"strconv"
+	"crypto/tls"
 )
-
 
 
 /////////////////////////////////////////////////
@@ -43,23 +43,22 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //restfull api for managing jobs handled on /jobs/
 func jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("Jobs request.")
-	if useTls {
-		log("Request has cert chain of length %v.",len(r.TLS.PeerCertificates))
-		
-		/*cert := *r.TLS.PeerCertificates[0]
-		if cert.Equal(clientCert)==false {
-			log("Rejecting jobs request.")
-			fmt.Fprint(w, "The tsl cert used to submit this request is not the one required.")
-			return
-		}*/
-	}
-	
+
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 	case "GET":
 		log("Method = GET.")
 		fmt.Fprint(w, "Listing of Jobs Not Yet implemented.")
 	case "POST":
+		if usepw {
+			pw := hashPw(r.FormValue("password"))
+			log("Verifying password.")
+			if hashedpw != pw {
+				fmt.Fprint(w, "Passwords do not match.")
+				return
+			}
+			log("Password verified")
+		}
 		log("Method = POST.")
 		s := NewSubmission(r.FormValue("data"))
 		subMap[s.SubId] = s
@@ -157,27 +156,41 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 }
 
 
-func RunMaster(hostname string) {
+func RunMaster(hostname string, password string) {
 	//start a server
 	subidChan <- 0
 	log("Running as master at %v", hostname)
-	
+
+	if password != "" {
+		usepw = true
+		hashedpw = hashPw(password)
+	}
+
 	if useTls {
 		//tls.Listen("tcp", hostname, getTlsConfig()) 
 	}
-	
+
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/jobs/", jobHandler)
 	http.Handle("/master/", websocket.Handler(nodeHandler))
 	if useTls {
-		certf,keyf:=getCertFiles()
+		cfg := getTlsConfig()
+		listener, err := tls.Listen("tcp", hostname, cfg)
+		if err != nil {
+			log("Listen Error : %v", err)
+		}
+
+		if err := http.Serve(listener, nil); err != nil {
+			log("Serve Error : %v", err)
+		}
+		/*certf,keyf:=getCertFiles()
 		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
 			log("ListenAndServe Error : %v", err)
-		}
-	}else{
+		}*/
+	} else {
 		if err := http.ListenAndServe(hostname, nil); err != nil {
 			log("ListenAndServe Error : %v", err)
 		}
-	
+
 	}
 }

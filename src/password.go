@@ -20,34 +20,13 @@
 package main
 
 import (
-	"flag"
+	"fmt"
+	"io"
 )
 
-
-//////////////////////////////////////////////
-//main method
-func main() {
-	var isMaster bool
-	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
-	var atOnce int
-	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
-	var hostname string
-	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
-	var unsecure bool
-	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
-	var password string
-	flag.StringVar(&password, "p", "", "The password to require with job submission.")
-
-	flag.Parse()
-	if unsecure {
-		useTls = false
-	}
-
-	switch isMaster {
-	case true:
-		RunMaster(hostname, password)
-	default:
-		RunNode(atOnce, hostname)
-	}
+func hashPw(password string) string {
+	hash.Reset()
+	io.WriteString(hash, password) // plus salt, or whatever 
+	return fmt.Sprintf("%x", hash.Sum())
 
 }

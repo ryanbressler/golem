@@ -1,4 +1,3 @@
-
 /*
    Copyright (C) 2003-2010 Institute for Systems Biology
                            Seattle, Washington, USA.
@@ -28,7 +27,6 @@ import (
 	"os"
 	"websocket"
 	"json"
-	
 )
 
 type Connection struct {

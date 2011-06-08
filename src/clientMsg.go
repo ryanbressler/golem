@@ -19,9 +19,7 @@
 */
 package main
 
-import (
-	
-)
+import ()
 
 //messages sent between server and client
 type clientMsg struct {

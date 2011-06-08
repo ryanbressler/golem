@@ -19,9 +19,7 @@
 */
 package main
 
-import (
-	
-)
+import ()
 
 //Internal Job Representation
 type Job struct {

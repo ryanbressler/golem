@@ -36,6 +36,11 @@ except ImportError:
 	supporttls=False
 	print "Error importing tlslite."
 
+usage = """Usage golem.py hostname [-p password] command and args
+where command and args can be:
+run n job_executable exeutable args
+runlist listofjobs
+"""
 
 
 def doPost(url, paramMap):
@@ -59,14 +64,14 @@ def doPost(url, paramMap):
 		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
 		#conn = httplib.HTTPSConnection(u.hostname,u.port,"/Users/rbressle/.golem/key.pem","/Users/rbressle/.golem/certificate.pem")#,None,2,("localhost","8080"))
-		keyf = open(os.path.expandvars("$HOME/.golem/key.pem"))
-		key = parsePEMKey(keyf.read())
-		keyf.close()
-		certf = open(os.path.expandvars("$HOME/.golem/certificate.pem"))
-		cert = X509()
-		cert.parse(certf.read())
-		certf.close()
-		conn = HTTPTLSConnection(u.hostname,u.port,privateKey=key,certChain=X509CertChain([cert]))
+	# 	keyf = open(os.path.expandvars("$HOME/.golem/key.pem"))
+# 		key = parsePEMKey(keyf.read())
+# 		keyf.close()
+# 		certf = open(os.path.expandvars("$HOME/.golem/certificate.pem"))
+# 		cert = X509()
+# 		cert.parse(certf.read())
+# 		certf.close()
+		conn = HTTPTLSConnection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
 	
 		
 	conn.request("POST", u.path, params, headers)
@@ -84,9 +89,20 @@ def doPost(url, paramMap):
 	conn.close()
 
 def main():
+	if len(sys.argv)==1:
+		print usage
+		return
+		
 	master = sys.argv[1]
-	cmd = sys.argv[2]
+	cmdi = 2
+	pwd = ""
+	if sys.argv[2] == "-p":
+		pwd = sys.argv[3]	
+	cmdi = 4
 	
+	
+	cmd = sys.argv[cmdi]
+
 	#Todo: default to http when not tls.
 	
 	if master[0:4] != "http":
@@ -102,8 +118,8 @@ def main():
 	url = master+"/jobs/"
 	if cmd == "run":
 		
-		jobs = [{"Count":int(sys.argv[3]),"Args":sys.argv[4:]}]
-		data = {'data': json.dumps(jobs)}
+		jobs = [{"Count":int(sys.argv[cmdi+1]),"Args":sys.argv[cmdi+2:]}]
+		data = {'data': json.dumps(jobs),'password':pwd}
 		print "Submiting run request to %s."%(url)
 		doPost(url,data)
 	
@@ -113,7 +129,7 @@ def main():
 		for line in fo:
 			vals = line.split()
 			jobs.append({"Count":int(vals[0]),"Args":vals[1:]})
-		data = {'data': json.dumps(jobs)}
+		data = {'data': json.dumps(jobs),'password':pwd}
 		print "Submiting run request to %s."%(url)
 		doPost(url,data)
 		
