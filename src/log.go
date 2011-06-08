@@ -26,7 +26,7 @@ import (
 
 func log(format string, a ...interface{}) {
 	t := time.LocalTime()
-	format = t.String()+": "+format +"\n"
-	fmt.Printf(format,a...)
+	format = t.String() + ": " + format + "\n"
+	fmt.Printf(format, a...)
 
 }

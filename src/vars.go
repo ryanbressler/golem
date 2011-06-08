@@ -20,7 +20,7 @@
 package main
 
 import (
-	"crypto/x509"
+	"crypto/sha256"
 )
 
 //TODO: make these vars not declared when not needed
@@ -37,7 +37,11 @@ var subMap = map[int]*Submission{}
 
 //tls configurability
 var useTls bool = true
-var clientCert * x509.Certificate
+
+//password
+var usepw bool = false
+var hash = sha256.New() // or whatever
+var hashedpw string
 
 
 const (

@@ -4,6 +4,7 @@ TARG=golem
 GOFILES=\
 	vars.go\
 	log.go\
+	password.go\
 	clientMsg.go\
 	RequestedJob.go\
 	Job.go\

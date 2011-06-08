@@ -26,9 +26,6 @@ import (
 )
 
 
-
-
-
 ////////////////////////////////////////////////////
 /// Submission
 /// TODO: Kill submissions once they finish.

@@ -19,9 +19,7 @@
 */
 package main
 
-import (
-	
-)
+import ()
 
 //job requested over rest api
 type RequestedJob struct {
