@@ -3,6 +3,7 @@ include $(GOROOT)/src/Make.inc
 TARG=golem
 GOFILES=\
 	vars.go\
+	log.go\
 	clientMsg.go\
 	RequestedJob.go\
 	Job.go\

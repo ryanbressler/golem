@@ -30,7 +30,6 @@ import (
 //////////////////////////////////////////////
 //main method
 func main() {
-
 	var isMaster bool
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	var atOnce int

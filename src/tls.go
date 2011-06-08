@@ -85,7 +85,7 @@ func getTlsConfig() *tls.Config {
 	certf,keyf:=getCertFiles()
 	cert, err := tls.LoadX509KeyPair(certf,keyf)
 	if err != nil {
-		fmt.Printf("Err loading tls keys from %v and %v: %v\n",certf,keyf,err)
+		log("Err loading tls keys from %v and %v: %v\n",certf,keyf,err)
 	}
 	
 	return &tls.Config{Certificates:[]tls.Certificate{cert}}

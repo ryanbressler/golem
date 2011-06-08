@@ -44,7 +44,7 @@ type Submission struct {
 func NewSubmission(reqjson string) *Submission {
 	rJobs := make([]RequestedJob, 0, 100)
 	if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
-		fmt.Printf("%v", err)
+		log("%v", err)
 	}
 	subId := <-subidChan
 	subidChan <- subId + 1
@@ -64,12 +64,12 @@ func NewSubmission(reqjson string) *Submission {
 func (s Submission) writeIo() {
 	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.SubId))
 	if err != nil {
-		fmt.Printf("Error creating output file: %v\n", err)
+		log("Error creating output file: %v\n", err)
 	}
 	defer outf.Close()
 	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.SubId))
 	if err != nil {
-		fmt.Printf("Error creating output file: %v\n", err)
+		log("Error creating output file: %v\n", err)
 	}
 	defer errf.Close()
 
