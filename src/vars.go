@@ -20,7 +20,7 @@
 package main
 
 import (
-	
+	"crypto/x509"
 )
 
 //TODO: make these vars not declared when not needed
@@ -34,6 +34,10 @@ var jobChan = make(chan *Job, 1000)
 
 //map of submissions by id
 var subMap = map[int]*Submission{}
+
+//tls configurability
+var useTls bool = true
+var clientCert * x509.Certificate
 
 
 const (

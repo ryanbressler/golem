@@ -43,6 +43,17 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //restfull api for managing jobs handled on /jobs/
 func jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("Jobs request.")
+	if useTls {
+		log("Request has cert chain of length %v.",len(r.TLS.PeerCertificates))
+		
+		/*cert := *r.TLS.PeerCertificates[0]
+		if cert.Equal(clientCert)==false {
+			log("Rejecting jobs request.")
+			fmt.Fprint(w, "The tsl cert used to submit this request is not the one required.")
+			return
+		}*/
+	}
+	
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 	case "GET":
@@ -146,7 +157,7 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 }
 
 
-func RunMaster(hostname string, useTls bool) {
+func RunMaster(hostname string) {
 	//start a server
 	subidChan <- 0
 	log("Running as master at %v", hostname)

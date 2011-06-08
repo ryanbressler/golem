@@ -95,7 +95,7 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 
 
 
-func RunNode(atOnce int, master string,useTls bool) {
+func RunNode(atOnce int, master string) {
 	running := 0
 	log("Running as %v process node owned by %v", atOnce, master)
 
