@@ -36,15 +36,18 @@ func main() {
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
 	var hostname string
 	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
-	var useTls bool
-	flag.BoolVar(&useTls, "tls", false, "Use tls security.")
+	var unsecure bool
+	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
 	flag.Parse()
+	if unsecure {
+		useTls = false
+	}
 
 	switch isMaster {
 	case true:
-		RunMaster(hostname,useTls)
+		RunMaster(hostname)
 	default:
-		RunNode(atOnce, hostname,useTls)
+		RunNode(atOnce, hostname)
 	}
 
 }
