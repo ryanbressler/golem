@@ -25,8 +25,13 @@ import urllib
 import urllib2
 import httplib
 import urlparse
+import os
 supporttls=True
-try: from tlslite.integration.HTTPTLSConnection import HTTPTLSConnection
+try: 
+	from tlslite.integration.HTTPTLSConnection import HTTPTLSConnection
+	from tlslite.X509 import X509
+	from tlslite.X509CertChain import X509CertChain
+	from tlslite.utils.keyfactory import parsePEMKey
 except ImportError:
 	supporttls=False
 	print "Error importing tlslite."
@@ -54,8 +59,15 @@ def doPost(url, paramMap):
 		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
 		#conn = httplib.HTTPSConnection(u.hostname,u.port,"/Users/rbressle/.golem/key.pem","/Users/rbressle/.golem/certificate.pem")#,None,2,("localhost","8080"))
-		conn = HTTPTLSConnection(u.hostname,u.port)
-	conn.set_debuglevel(100)
+		keyf = open(os.path.expandvars("$HOME/.golem/key.pem"))
+		key = parsePEMKey(keyf.read())
+		keyf.close()
+		certf = open(os.path.expandvars("$HOME/.golem/certificate.pem"))
+		cert = X509()
+		cert.parse(certf.read())
+		certf.close()
+		conn = HTTPTLSConnection(u.hostname,u.port,privateKey=key,certChain=X509CertChain([cert]))
+	
 		
 	conn.request("POST", u.path, params, headers)
 
@@ -78,8 +90,15 @@ def main():
 	#Todo: default to http when not tls.
 	
 	if master[0:4] != "http":
-		print "Using http (unsecure)."
-		master = "http://"+master
+		if supporttls:
+			print "Using https."
+			master = "https://"+master
+		else:
+			print "Using http (unsecure)."
+			master = "http://"+master
+	if master[0:5] == "https" and supporttls == False:
+		return "To use https please instal the python package tlslite."
+	
 	url = master+"/jobs/"
 	if cmd == "run":
 		
