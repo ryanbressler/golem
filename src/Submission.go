@@ -47,15 +47,20 @@ func NewSubmission(reqjson string) *Submission {
 	subidChan <- subId + 1
 	s := Submission{SubId: subId, CoutFileChan: make(chan string, 10), CerrFileChan: make(chan string, 10), Jobs: rJobs}
 	go s.writeIo()
+	go s.submitJobs()
+	
+	return &s
+
+}
+
+func (s Submission) submitJobs() {
 	jobId := 0
-	for lineId, vals := range rJobs {
+	for lineId, vals := range s.Jobs {
 		for i := 0; i < vals.Count; i++ {
-			jobChan <- &Job{SubId: subId, LineId: lineId, JobId: jobId, Args: vals.Args}
+			jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}
 			jobId++
 		}
 	}
-	return &s
-
 }
 
 func (s Submission) writeIo() {

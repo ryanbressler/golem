@@ -29,7 +29,7 @@ import (
 var subidChan = make(chan int, 1)
 
 //buffered channel for creating jobs
-var jobChan = make(chan *Job, 1000)
+var jobChan = make(chan *Job, 1)
 
 
 //map of submissions by id
