@@ -124,7 +124,7 @@ def main():
 		doPost(url,data)
 	
 	if cmd == "runlist":
-		fo = open(sys.argv[3])
+		fo = open(sys.argv[cmdi+1])
 		jobs=[]
 		for line in fo:
 			vals = line.split()
