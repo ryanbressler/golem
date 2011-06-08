@@ -28,7 +28,6 @@ import (
 	"os"
 	"websocket"
 	"json"
-	"fmt"
 	
 )
 
@@ -52,15 +51,15 @@ func (con Connection) SendMsgs() {
 
 		msgjson, err := json.Marshal(msg)
 		if err != nil {
-			fmt.Printf("error json.Marshaling msg: %v\n", err)
+			log("error json.Marshaling msg: %v", err)
 			return
 		}
 
-		//fmt.Printf("sending:%v\n", string(msgjson))
+		//log("sending:%v\n", string(msgjson))
 		if _, err := con.Socket.Write(msgjson); err != nil {
-			fmt.Printf("Error sending msg: %v\n", err)
+			log("Error sending msg: %v", err)
 		}
-		//fmt.Printf("msg sent\n")
+		//log("msg sent\n")
 	}
 
 }
@@ -72,11 +71,11 @@ func (con Connection) GetMsgs() {
 		err := decoder.Decode(&msg)
 		switch {
 		case err == os.EOF:
-			fmt.Printf("EOF recieved on websocket.")
+			log("EOF recieved on websocket.")
 			con.Socket.Close()
 			return //TODO: recover
 		case err != nil:
-			fmt.Printf("error parseing client msg json: %v\n", err)
+			log("error parseing client msg json: %v", err)
 			continue
 		}
 		con.InChan <- msg

@@ -35,24 +35,24 @@ import (
 //web handlers
 //Handler for /. Nothing on root so say hello.
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Root request.\n")
+	log("Root request.")
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprint(w, "Hello. This is a golem master node:\n http://code.google.com/p/golem/")
 }
 
 //restfull api for managing jobs handled on /jobs/
 func jobHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Jobs request.\n")
+	log("Jobs request.")
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 	case "GET":
-		fmt.Printf("Method = GET.\n")
+		log("Method = GET.")
 		fmt.Fprint(w, "Listing of Jobs Not Yet implemented.")
 	case "POST":
-		fmt.Printf("Method = POST.\n")
+		log("Method = POST.")
 		s := NewSubmission(r.FormValue("data"))
 		subMap[s.SubId] = s
-		fmt.Printf("Created submission: %v\n", s.SubId)
+		log("Created submission: %v", s.SubId)
 		fmt.Fprintf(w, "{\"SubId\":%v}", s.SubId)
 	case "DEL":
 		fmt.Fprint(w, "Deleting of jobs not yet implemented.")
@@ -62,7 +62,7 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 
 //start routinges to manage nodes as they conect
 func nodeHandler(ws *websocket.Conn) {
-	fmt.Printf("Node connectiong.\n")
+	log("Node connectiong.")
 	monitorNode(NewConnection(ws))
 }
 
@@ -76,7 +76,7 @@ func sendJob(n *Connection, j *Job) {
 	job := *j
 	jobjson, err := json.Marshal(job)
 	if err != nil {
-		fmt.Printf("error json.Marshaling job: %v\n", err)
+		log("error json.Marshaling job: %v", err)
 
 	}
 	msg := clientMsg{Type: START, Body: string(jobjson)}
@@ -101,15 +101,15 @@ func monitorNode(n *Connection) {
 	if msg.Type == HELLO {
 		val, err := strconv.Atoi(msg.Body)
 		if err != nil {
-			fmt.Printf("error parsing client hello: %v\n", err)
+			log("error parsing client hello: %v", err)
 			return
 		}
 		atOnce = val
 	} else {
-		fmt.Printf("Client didn't say hello as first message.\n")
+		log("Client didn't say hello as first message.")
 		return
 	}
-	fmt.Printf("Client says hello and asks for %v jobs.\n", msg.Body)
+	log("Client says hello and asks for %v jobs.", msg.Body)
 
 	//control loop
 	for {
@@ -149,7 +149,7 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 func RunMaster(hostname string, useTls bool) {
 	//start a server
 	subidChan <- 0
-	fmt.Printf("Running as master at %v\n", hostname)
+	log("Running as master at %v", hostname)
 	
 	if useTls {
 		//tls.Listen("tcp", hostname, getTlsConfig()) 
@@ -161,11 +161,11 @@ func RunMaster(hostname string, useTls bool) {
 	if useTls {
 		certf,keyf:=getCertFiles()
 		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
-			fmt.Printf("ListenAndServe Error : %v\n", err)
+			log("ListenAndServe Error : %v", err)
 		}
 	}else{
 		if err := http.ListenAndServe(hostname, nil); err != nil {
-			fmt.Printf("ListenAndServe Error : %v\n", err)
+			log("ListenAndServe Error : %v", err)
 		}
 	
 	}

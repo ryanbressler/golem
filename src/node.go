@@ -47,19 +47,19 @@ func pipeToChan(p *os.File, msgType int, Id int, ch chan clientMsg) {
 }
 
 func startJob(cn *Connection, replyc chan int, jsonjob string) {
-	fmt.Printf("Starting job from json: %v\n", jsonjob)
+	log("Starting job from json: %v", jsonjob)
 	var job Job
 	con := *cn
 	err := json.Unmarshal([]byte(jsonjob), &job)
 	if err != nil {
-		fmt.Printf("error parseing job json: %v\n", err)
+		log("error parseing job json: %v", err)
 	}
 	jobcmd := job.Args[0]
 	//make sure the path to the exec is fully qualified
 	cmd, err := exec.LookPath(jobcmd)
 	if err != nil {
 		con.OutChan <- clientMsg{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
-		fmt.Printf("exec %s: %s\n", jobcmd, err)
+		log("exec %s: %s\n", jobcmd, err)
 		replyc <- -1 * job.JobId
 		return
 	}
@@ -73,17 +73,17 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 	//note that cmd has to be the first thing in the args array
 	c, err := exec.Run(cmd, args, nil, "./", exec.DevNull, exec.Pipe, exec.Pipe)
 	if err != nil {
-		fmt.Printf("%v", err)
+		log("%v", err)
 	}
 	go pipeToChan(c.Stdout, COUT, job.SubId, con.OutChan)
 	go pipeToChan(c.Stderr, CERROR, job.SubId, con.OutChan)
 	//wait for the job to finish
 	w, err := c.Wait(0)
 	if err != nil {
-		fmt.Printf("joberror:%v", err)
+		log("joberror:%v", err)
 	}
 
-	fmt.Printf("Finishing job %v\n", job.JobId)
+	log("Finishing job %v", job.JobId)
 	//send signal back to main
 	if w.Exited() && w.ExitStatus() == 0 {
 		replyc <- job.JobId
@@ -97,12 +97,12 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 
 func RunNode(atOnce int, master string,useTls bool) {
 	running := 0
-	fmt.Printf("Running as %v process node owned by %v\n", atOnce, master)
+	log("Running as %v process node owned by %v", atOnce, master)
 
 
 	ws, err := wsDialToMaster(master, useTls)
 	if err != nil {
-		fmt.Printf("Error connectiong to master:%v\n", err)
+		log("Error connectiong to master:%v", err)
 		return
 	}
 	//ws.Write([]byte("h"))
@@ -117,7 +117,7 @@ func RunNode(atOnce int, master string,useTls bool) {
 
 		select {
 		case rv := <-replyc:
-			fmt.Printf("Got 'done' signal: %v\n", rv)
+			log("Got 'done' signal: %v", rv)
 			mcon.OutChan <- clientMsg{Type: DONE, Body: fmt.Sprintf("%v", rv)}
 			running--
 
