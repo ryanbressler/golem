@@ -71,6 +71,10 @@ func (con Connection) GetMsgs() {
 		case err == os.EOF:
 			log("EOF recieved on websocket.")
 			con.Socket.Close()
+			if isMaster!=true {
+				os.Exit(0)
+			}
+			
 			return //TODO: recover
 		case err != nil:
 			log("error parseing client msg json: %v", err)
