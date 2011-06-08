@@ -25,6 +25,9 @@ import (
 
 //TODO: make these vars not declared when not needed
 
+//
+var isMaster bool
+
 //buffered channel for use as an incrementer to keep track of submissions
 var subidChan = make(chan int, 1)
 
