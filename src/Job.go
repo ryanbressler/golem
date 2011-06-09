@@ -19,7 +19,9 @@
 */
 package main
 
-import ()
+import (
+	"json"
+)
 
 //Internal Job Representation
 type Job struct {
@@ -27,4 +29,15 @@ type Job struct {
 	LineId int
 	JobId  int
 	Args   []string
+}
+
+func NewJob(jsonjob string) *Job {
+	var job Job
+
+	err := json.Unmarshal([]byte(jsonjob), &job)
+	if err != nil {
+		log("error parseing job json: %v", err)
+	}
+	return &job
+
 }

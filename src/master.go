@@ -82,10 +82,10 @@ func nodeHandler(ws *websocket.Conn) {
 //the client. This may deadlock if the client is waiting for messages
 //so the client checks in. TODO: test if the InUse lock is needed.
 func sendJob(n *Connection, j *Job) {
-	
+
 	con := *n
 	job := *j
-	log("Sending job %v to %v",job,con.Socket.LocalAddr().String())
+	log("Sending job %v to %v", job, con.Socket.LocalAddr().String())
 	jobjson, err := json.Marshal(job)
 	if err != nil {
 		log("error json.Marshaling job: %v", err)
@@ -100,7 +100,7 @@ func sendJob(n *Connection, j *Job) {
 //monitors messages and starts jobs as needed
 func monitorNode(n *Connection) {
 	con := *n
-
+	nodename := con.Socket.LocalAddr().String()
 	//number to run at once
 	atOnce := 0
 	//number running
@@ -118,48 +118,59 @@ func monitorNode(n *Connection) {
 		}
 		atOnce = val
 	} else {
-		log("Client didn't say hello as first message.")
+		log("%v didn't say hello as first message.", nodename)
 		return
 	}
-	log("Client says hello and asks for %v jobs.", msg.Body)
+	log("%v says hello and asks for %v jobs.", nodename, msg.Body)
 
 	//control loop
 	for {
 		switch {
 		case running < atOnce:
+			log("Waiting for job or msg from %v", nodename)
 			select {
+
 			case job := <-jobChan:
 				sendJob(&con, job)
 				running++
 			case msg = <-con.InChan:
-				clientMsgSwitch(&msg, &running)
+				log("Got msg from %v", nodename)
+				running = clientMsgSwitch(&msg, running)
 			}
 		default:
+			log("Waiting for msg from %v", nodename)
 			msg = <-con.InChan
-			clientMsgSwitch(&msg, &running)
+			log("Got msg from %v", nodename)
+			running = clientMsgSwitch(&msg, running)
 		}
 
 	}
 
 }
 
-func clientMsgSwitch(msg *clientMsg, running *int) {
+func clientMsgSwitch(msg *clientMsg, running int) int {
 	switch msg.Type {
 	default:
 		//cout <- msg.Body
 	case CHECKIN:
 	case COUT:
+		
 		subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
 		subMap[msg.SubId].CerrFileChan <- msg.Body
 	case JOBFINISHED:
-		*running--
-		log("Got job finished: %v running: %v",msg.Body,running)
-	case JOBERROR:
-		*running--
-		log("Got job error: %v running: %v",msg.Body,running)
+		running--
+		log("Got job finished: %v running: %v", msg.Body, running)
+		subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
 		
+	case JOBERROR:
+		running--
+		log("Got job error: %v running: %v", msg.Body, running)
+		subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
+		
+
 	}
+	return running
 }
 
 
