@@ -127,20 +127,20 @@ func monitorNode(n *Connection) {
 	for {
 		switch {
 		case running < atOnce:
-			log("Waiting for job or msg from %v", nodename)
+			//log("Waiting for job or msg from %v", nodename)
 			select {
 
 			case job := <-jobChan:
 				sendJob(&con, job)
 				running++
 			case msg = <-con.InChan:
-				log("Got msg from %v", nodename)
+				//log("Got msg from %v", nodename)
 				running = clientMsgSwitch(&msg, running)
 			}
 		default:
-			log("Waiting for msg from %v", nodename)
+			//log("Waiting for msg from %v", nodename)
 			msg = <-con.InChan
-			log("Got msg from %v", nodename)
+			//log("Got msg from %v", nodename)
 			running = clientMsgSwitch(&msg, running)
 		}
 
@@ -154,7 +154,7 @@ func clientMsgSwitch(msg *clientMsg, running int) int {
 		//cout <- msg.Body
 	case CHECKIN:
 	case COUT:
-		
+
 		subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
 		subMap[msg.SubId].CerrFileChan <- msg.Body
@@ -162,12 +162,11 @@ func clientMsgSwitch(msg *clientMsg, running int) int {
 		running--
 		log("Got job finished: %v running: %v", msg.Body, running)
 		subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
-		
+
 	case JOBERROR:
 		running--
 		log("Got job error: %v running: %v", msg.Body, running)
 		subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
-		
 
 	}
 	return running
