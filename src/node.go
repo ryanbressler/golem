@@ -22,7 +22,6 @@ package main
 import (
 	"os"
 	"bufio"
-	"json"
 	"fmt"
 	"exec"
 )
@@ -48,19 +47,16 @@ func pipeToChan(p *os.File, msgType int, Id int, ch chan clientMsg) {
 
 func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 	log("Starting job from json: %v", jsonjob)
-	var job Job
 	con := *cn
-	err := json.Unmarshal([]byte(jsonjob), &job)
-	if err != nil {
-		log("error parseing job json: %v", err)
-	}
+
+	job := NewJob(jsonjob)
 	jobcmd := job.Args[0]
 	//make sure the path to the exec is fully qualified
 	cmd, err := exec.LookPath(jobcmd)
 	if err != nil {
 		con.OutChan <- clientMsg{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
 		log("exec %s: %s\n", jobcmd, err)
-		replyc <- &clientMsg{Type: JOBERROR, Body: jsonjob}
+		replyc <- &clientMsg{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 		return
 	}
 
@@ -86,10 +82,10 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 	log("Finishing job %v", job.JobId)
 	//send signal back to main
 	if w.Exited() && w.ExitStatus() == 0 {
-		
-		replyc <- &clientMsg{Type: JOBFINISHED, Body: jsonjob}
+
+		replyc <- &clientMsg{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
 	} else {
-		replyc <- &clientMsg{Type: JOBERROR, Body: jsonjob}
+		replyc <- &clientMsg{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 	}
 
 }

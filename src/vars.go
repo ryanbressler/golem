@@ -32,7 +32,7 @@ var isMaster bool
 var subidChan = make(chan int, 1)
 
 //buffered channel for creating jobs
-var jobChan = make(chan *Job, 1)
+var jobChan = make(chan *Job, 1000)
 
 
 //map of submissions by id
@@ -49,15 +49,15 @@ var hashedpw string
 
 const (
 	//Message type constants
-	HELLO   = 1
-	
-	
+	HELLO = 1
+
+
 	START   = 3
 	CHECKIN = 4
 
 	COUT   = 5
 	CERROR = 6
-	
+
 	JOBFINISHED = 7
-	JOBERROR = 8
+	JOBERROR    = 8
 )

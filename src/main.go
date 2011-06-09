@@ -27,7 +27,7 @@ import (
 //////////////////////////////////////////////
 //main method
 func main() {
-	
+
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	var atOnce int
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")

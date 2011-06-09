@@ -35,6 +35,12 @@ type Submission struct {
 	CoutFileChan chan string
 	CerrFileChan chan string
 	Jobs         []RequestedJob
+	ErrorChan    chan *Job
+	FinishedChan chan *Job
+	TotalJobs    int
+	FinishedJobs int
+	ErroredJobs  int
+	killChan chan int
 }
 
 
@@ -45,11 +51,44 @@ func NewSubmission(reqjson string) *Submission {
 	}
 	subId := <-subidChan
 	subidChan <- subId + 1
-	s := Submission{SubId: subId, CoutFileChan: make(chan string, 10), CerrFileChan: make(chan string, 10), Jobs: rJobs}
+	s := Submission{SubId: subId,
+		CoutFileChan: make(chan string, 10),
+		CerrFileChan: make(chan string, 10),
+		Jobs:         rJobs,
+		ErrorChan:    make(chan *Job, 1),
+		FinishedChan: make(chan *Job, 1),
+		FinishedJobs: 0,
+		ErroredJobs:  0,
+		TotalJobs: 0,
+		killChan: make(chan int, 0),}
+	for _, vals := range s.Jobs {
+		s.TotalJobs += vals.Count
+	}
+	go s.monitorJobs()
 	go s.writeIo()
 	go s.submitJobs()
 	
+	
+	
 	return &s
+
+}
+
+func (s Submission) monitorJobs() {
+	for {
+		select {
+		case <-s.ErrorChan:
+			s.ErroredJobs++
+		case <-s.FinishedChan:
+			s.FinishedJobs++
+		}
+		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, s.FinishedJobs, s.ErroredJobs,s.TotalJobs)
+		if s.TotalJobs == (s.FinishedJobs+s.ErroredJobs) {
+			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, s.FinishedJobs, s.ErroredJobs)
+			s.killChan<-1 //TODO: clean up submission object here
+			return
+		}
+	}
 
 }
 
@@ -61,7 +100,7 @@ func (s Submission) submitJobs() {
 			jobId++
 		}
 	}
-	log("All jobs submitted for %v",s)
+	log("All jobs submitted for SubId: %v", s.SubId)
 }
 
 func (s Submission) writeIo() {
@@ -78,6 +117,8 @@ func (s Submission) writeIo() {
 
 	for {
 		select {
+		case <- s.killChan:
+			return
 		case msg := <-s.CoutFileChan:
 			fmt.Fprint(outf, msg)
 		case errmsg := <-s.CerrFileChan:
