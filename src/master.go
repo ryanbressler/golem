@@ -82,8 +82,10 @@ func nodeHandler(ws *websocket.Conn) {
 //the client. This may deadlock if the client is waiting for messages
 //so the client checks in. TODO: test if the InUse lock is needed.
 func sendJob(n *Connection, j *Job) {
+	
 	con := *n
 	job := *j
+	log("Sending job %v to %v",job,con.Socket.LocalAddr().String())
 	jobjson, err := json.Marshal(job)
 	if err != nil {
 		log("error json.Marshaling job: %v", err)
@@ -150,8 +152,13 @@ func clientMsgSwitch(msg *clientMsg, running *int) {
 		subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
 		subMap[msg.SubId].CerrFileChan <- msg.Body
-	case DONE:
+	case JOBFINISHED:
 		*running--
+		log("Got job finished: %v running: %v",msg.Body,running)
+	case JOBERROR:
+		*running--
+		log("Got job error: %v running: %v",msg.Body,running)
+		
 	}
 }
 
