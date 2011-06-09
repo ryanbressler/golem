@@ -83,7 +83,7 @@ func (s Submission) monitorJobs() {
 		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, s.FinishedJobs, s.ErroredJobs, s.TotalJobs)
 		if s.TotalJobs == (s.FinishedJobs + s.ErroredJobs) {
 			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, s.FinishedJobs, s.ErroredJobs)
-			s.killChan <- 1 //TODO: clean up submission object here
+			//s.killChan <- 1 //TODO: clean up submission object here
 			return
 		}
 	}
@@ -115,8 +115,6 @@ func (s Submission) writeIo() {
 
 	for {
 		select {
-		case <-s.killChan:
-			return
 		case msg := <-s.CoutFileChan:
 			fmt.Fprint(outf, msg)
 		case errmsg := <-s.CerrFileChan:
