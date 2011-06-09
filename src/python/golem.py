@@ -57,7 +57,7 @@ def doPost(url, paramMap):
 
 	print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
 	
-	print "parameters: [" + params + "]"
+	#print "parameters: [" + params + "]"
 	
 	conn=0
 	if u.scheme == "http":

@@ -72,7 +72,7 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 
 //start routinges to manage nodes as they conect
 func nodeHandler(ws *websocket.Conn) {
-	log("Node connectiong.")
+	log("Node connectiong from %v.",ws.LocalAddr().String())
 	monitorNode(NewConnection(ws))
 }
 
@@ -127,7 +127,7 @@ func monitorNode(n *Connection) {
 	for {
 		switch {
 		case running < atOnce:
-			//log("Waiting for job or msg from %v", nodename)
+			log("%v has %v running. Waiting for job or message.", nodename, running)
 			select {
 
 			case job := <-jobChan:
@@ -135,38 +135,41 @@ func monitorNode(n *Connection) {
 				running++
 			case msg = <-con.InChan:
 				//log("Got msg from %v", nodename)
-				running = clientMsgSwitch(&msg, running)
+				running = clientMsgSwitch(nodename,&msg, running)
 			}
 		default:
-			//log("Waiting for msg from %v", nodename)
+			log("%v has %v running. Waiting for message.", nodename, running)
 			msg = <-con.InChan
 			//log("Got msg from %v", nodename)
-			running = clientMsgSwitch(&msg, running)
+			running = clientMsgSwitch(nodename,&msg, running)
 		}
 
 	}
 
 }
 
-func clientMsgSwitch(msg *clientMsg, running int) int {
+func clientMsgSwitch(nodename string, msg *clientMsg, running int) int {
 	switch msg.Type {
 	default:
 		//cout <- msg.Body
 	case CHECKIN:
 	case COUT:
-
 		subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
 		subMap[msg.SubId].CerrFileChan <- msg.Body
 	case JOBFINISHED:
+		
+		log("%v says job finished: %v running: %v", nodename, msg.Body, running)
 		running--
-		log("Got job finished: %v running: %v", msg.Body, running)
 		subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
+		log("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
 
 	case JOBERROR:
-		running--
-		log("Got job error: %v running: %v", msg.Body, running)
+		log("%v says job error: %v running: %v", nodename, msg.Body, running)
+		running--		
 		subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
+		log("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
+
 
 	}
 	return running
