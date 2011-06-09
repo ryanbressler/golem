@@ -46,7 +46,7 @@ func pipeToChan(p *os.File, msgType int, Id int, ch chan clientMsg) {
 
 }
 
-func startJob(cn *Connection, replyc chan int, jsonjob string) {
+func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 	log("Starting job from json: %v", jsonjob)
 	var job Job
 	con := *cn
@@ -60,7 +60,7 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 	if err != nil {
 		con.OutChan <- clientMsg{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
 		log("exec %s: %s\n", jobcmd, err)
-		replyc <- -1 * job.JobId
+		replyc <- &clientMsg{Type: JOBERROR, Body: jsonjob}
 		return
 	}
 
@@ -86,9 +86,10 @@ func startJob(cn *Connection, replyc chan int, jsonjob string) {
 	log("Finishing job %v", job.JobId)
 	//send signal back to main
 	if w.Exited() && w.ExitStatus() == 0 {
-		replyc <- job.JobId
+		
+		replyc <- &clientMsg{Type: JOBFINISHED, Body: jsonjob}
 	} else {
-		replyc <- -1 * job.JobId
+		replyc <- &clientMsg{Type: JOBERROR, Body: jsonjob}
 	}
 
 }
@@ -108,15 +109,15 @@ func RunNode(atOnce int, master string) {
 	//go sendCio(&mcon)
 	mcon.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 
-	replyc := make(chan int)
+	replyc := make(chan *clientMsg)
 
 	//control loop
 	for {
 
 		select {
 		case rv := <-replyc:
-			log("Got 'done' signal: %v", rv)
-			mcon.OutChan <- clientMsg{Type: DONE, Body: fmt.Sprintf("%v", rv)}
+			log("Got 'done' signal: %v", *rv)
+			mcon.OutChan <- *rv
 			running--
 
 		case msg := <-mcon.InChan:

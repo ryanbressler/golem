@@ -61,6 +61,7 @@ func (s Submission) submitJobs() {
 			jobId++
 		}
 	}
+	log("All jobs submitted for %v",s)
 }
 
 func (s Submission) writeIo() {

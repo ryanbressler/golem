@@ -31,7 +31,11 @@ import (
 
 func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Error) {
 
-	origin := "http://localhost/"
+	
+	origin,err := os.Hostname()
+	if err != nil {
+		log("Error getting hostname")
+	}
 	prot := "ws"
 
 	if useTls {

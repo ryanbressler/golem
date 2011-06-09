@@ -50,10 +50,14 @@ var hashedpw string
 const (
 	//Message type constants
 	HELLO   = 1
-	DONE    = 2
+	
+	
 	START   = 3
 	CHECKIN = 4
 
 	COUT   = 5
 	CERROR = 6
+	
+	JOBFINISHED = 7
+	JOBERROR = 8
 )
