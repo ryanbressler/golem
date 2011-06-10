@@ -43,10 +43,10 @@ runlist listofjobs
 """
 
 
-def doPost(url, paramMap):
+def doPost(url, paramMap,password):
 	u = urlparse.urlparse(url)
 	
-	headers = { "Content-type": "application/x-www-form-urlencoded","Accept": "text/plain" }
+	headers = { "Content-type": "application/x-www-form-urlencoded","Accept": "text/plain","Password":password }
 
    
 
@@ -119,9 +119,9 @@ def main():
 	if cmd == "run":
 		
 		jobs = [{"Count":int(sys.argv[cmdi+1]),"Args":sys.argv[cmdi+2:]}]
-		data = {'data': json.dumps(jobs),'password':pwd}
+		data = {'data': json.dumps(jobs),'command':cmd}
 		print "Submiting run request to %s."%(url)
-		doPost(url,data)
+		doPost(url,data,pwd)
 	
 	if cmd == "runlist":
 		fo = open(sys.argv[cmdi+1])
@@ -129,9 +129,16 @@ def main():
 		for line in fo:
 			vals = line.split()
 			jobs.append({"Count":int(vals[0]),"Args":vals[1:]})
-		data = {'data': json.dumps(jobs),'password':pwd}
+		data = {'data': json.dumps(jobs),'command':cmd}
 		print "Submiting run request to %s."%(url)
-		doPost(url,data)
+		doPost(url,data,pwd)
+		
+	if cmd == "runoneach":
+		
+		jobs = [{"Args":sys.argv[cmdi+1:]}]
+		data = {'data': json.dumps(jobs),'command':cmd}
+		print "Submiting run request to %s."%(url)
+		doPost(url,data,pwd)
 		
 	if cmd == "ls":
 		print "not yet implemented"
