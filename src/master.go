@@ -188,9 +188,11 @@ func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
 			case job := <-jobChan:
 				m.sendJob(&con, job)
 				running++
+				log("%v got job, %v running.", nodename, running)
 			case msg = <-con.InChan:
-				//log("Got msg from %v", nodename)
+				log("%v Got msg", nodename)
 				running = m.clientMsgSwitch(nodename, &msg, running)
+				log("%v msg handled", nodename)
 			}
 		default:
 			log("%v has %v running. Waiting for message.", nodename, running)
@@ -212,10 +214,12 @@ func (m *Master) clientMsgSwitch(nodename string, msg *clientMsg, running int) i
 	default:
 		//cout <- msg.Body
 	case CHECKIN:
-		log("%v checks in",nodename) 
+		log("%v checks in", nodename)
 	case COUT:
+		log("%v got cout", nodename)
 		m.subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
+		log("%v got cerror", nodename)
 		m.subMap[msg.SubId].CerrFileChan <- msg.Body
 	case JOBFINISHED:
 
