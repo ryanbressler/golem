@@ -91,12 +91,12 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 
 }
 
-func CheckIn(c * Connection) {
+func CheckIn(c *Connection) {
 	con := *c
 	for {
 		time.Sleep(60000000000)
 		con.OutChan <- clientMsg{Type: CHECKIN}
-		
+
 	}
 }
 
@@ -118,7 +118,7 @@ func RunNode(atOnce int, master string) {
 
 	//control loop
 	for {
-
+		log("Waiting for done or msg.")
 		select {
 		case rv := <-replyc:
 			log("Got 'done' signal: %v", *rv)
@@ -126,6 +126,7 @@ func RunNode(atOnce int, master string) {
 			running--
 
 		case msg := <-mcon.InChan:
+			log("Got master msg")
 			switch msg.Type {
 			case START:
 				go startJob(&mcon, replyc, msg.Body)
