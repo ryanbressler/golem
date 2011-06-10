@@ -45,7 +45,8 @@ func main() {
 
 	switch isMaster {
 	case true:
-		RunMaster(hostname, password)
+		m := NewMaster()
+		m.RunMaster(hostname, password)
 	default:
 		RunNode(atOnce, hostname)
 	}
