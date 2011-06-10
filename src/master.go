@@ -48,6 +48,42 @@ func NewMaster() *Master {
 
 }
 
+func (m *Master) RunMaster(hostname string, password string) {
+	//start a server
+	subidChan <- 0
+	log("Running as master at %v", hostname)
+
+	if password != "" {
+		usepw = true
+		hashedpw = hashPw(password)
+	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { m.rootHandler(w, r) })
+	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { m.jobHandler(w, r) })
+	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.nodeHandler(ws) }))
+
+	if useTls {
+		cfg := getTlsConfig()
+		listener, err := tls.Listen("tcp", hostname, cfg)
+		if err != nil {
+			log("Listen Error : %v", err)
+		}
+
+		if err := http.Serve(listener, nil); err != nil {
+			log("Serve Error : %v", err)
+		}
+		/*certf,keyf:=getCertFiles()
+		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
+			log("ListenAndServe Error : %v", err)
+		}*/
+	} else {
+		if err := http.ListenAndServe(hostname, nil); err != nil {
+			log("ListenAndServe Error : %v", err)
+		}
+
+	}
+}
+
 //web handlers
 //Handler for /. Nothing on root so say hello.
 func (m *Master) rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +212,7 @@ func (m *Master) clientMsgSwitch(nodename string, msg *clientMsg, running int) i
 	default:
 		//cout <- msg.Body
 	case CHECKIN:
+		log("%v checks in",nodename) 
 	case COUT:
 		m.subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
@@ -195,44 +232,4 @@ func (m *Master) clientMsgSwitch(nodename string, msg *clientMsg, running int) i
 
 	}
 	return running
-}
-
-
-func (m *Master) RunMaster(hostname string, password string) {
-	//start a server
-	subidChan <- 0
-	log("Running as master at %v", hostname)
-
-	if password != "" {
-		usepw = true
-		hashedpw = hashPw(password)
-	}
-
-	if useTls {
-		//tls.Listen("tcp", hostname, getTlsConfig()) 
-	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { m.rootHandler(w, r) })
-	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { m.jobHandler(w, r) })
-	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.nodeHandler(ws) }))
-	if useTls {
-		cfg := getTlsConfig()
-		listener, err := tls.Listen("tcp", hostname, cfg)
-		if err != nil {
-			log("Listen Error : %v", err)
-		}
-
-		if err := http.Serve(listener, nil); err != nil {
-			log("Serve Error : %v", err)
-		}
-		/*certf,keyf:=getCertFiles()
-		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
-			log("ListenAndServe Error : %v", err)
-		}*/
-	} else {
-		if err := http.ListenAndServe(hostname, nil); err != nil {
-			log("ListenAndServe Error : %v", err)
-		}
-
-	}
 }
