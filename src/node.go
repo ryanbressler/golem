@@ -24,6 +24,7 @@ import (
 	"bufio"
 	"fmt"
 	"exec"
+	"time"
 )
 
 
@@ -90,6 +91,14 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 
 }
 
+func CheckIn(c * Connection) {
+	con := *c
+	for {
+		time.Sleep(60000000000)
+		con.OutChan <- clientMsg{Type: CHECKIN}
+		
+	}
+}
 
 func RunNode(atOnce int, master string) {
 	running := 0
@@ -104,7 +113,7 @@ func RunNode(atOnce int, master string) {
 	mcon := *NewConnection(ws)
 	//go sendCio(&mcon)
 	mcon.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
-
+	go CheckIn(&mcon)
 	replyc := make(chan *clientMsg)
 
 	//control loop
