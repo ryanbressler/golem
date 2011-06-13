@@ -26,6 +26,7 @@ import (
 	"json"
 	"strconv"
 	"crypto/tls"
+	"strings"
 )
 
 
@@ -33,24 +34,22 @@ import (
 //master
 
 type Master struct {
-	subMap        map[int]*Submission //buffered channel for creating jobs
-	jobChan       chan *Job           //buffered channel for creating jobs
-	subidChan     chan int            //buffered channel for use as an incrementer to keep track of submissions
+	subMap        map[string]*Submission //buffered channel for creating jobs
+	jobChan       chan *Job              //buffered channel for creating jobs
+	subidChan     chan int               //buffered channel for use as an incrementer to keep track of submissions
 	brodcastChans []chan *clientMsg
 }
 
 func NewMaster() *Master {
-	m := Master{subMap: map[int]*Submission{},
+	m := Master{
+		subMap: map[string]*Submission{},
 		jobChan:       make(chan *Job, 0),
-		subidChan:     make(chan int, 1),
 		brodcastChans: make([]chan *clientMsg, 0, 0)}
 	return &m
 
 }
 
 func (m *Master) RunMaster(hostname string, password string) {
-	//start a server
-	subidChan <- 0
 	log("Running as master at %v", hostname)
 
 	if password != "" {
@@ -99,9 +98,32 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 	case "GET":
-		log("Method = GET.")
-		fmt.Fprint(w, "Listing of Jobs Not Yet implemented.")
+		vlog("Method = GET.")
+		spliturl := strings.Split(r.URL.Path,"/",-1)
+		nsplit := len(spliturl)
+		log("path: %v, nsplit: %v %v %v %v",r.URL.Path, nsplit,spliturl[0],spliturl[1],spliturl[2])
+		switch {
+		case nsplit == 3 && spliturl[2]=="":
+			jobdescs := make([]string, 0)
+			for _, s := range m.subMap {
+				jobdescs = append(jobdescs, s.DescribeSelfJson())
+				fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
+			}
+		case nsplit == 3 :
+			subid := spliturl[2]
+			_,isin := m.subMap[subid]
+			if isin {
+				fmt.Fprintf(w, "%v", m.subMap[subid].DescribeSelfJson())
+			} else {
+				log("Request for non submission: %v", subid)
+			}
+		case nsplit == 4 :
+			fmt.Fprint(w, "Verbs of jobs not yet implemented.")
+		}
+
+		
 	case "POST":
+		vlog("Method = POST.")
 		if usepw {
 			pw := hashPw(r.Header.Get("Password"))
 			log("Verifying password.")
@@ -111,13 +133,19 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			log("Password verified")
 		}
-		log("Method = POST.")
-		s := NewSubmission(r.FormValue("data"))
+		
+		reqjson := r.FormValue("data")
+		rJobs := make([]RequestedJob, 0, 100)
+		if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
+			fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
+			log("json parse error: %v\n json: %v", err,reqjson)
+			return
+		}
+		s := NewSubmission(&rJobs, m.jobChan)
 		m.subMap[s.SubId] = s
 		log("Created submission: %v", s.SubId)
-		fmt.Fprintf(w, "{\"SubId\":%v}", s.SubId)
-	case "DEL":
-		fmt.Fprint(w, "Deleting of jobs not yet implemented.")
+		fmt.Fprintf(w, "%v", s.DescribeSelfJson())
+		
 	}
 }
 
@@ -181,21 +209,21 @@ func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
 	for {
 		switch {
 		case running < atOnce:
-			log("%v has %v running. Waiting for job or message.", nodename, running)
+			vlog("%v has %v running. Waiting for job or message.", nodename, running)
 			select {
 			case bcMsg := <-bcChan:
 				con.OutChan <- *bcMsg
-			case job := <-jobChan:
+			case job := <-m.jobChan:
 				m.sendJob(&con, job)
 				running++
-				log("%v got job, %v running.", nodename, running)
+				vlog("%v got job, %v running.", nodename, running)
 			case msg = <-con.InChan:
-				log("%v Got msg", nodename)
+				vlog("%v Got msg", nodename)
 				running = m.clientMsgSwitch(nodename, &msg, running)
-				log("%v msg handled", nodename)
+				vlog("%v msg handled", nodename)
 			}
 		default:
-			log("%v has %v running. Waiting for message.", nodename, running)
+			vlog("%v has %v running. Waiting for message.", nodename, running)
 			select {
 			case bcMsg := <-bcChan:
 				con.OutChan <- *bcMsg
@@ -214,25 +242,25 @@ func (m *Master) clientMsgSwitch(nodename string, msg *clientMsg, running int) i
 	default:
 		//cout <- msg.Body
 	case CHECKIN:
-		log("%v checks in", nodename)
+		vlog("%v checks in", nodename)
 	case COUT:
-		log("%v got cout", nodename)
+		vlog("%v got cout", nodename)
 		m.subMap[msg.SubId].CoutFileChan <- msg.Body
 	case CERROR:
-		log("%v got cerror", nodename)
+		vlog("%v got cerror", nodename)
 		m.subMap[msg.SubId].CerrFileChan <- msg.Body
 	case JOBFINISHED:
 
 		log("%v says job finished: %v running: %v", nodename, msg.Body, running)
 		running--
 		m.subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
-		log("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
+		vlog("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
 
 	case JOBERROR:
 		log("%v says job error: %v running: %v", nodename, msg.Body, running)
 		running--
 		m.subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
-		log("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
+		vlog("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
 
 	}
 	return running

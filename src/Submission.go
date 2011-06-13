@@ -20,9 +20,9 @@
 package main
 
 import (
-	"json"
 	"fmt"
 	"os"
+	"crypto/rand"
 )
 
 
@@ -31,7 +31,8 @@ import (
 /// TODO: Kill submissions once they finish.
 
 type Submission struct {
-	SubId        int
+	Uri          string
+	SubId        string
 	CoutFileChan chan string
 	CerrFileChan chan string
 	Jobs         []RequestedJob
@@ -44,16 +45,21 @@ type Submission struct {
 }
 
 
-func NewSubmission(reqjson string) *Submission {
-	rJobs := make([]RequestedJob, 0, 100)
-	if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
-		log("%v", err)
+func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
+	rJobs := *js
+	//subId := <-subidChan
+	//subidChan <- subId + 1
+	subId := make([]byte, 16)
+	_, err := rand.Read(subId)
+	if err != nil {
+		log("Error generating rand subId: %v", err)
 	}
-	subId := <-subidChan
-	subidChan <- subId + 1
-	s := Submission{SubId: subId,
-		CoutFileChan: make(chan string, 10),
-		CerrFileChan: make(chan string, 10),
+	subIds := fmt.Sprintf("%x", subId)
+	s := Submission{
+		Uri:          fmt.Sprintf("/jobs/%v", subIds),
+		SubId:        subIds,
+		CoutFileChan: make(chan string, iobuffersize),
+		CerrFileChan: make(chan string, iobuffersize),
 		Jobs:         rJobs,
 		ErrorChan:    make(chan *Job, 1),
 		FinishedChan: make(chan *Job, 1),
@@ -66,10 +72,15 @@ func NewSubmission(reqjson string) *Submission {
 	}
 	go s.monitorJobs()
 	go s.writeIo()
-	go s.submitJobs()
+	go s.submitJobs(jobChan)
 
 	return &s
 
+}
+
+func (s * Submission) DescribeSelfJson() string {
+	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, s.FinishedJobs, s.ErroredJobs, s.TotalJobs)
+	return fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v}", s.Uri, s.SubId, s.TotalJobs, s.FinishedJobs, s.ErroredJobs)
 }
 
 func (s Submission) monitorJobs() {
@@ -90,7 +101,7 @@ func (s Submission) monitorJobs() {
 
 }
 
-func (s Submission) submitJobs() {
+func (s Submission) submitJobs(jobChan chan *Job) {
 	jobId := 0
 	for lineId, vals := range s.Jobs {
 		for i := 0; i < vals.Count; i++ {
