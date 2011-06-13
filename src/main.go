@@ -37,7 +37,8 @@ func main() {
 	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
 	var password string
 	flag.StringVar(&password, "p", "", "The password to require with job submission.")
-	flag.BoolVar(&verbose, "-v", false, "Use verbose logging.")
+	flag.BoolVar(&verbose, "v", false, "Use verbose logging.")
+	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
 
 	flag.Parse()
 	if unsecure {

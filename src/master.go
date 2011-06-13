@@ -42,7 +42,7 @@ type Master struct {
 
 func NewMaster() *Master {
 	m := Master{
-		subMap: map[string]*Submission{},
+		subMap:        map[string]*Submission{},
 		jobChan:       make(chan *Job, 0),
 		brodcastChans: make([]chan *clientMsg, 0, 0)}
 	return &m
@@ -99,11 +99,11 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		vlog("Method = GET.")
-		spliturl := strings.Split(r.URL.Path,"/",-1)
+		spliturl := strings.Split(r.URL.Path, "/", -1)
 		nsplit := len(spliturl)
-		vlog("path: %v, nsplit: %v %v %v %v",r.URL.Path, nsplit,spliturl[0],spliturl[1],spliturl[2])
+		vlog("path: %v, nsplit: %v %v %v %v", r.URL.Path, nsplit, spliturl[0], spliturl[1], spliturl[2])
 		switch {
-		case nsplit == 3 && spliturl[2]=="":
+		case nsplit == 3 && spliturl[2] == "":
 			jobdescs := make([]string, 0)
 			for _, s := range m.subMap {
 				jobdescs = append(jobdescs, s.DescribeSelfJson())
@@ -111,17 +111,16 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
 		case nsplit == 3:
 			subid := spliturl[2]
-			_,isin := m.subMap[subid]
+			_, isin := m.subMap[subid]
 			if isin {
 				fmt.Fprintf(w, "%v", m.subMap[subid].DescribeSelfJson())
 			} else {
 				log("Request for non submission: %v", subid)
 			}
-		case nsplit == 4 :
+		case nsplit == 4:
 			fmt.Fprint(w, "Verbs of jobs not yet implemented.")
 		}
 
-		
 	case "POST":
 		vlog("Method = POST.")
 		if usepw {
@@ -133,19 +132,19 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			log("Password verified")
 		}
-		
+
 		reqjson := r.FormValue("data")
 		rJobs := make([]RequestedJob, 0, 100)
 		if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
 			fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
-			log("json parse error: %v\n json: %v", err,reqjson)
+			log("json parse error: %v\n json: %v", err, reqjson)
 			return
 		}
 		s := NewSubmission(&rJobs, m.jobChan)
 		m.subMap[s.SubId] = s
 		log("Created submission: %v", s.SubId)
 		fmt.Fprintf(w, "%v", s.DescribeSelfJson())
-		
+
 	}
 }
 
