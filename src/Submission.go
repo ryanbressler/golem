@@ -31,17 +31,17 @@ import (
 /// TODO: Kill submissions once they finish.
 
 type Submission struct {
-	Uri          string
-	SubId        string
-	CoutFileChan chan string
-	CerrFileChan chan string
-	Jobs         []RequestedJob
-	ErrorChan    chan *Job
-	FinishedChan chan *Job
+	Uri              string
+	SubId            string
+	CoutFileChan     chan string
+	CerrFileChan     chan string
+	Jobs             []RequestedJob
+	ErrorChan        chan *Job
+	FinishedChan     chan *Job
 	TotalJobsChan    chan int
 	FinishedJobsChan chan int
 	ErroredJobsChan  chan int
-	killChan     chan int
+	killChan         chan int
 }
 
 
@@ -56,24 +56,24 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 	}
 	subIds := fmt.Sprintf("%x", subId)
 	s := Submission{
-		Uri:          fmt.Sprintf("/jobs/%v", subIds),
-		SubId:        subIds,
-		CoutFileChan: make(chan string, iobuffersize),
-		CerrFileChan: make(chan string, iobuffersize),
-		Jobs:         rJobs,
-		ErrorChan:    make(chan *Job, 1),
-		FinishedChan: make(chan *Job, 1),
+		Uri:              fmt.Sprintf("/jobs/%v", subIds),
+		SubId:            subIds,
+		CoutFileChan:     make(chan string, iobuffersize),
+		CerrFileChan:     make(chan string, iobuffersize),
+		Jobs:             rJobs,
+		ErrorChan:        make(chan *Job, 1),
+		FinishedChan:     make(chan *Job, 1),
 		FinishedJobsChan: make(chan int, 1),
 		ErroredJobsChan:  make(chan int, 1),
 		TotalJobsChan:    make(chan int, 1),
-		killChan:     make(chan int, 0)}
-	totalJobs:=0
+		killChan:         make(chan int, 0)}
+	totalJobs := 0
 	for _, vals := range s.Jobs {
 		totalJobs += vals.Count
 	}
-	s.TotalJobsChan<-totalJobs
-	s.FinishedJobsChan<-0
-	s.ErroredJobsChan<-0
+	s.TotalJobsChan <- totalJobs
+	s.FinishedJobsChan <- 0
+	s.ErroredJobsChan <- 0
 	go s.monitorJobs()
 	go s.writeIo()
 	go s.submitJobs(jobChan)
@@ -82,47 +82,47 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 
 }
 
-func (s * Submission) DescribeSelfJson() string {
-	TotalJobs:=<-s.TotalJobsChan
-	FinishedJobs:=<-s.FinishedJobsChan
-	ErroredJobs:=<-s.ErroredJobsChan
+func (s *Submission) DescribeSelfJson() string {
+	TotalJobs := <-s.TotalJobsChan
+	FinishedJobs := <-s.FinishedJobsChan
+	ErroredJobs := <-s.ErroredJobsChan
 	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs)
-	s.TotalJobsChan<-TotalJobs
-	s.FinishedJobsChan<-FinishedJobs
-	s.ErroredJobsChan<-ErroredJobs
+	s.TotalJobsChan <- TotalJobs
+	s.FinishedJobsChan <- FinishedJobs
+	s.ErroredJobsChan <- ErroredJobs
 	return rv
 }
 
 func (s Submission) monitorJobs() {
 	for {
-		
+
 		select {
 		case <-s.ErrorChan:
-			ErroredJobs:=<-s.ErroredJobsChan
+			ErroredJobs := <-s.ErroredJobsChan
 			ErroredJobs++
-			s.ErroredJobsChan<-ErroredJobs
+			s.ErroredJobsChan <- ErroredJobs
 		case <-s.FinishedChan:
-			FinishedJobs:=<-s.FinishedJobsChan
+			FinishedJobs := <-s.FinishedJobsChan
 			FinishedJobs++
-			s.FinishedJobsChan<-FinishedJobs
+			s.FinishedJobsChan <- FinishedJobs
 		}
-		TotalJobs:=<-s.TotalJobsChan
-		FinishedJobs:=<-s.FinishedJobsChan
-		ErroredJobs:=<-s.ErroredJobsChan
-		
+		TotalJobs := <-s.TotalJobsChan
+		FinishedJobs := <-s.FinishedJobsChan
+		ErroredJobs := <-s.ErroredJobsChan
+
 		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 		if TotalJobs == (FinishedJobs + ErroredJobs) {
 			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, FinishedJobs, ErroredJobs)
 			//s.killChan <- 1 //TODO: clean up submission object here
-			s.TotalJobsChan<-TotalJobs
-			s.FinishedJobsChan<-FinishedJobs
-			s.ErroredJobsChan<-ErroredJobs
+			s.TotalJobsChan <- TotalJobs
+			s.FinishedJobsChan <- FinishedJobs
+			s.ErroredJobsChan <- ErroredJobs
 			return
 		}
-		s.TotalJobsChan<-TotalJobs
-		s.FinishedJobsChan<-FinishedJobs
-		s.ErroredJobsChan<-ErroredJobs
+		s.TotalJobsChan <- TotalJobs
+		s.FinishedJobsChan <- FinishedJobs
+		s.ErroredJobsChan <- ErroredJobs
 	}
 
 }
