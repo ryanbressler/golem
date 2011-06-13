@@ -24,6 +24,6 @@ import ()
 //messages sent between server and client
 type clientMsg struct {
 	Type  int
-	SubId int
+	SubId string
 	Body  string
 }

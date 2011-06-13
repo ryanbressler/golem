@@ -32,7 +32,7 @@ import (
 //node 
 
 
-func pipeToChan(p *os.File, msgType int, Id int, ch chan clientMsg) {
+func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
 	bp := bufio.NewReader(p)
 
 	for {

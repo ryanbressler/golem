@@ -25,7 +25,7 @@ import (
 
 //Internal Job Representation
 type Job struct {
-	SubId  int
+	SubId  string
 	LineId int
 	JobId  int
 	Args   []string

@@ -23,20 +23,13 @@ import (
 	"crypto/sha256"
 )
 
-//TODO: make these vars not declared when not needed
+
+var verbose = false
+var iobuffersize = 1000
 
 //
 var isMaster bool
 
-//buffered channel for use as an incrementer to keep track of submissions
-var subidChan = make(chan int, 1)
-
-//buffered channel for creating jobs
-var jobChan = make(chan *Job, 0)
-
-
-//map of submissions by id
-var subMap = map[int]*Submission{}
 
 //tls configurability
 var useTls bool = true

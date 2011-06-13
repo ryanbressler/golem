@@ -30,3 +30,9 @@ func log(format string, a ...interface{}) {
 	fmt.Printf(format, a...)
 
 }
+
+func vlog(format string, a ...interface{}) {
+	if verbose {
+		vlog(format, a...)
+	}
+}
