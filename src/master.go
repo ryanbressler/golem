@@ -101,15 +101,15 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 		vlog("Method = GET.")
 		spliturl := strings.Split(r.URL.Path,"/",-1)
 		nsplit := len(spliturl)
-		log("path: %v, nsplit: %v %v %v %v",r.URL.Path, nsplit,spliturl[0],spliturl[1],spliturl[2])
+		vlog("path: %v, nsplit: %v %v %v %v",r.URL.Path, nsplit,spliturl[0],spliturl[1],spliturl[2])
 		switch {
 		case nsplit == 3 && spliturl[2]=="":
 			jobdescs := make([]string, 0)
 			for _, s := range m.subMap {
 				jobdescs = append(jobdescs, s.DescribeSelfJson())
-				fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
 			}
-		case nsplit == 3 :
+			fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
+		case nsplit == 3:
 			subid := spliturl[2]
 			_,isin := m.subMap[subid]
 			if isin {
