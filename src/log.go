@@ -33,6 +33,6 @@ func log(format string, a ...interface{}) {
 
 func vlog(format string, a ...interface{}) {
 	if verbose {
-		vlog(format, a...)
+		log(format, a...)
 	}
 }

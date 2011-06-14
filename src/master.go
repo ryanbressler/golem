@@ -98,7 +98,7 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
 	case "GET":
-		vlog("Method = GET.")
+		log("Method = GET.")
 		spliturl := strings.Split(r.URL.Path, "/", -1)
 		nsplit := len(spliturl)
 		vlog("path: %v, nsplit: %v %v %v %v", r.URL.Path, nsplit, spliturl[0], spliturl[1], spliturl[2])
@@ -122,7 +122,7 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "POST":
-		vlog("Method = POST.")
+		log("Method = POST.")
 		if usepw {
 			pw := hashPw(r.Header.Get("Password"))
 			log("Verifying password.")
@@ -133,7 +133,9 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 			log("Password verified")
 		}
 
+		vlog("getting json from form")
 		reqjson := r.FormValue("data")
+		vlog("json is : %v", reqjson)
 		rJobs := make([]RequestedJob, 0, 100)
 		if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
 			fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
