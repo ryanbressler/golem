@@ -66,10 +66,12 @@ func (m *Master) RunMaster(hostname string, password string) {
 		listener, err := tls.Listen("tcp", hostname, cfg)
 		if err != nil {
 			log("Listen Error : %v", err)
+			return
 		}
 
 		if err := http.Serve(listener, nil); err != nil {
 			log("Serve Error : %v", err)
+			return
 		}
 		/*certf,keyf:=getCertFiles()
 		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
@@ -78,6 +80,7 @@ func (m *Master) RunMaster(hostname string, password string) {
 	} else {
 		if err := http.ListenAndServe(hostname, nil); err != nil {
 			log("ListenAndServe Error : %v", err)
+			return
 		}
 
 	}
