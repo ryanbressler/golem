@@ -131,6 +131,8 @@ func RunNode(atOnce int, master string) {
 			case START:
 				go startJob(&mcon, replyc, msg.Body)
 				running++
+			case STOP:
+				log("Got stop message: %v", msg)
 			}
 		}
 

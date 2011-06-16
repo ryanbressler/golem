@@ -76,7 +76,9 @@ func (m *Master) rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hello. This is a golem master node:\n http://code.google.com/p/golem/")
 }
 
+
 //restfull api for managing jobs handled on /jobs/
+//TODO: refactor the whole jobs rest interface
 func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("Jobs request.")
 
@@ -94,16 +96,34 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 				jobdescs = append(jobdescs, s.DescribeSelfJson())
 			}
 			fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
-		case nsplit == 3:
+		case nsplit == 3 || (nsplit == 4 && spliturl[3] == ""):
 			subid := spliturl[2]
 			_, isin := m.subMap[subid]
 			if isin {
 				fmt.Fprintf(w, "%v", m.subMap[subid].DescribeSelfJson())
 			} else {
+				fmt.Fprintf(w, "null")
 				log("Request for non submission: %v", subid)
 			}
-		case nsplit == 4:
-			fmt.Fprint(w, "Verbs of jobs not yet implemented.")
+		case nsplit == 4 && spliturl[3] != "": //TODO: combine this with above and refactor out verb logic
+			subid := spliturl[2]
+			verb := spliturl[3]
+			switch verb {
+			case "stop":
+				_, isin := m.subMap[subid]
+				if isin {
+					m.subMap[subid].Stop()
+					log("Broadcasting stop message for SubId: %v", subid)
+					m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
+					fmt.Fprintf(w, "true")
+				} else {
+
+					fmt.Fprintf(w, "false")
+					log("stop Request for non submission: %v", subid)
+				}
+			default:
+				fmt.Fprint(w, "{\"Error\":\"Verb '%s' not impelmented.\"}")
+			}
 		}
 
 	case "POST":
@@ -152,6 +172,12 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (m *Master) Broadcast(msg *clientMsg) {
+	for _, chn := range m.brodcastChans {
+		chn <- msg
+	}
+
+}
 
 //start routinges to manage nodes as they conect
 func (m *Master) nodeHandler(ws *websocket.Conn) {

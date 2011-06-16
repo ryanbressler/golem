@@ -41,7 +41,7 @@ type Submission struct {
 	TotalJobsChan    chan int
 	FinishedJobsChan chan int
 	ErroredJobsChan  chan int
-	killChan         chan int
+	stopChan         chan int
 }
 
 
@@ -66,7 +66,7 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 		FinishedJobsChan: make(chan int, 1),
 		ErroredJobsChan:  make(chan int, 1),
 		TotalJobsChan:    make(chan int, 1),
-		killChan:         make(chan int, 0)}
+		stopChan:         make(chan int, 1)}
 	totalJobs := 0
 	for _, vals := range s.Jobs {
 		totalJobs += vals.Count
@@ -92,6 +92,13 @@ func (s *Submission) DescribeSelfJson() string {
 	s.FinishedJobsChan <- FinishedJobs
 	s.ErroredJobsChan <- ErroredJobs
 	return rv
+}
+
+func (s *Submission) Stop() {
+
+	s.stopChan <- 1
+	s.stopChan <- 1 //second time to make sure submitJobs takes the 1 out of the chan
+	log("Stoped submission for SubId: %v", s.SubId)
 }
 
 func (s Submission) monitorJobs() {
@@ -131,8 +138,12 @@ func (s Submission) submitJobs(jobChan chan *Job) {
 	jobId := 0
 	for lineId, vals := range s.Jobs {
 		for i := 0; i < vals.Count; i++ {
-			jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}
-			jobId++
+			select {
+			case jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}:
+				jobId++
+			case <-s.stopChan:
+				return //TODO: add indication that we stopped
+			}
 		}
 	}
 	log("All jobs submitted for SubId: %v", s.SubId)
