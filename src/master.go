@@ -137,14 +137,32 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		vlog("getting json from form")
-		reqjson := r.FormValue("data")
-		vlog("json is : %v", reqjson)
+		mpreader, err := r.MultipartReader() 
+		if err!= nil{
+			log("Error getting multipart reader: %v", err)
+		}
+		
+		frm, err := mpreader.ReadForm(10000)
+		if err!= nil{
+			log("Error reading multipart form: %v", err)
+		}
+		cmd:=frm.Value["command"][0]
+		log("command: %s",cmd)
+		
 		rJobs := make([]RequestedJob, 0, 100)
-		if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
+		jsonfile,err :=frm.File["jsonfile"][0].Open() 
+		if err!= nil{
+			log("Error opening file from request: %v", err)
+		}
+		dec:=json.NewDecoder(jsonfile)
+		if err := dec.Decode(&rJobs); err != nil {
 			fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
-			log("json parse error: %v\n json: %v", err, reqjson)
+			log("json parse error: %v\n json: %v", err)
 			return
 		}
+		jsonfile.Close()
+
+		
 		s := NewSubmission(&rJobs, m.jobChan)
 		m.subMap[s.SubId] = s
 		log("Created submission: %v", s.SubId)
