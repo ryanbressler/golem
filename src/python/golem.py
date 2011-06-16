@@ -43,38 +43,50 @@ runlist listofjobs
 """
 
 
-def doPost(url, paramMap,password):
+def encode_multipart_formdata(data, filebody):
+    BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
+    CRLF = '\r\n'
+    L = []
+    for key, value in data.iteritems():
+        L.append('--' + BOUNDARY)
+        L.append('Content-Disposition: form-data; name="%s"' % key)
+        L.append('')
+        L.append(value)
+
+	L.append('--' + BOUNDARY)
+	L.append('Content-Disposition: form-data; name="jsonfile"; filename="data.json"')
+	L.append('Content-Type: text/plain')
+	L.append('')
+	L.append(filebody)
+    L.append('--' + BOUNDARY + '--')
+    L.append('')
+    body = CRLF.join(L)
+    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+    return content_type, body
+
+def doPost(url, paramMap, jsondata,password):
 	u = urlparse.urlparse(url)
 	
-	headers = { "Content-type": "application/x-www-form-urlencoded","Accept": "text/plain","Password":password }
+	content_type, body =encode_multipart_formdata(paramMap,jsondata)
+	headers = { "Content-type": content_type,
+		'content-length':str(len(body)),
+		"Accept": "text/plain",
+		"Password":password }
 
-   
-
-	#params = "empty"
-	#if paramMap:
-	
-	params = urllib.urlencode(paramMap)
 
 	print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
 	
-	#print "parameters: [" + params + "]"
+
 	
 	conn=0
 	if u.scheme == "http":
 		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
-		#conn = httplib.HTTPSConnection(u.hostname,u.port,"/Users/rbressle/.golem/key.pem","/Users/rbressle/.golem/certificate.pem")#,None,2,("localhost","8080"))
-	# 	keyf = open(os.path.expandvars("$HOME/.golem/key.pem"))
-# 		key = parsePEMKey(keyf.read())
-# 		keyf.close()
-# 		certf = open(os.path.expandvars("$HOME/.golem/certificate.pem"))
-# 		cert = X509()
-# 		cert.parse(certf.read())
-# 		certf.close()
+
 		conn = HTTPTLSConnection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
 	
 		
-	conn.request("POST", u.path, params, headers)
+	conn.request("POST", u.path, body, headers)
 
 	resp = conn.getresponse()
 	if resp.status == 200:
@@ -119,9 +131,10 @@ def main():
 	if cmd == "run":
 		
 		jobs = [{"Count":int(sys.argv[cmdi+1]),"Args":sys.argv[cmdi+2:]}]
-		data = {'data': json.dumps(jobs),'command':cmd}
+		jobs = json.dumps(jobs)
+		data = {'command':cmd}
 		print "Submiting run request to %s."%(url)
-		doPost(url,data,pwd)
+		doPost(url,data,jobs,pwd)
 	
 	if cmd == "runlist":
 		fo = open(sys.argv[cmdi+1])
@@ -129,16 +142,18 @@ def main():
 		for line in fo:
 			vals = line.split()
 			jobs.append({"Count":int(vals[0]),"Args":vals[1:]})
-		data = {'data': json.dumps(jobs),'command':cmd}
+		jobs = json.dumps(jobs)
+		data = {'command':cmd}
 		print "Submiting run request to %s."%(url)
-		doPost(url,data,pwd)
+		doPost(url,data,jobs,pwd)
 		
 	if cmd == "runoneach":
 		
 		jobs = [{"Args":sys.argv[cmdi+1:]}]
-		data = {'data': json.dumps(jobs),'command':cmd}
+		jobs = json.dumps(jobs)
+		data = {'command':cmd}
 		print "Submiting run request to %s."%(url)
-		doPost(url,data,pwd)
+		doPost(url,data,jobs,pwd)
 		
 	if cmd == "ls":
 		print "not yet implemented"
