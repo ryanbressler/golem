@@ -27,15 +27,16 @@ import (
 //////////////////////////////////////////////
 //main method
 func main() {
-
-	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	var atOnce int
-	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
 	var hostname string
-	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
 	var unsecure bool
-	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
 	var password string
+	
+	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
+	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
+	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
+	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
+	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
 	flag.StringVar(&password, "p", "", "The password to require with job submission.")
 	flag.BoolVar(&verbose, "v", false, "Use verbose logging.")
 	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
@@ -45,12 +46,13 @@ func main() {
 		useTls = false
 	}
 
-	switch isMaster {
-	case true:
+	if isMaster {
 		m := NewMaster()
 		m.RunMaster(hostname, password)
-	default:
+	} else if isScribe {
+		s := NewScribe()
+		s.RunScribe(hostname, password)
+	} else {
 		RunNode(atOnce, hostname)
 	}
-
 }

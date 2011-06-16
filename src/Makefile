@@ -11,6 +11,7 @@ GOFILES=\
 	Connection.go\
 	Submission.go\
 	master.go\
+	scribe.go\
 	node.go\
 	tls.go\
 	main.go\
