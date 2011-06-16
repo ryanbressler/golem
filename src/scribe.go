@@ -22,7 +22,6 @@ package main
 import (
 	"http"
 	"fmt"
-	"crypto/tls"
 	"strings"
 )
 
@@ -56,28 +55,14 @@ func (s *Scribe) RunScribe(hostname string, password string) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { s.rootHandler(w, r) })
 	http.HandleFunc("/jobs", func(w http.ResponseWriter, r *http.Request) { s.jobsHandler(w, r) })
 	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { s.jobsHandler(w, r) })
-//	http.HandleFunc("/jobs/*", func(w http.ResponseWriter, r *http.Request) { s.jobHandler(w, r) })
-//	http.HandleFunc("/jobs/*/stop", func(w http.ResponseWriter, r *http.Request) { s.stopJobHandler(w, r) })
-//	http.HandleFunc("/jobs/*/delete", func(w http.ResponseWriter, r *http.Request) { s.deleteJobHandler(w, r) })
-	
-	// TODO : Move to tls.go
-	if useTls {
-		cfg := getTlsConfig()
-		listener, err := tls.Listen("tcp", hostname, cfg)
-		if err != nil {
-			log("Listen Error : %v", err)
-			return
-		}
+	//	http.HandleFunc("/jobs/*", func(w http.ResponseWriter, r *http.Request) { s.jobHandler(w, r) })
+	//	http.HandleFunc("/jobs/*/stop", func(w http.ResponseWriter, r *http.Request) { s.stopJobHandler(w, r) })
+	//	http.HandleFunc("/jobs/*/delete", func(w http.ResponseWriter, r *http.Request) { s.deleteJobHandler(w, r) })
 
-		if err := http.Serve(listener, nil); err != nil {
-			log("Serve Error : %v", err)
-			return
-		}
-	} else {
-		if err := http.ListenAndServe(hostname, nil); err != nil {
-			log("ListenAndServe Error : %v", err)
-			return
-		}
+	//relys on global useTls being set
+	if err := ListenAndServeTLSorNot(hostname, nil); err != nil {
+		log("ListenAndServeTLSorNot Error : %v", err)
+		return
 	}
 }
 
@@ -95,38 +80,38 @@ func (m *Scribe) jobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	switch r.Method {
-		case "GET":
-			log("Method = GET.")
-			spliturl := strings.Split(r.URL.Path, "/", -1)
-			nsplit := len(spliturl)
-			vlog("path: %v, nsplit: %v %v %v %v", r.URL.Path, nsplit, spliturl[0], spliturl[1], spliturl[2])
-			switch {
-				case nsplit == 3 && spliturl[2] == "":
-					vlog("jobs")					
-				case nsplit == 3:
-					subid := spliturl[2]
-					vlog("job: %v", subid)
-				case nsplit == 4:
-				    subid := spliturl[3]
-					vlog("job verbs: %v", subid)
+	case "GET":
+		log("Method = GET.")
+		spliturl := strings.Split(r.URL.Path, "/", -1)
+		nsplit := len(spliturl)
+		vlog("path: %v, nsplit: %v %v %v %v", r.URL.Path, nsplit, spliturl[0], spliturl[1], spliturl[2])
+		switch {
+		case nsplit == 3 && spliturl[2] == "":
+			vlog("jobs")
+		case nsplit == 3:
+			subid := spliturl[2]
+			vlog("job: %v", subid)
+		case nsplit == 4:
+			subid := spliturl[3]
+			vlog("job verbs: %v", subid)
+		}
+
+	case "POST":
+		log("Method = POST.")
+		// TODO : Move to password.go
+		if usepw {
+			pw := hashPw(r.Header.Get("Password"))
+			log("Verifying password.")
+			if hashedpw != pw {
+				fmt.Fprint(w, "Passwords do not match.")
+				return
 			}
-	
-		case "POST":
-			log("Method = POST.")
-			// TODO : Move to password.go
-			if usepw {
-				pw := hashPw(r.Header.Get("Password"))
-				log("Verifying password.")
-				if hashedpw != pw {
-					fmt.Fprint(w, "Passwords do not match.")
-					return
-				}
-				log("Password verified")
-			}
-	
-			vlog("getting json from form")
-			reqjson := r.FormValue("data")
-			vlog("json is : %v", reqjson)
-			// TODO : Persist JSON to database
+			log("Password verified")
+		}
+
+		vlog("getting json from form")
+		reqjson := r.FormValue("data")
+		vlog("json is : %v", reqjson)
+		// TODO : Persist JSON to database
 	}
 }

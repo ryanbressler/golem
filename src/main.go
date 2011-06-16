@@ -31,7 +31,7 @@ func main() {
 	var hostname string
 	var unsecure bool
 	var password string
-	
+
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")

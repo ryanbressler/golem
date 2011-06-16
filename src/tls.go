@@ -24,6 +24,7 @@ import (
 	"websocket"
 	"os"
 	"crypto/tls"
+	"http"
 )
 
 //////////////////////
@@ -42,33 +43,7 @@ func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Erro
 
 	}
 	url := fmt.Sprintf("%v://"+master+"/master/", prot)
-	/*var client net.Conn
-		parsedUrl, err := http.ParseURL(url)
-		if err != nil {
-			goto Error
-		}
 
-		switch prot {
-		case "ws":
-			client, err = net.Dial("tcp", parsedUrl.Host)
-
-		case "wss":
-			client, err = tls.Dial("tcp", parsedUrl.Host, getTlsConfig())
-
-
-		}
-		if err != nil {
-				goto Error
-	   	}
-
-		ws, err = websocket.newClient(parsedUrl.RawPath, parsedUrl.Host, origin, url, "", client, websocket.handshake)
-		if err != nil {
-			goto Error
-		}
-		return
-
-	   	Error:
-			return nil, &websocket.DialError{url, "", origin, err}*/
 	ws, err = websocket.Dial(url, "", origin)
 	if err != nil {
 		return nil, err
@@ -77,19 +52,56 @@ func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Erro
 
 }
 
-func getCertFiles() (string, string) {
+func getCertFilePaths() (string, string) {
 	certf := os.ShellExpand("$HOME/.golem/certificate.pem")
 	keyf := os.ShellExpand("$HOME/.golem/key.pem")
 	return certf, keyf
 }
 
-func getTlsConfig() *tls.Config {
-	certf, keyf := getCertFiles()
+func getTlsConfig() (*tls.Config, os.Error) {
+	certf, keyf := getCertFilePaths()
 	cert, err := tls.LoadX509KeyPair(certf, keyf)
 	if err != nil {
-		log("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
+		vlog("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
+		return nil, err
 	}
 
-	return &tls.Config{Certificates: []tls.Certificate{cert}, AuthenticateClient: true}
+	return &tls.Config{Certificates: []tls.Certificate{cert}, AuthenticateClient: true}, nil
 
+}
+
+func ConfigListenAndServeTLS(hostname string, handler http.Handler) os.Error {
+	cfg, err := getTlsConfig()
+	if err != nil {
+		return err
+	}
+	listener, err := tls.Listen("tcp", hostname, cfg)
+	if err != nil {
+		vlog("Tls Listen Error : %v", err)
+		return err
+	}
+
+	if err := http.Serve(listener, handler); err != nil {
+		vlog("Tls Serve Error : %v", err)
+		return err
+	}
+	return nil
+}
+
+//relys on global useTls being set
+func ListenAndServeTLSorNot(hostname string, handler http.Handler) os.Error {
+	if useTls {
+		if err := ConfigListenAndServeTLS(hostname, nil); err != nil {
+			vlog("ConfigListenAndServeTLS : %v", err)
+			return err
+		}
+
+	} else {
+		if err := http.ListenAndServe(hostname, nil); err != nil {
+			vlog("ListenAndServe Error : %v", err)
+			return err
+		}
+
+	}
+	return nil
 }
