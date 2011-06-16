@@ -25,7 +25,6 @@ import (
 	"websocket"
 	"json"
 	"strconv"
-	"crypto/tls"
 	"strings"
 )
 
@@ -61,29 +60,12 @@ func (m *Master) RunMaster(hostname string, password string) {
 	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { m.jobHandler(w, r) })
 	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.nodeHandler(ws) }))
 
-	if useTls {
-		cfg := getTlsConfig()
-		listener, err := tls.Listen("tcp", hostname, cfg)
-		if err != nil {
-			log("Listen Error : %v", err)
-			return
-		}
-
-		if err := http.Serve(listener, nil); err != nil {
-			log("Serve Error : %v", err)
-			return
-		}
-		/*certf,keyf:=getCertFiles()
-		if err := http.ListenAndServeTLS(hostname,certf,keyf, nil); err != nil {
-			log("ListenAndServe Error : %v", err)
-		}*/
-	} else {
-		if err := http.ListenAndServe(hostname, nil); err != nil {
-			log("ListenAndServe Error : %v", err)
-			return
-		}
-
+	//relys on global useTls being set
+	if err := ListenAndServeTLSorNot(hostname, nil); err != nil {
+		log("ListenAndServeTLSorNot Error : %v", err)
+		return
 	}
+
 }
 
 //web handlers
@@ -137,24 +119,24 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		vlog("getting json from form")
-		mpreader, err := r.MultipartReader() 
-		if err!= nil{
+		mpreader, err := r.MultipartReader()
+		if err != nil {
 			log("Error getting multipart reader: %v", err)
 		}
-		
+
 		frm, err := mpreader.ReadForm(10000)
-		if err!= nil{
+		if err != nil {
 			log("Error reading multipart form: %v", err)
 		}
-		cmd:=frm.Value["command"][0]
-		log("command: %s",cmd)
-		
+		cmd := frm.Value["command"][0]
+		log("command: %s", cmd)
+
 		rJobs := make([]RequestedJob, 0, 100)
-		jsonfile,err :=frm.File["jsonfile"][0].Open() 
-		if err!= nil{
+		jsonfile, err := frm.File["jsonfile"][0].Open()
+		if err != nil {
 			log("Error opening file from request: %v", err)
 		}
-		dec:=json.NewDecoder(jsonfile)
+		dec := json.NewDecoder(jsonfile)
 		if err := dec.Decode(&rJobs); err != nil {
 			fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
 			log("json parse error: %v\n json: %v", err)
@@ -162,7 +144,6 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonfile.Close()
 
-		
 		s := NewSubmission(&rJobs, m.jobChan)
 		m.subMap[s.SubId] = s
 		log("Created submission: %v", s.SubId)
