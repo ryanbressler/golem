@@ -110,12 +110,15 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 			verb := spliturl[3]
 			switch verb {
 			case "stop":
+				worked := false
 				_, isin := m.subMap[subid]
 				if isin {
-					m.subMap[subid].Stop()
-					log("Broadcasting stop message for SubId: %v", subid)
-					m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
-					fmt.Fprintf(w, "true")
+					worked = m.subMap[subid].Stop()
+					if worked {
+						log("Broadcasting stop message for SubId: %v", subid)
+						m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
+					}
+					fmt.Fprintf(w, "%v",worked)
 				} else {
 
 					fmt.Fprintf(w, "false")

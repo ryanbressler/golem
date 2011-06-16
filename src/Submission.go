@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"crypto/rand"
+	"time"
 )
 
 
@@ -66,7 +67,7 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 		FinishedJobsChan: make(chan int, 1),
 		ErroredJobsChan:  make(chan int, 1),
 		TotalJobsChan:    make(chan int, 1),
-		stopChan:         make(chan int, 1)}
+		stopChan:         make(chan int, 0)}
 	totalJobs := 0
 	for _, vals := range s.Jobs {
 		totalJobs += vals.Count
@@ -94,11 +95,17 @@ func (s *Submission) DescribeSelfJson() string {
 	return rv
 }
 
-func (s *Submission) Stop() {
-
-	s.stopChan <- 1
-	s.stopChan <- 1 //second time to make sure submitJobs takes the 1 out of the chan
-	log("Stoped submission for SubId: %v", s.SubId)
+func (s *Submission) Stop() bool {
+	rv := false
+	select {
+	case s.stopChan <- 1:
+		rv = true
+		log("Stoped submission for SubId: %v", s.SubId)
+	case <-time.After(250000000):
+		rv = false
+		log("Time out stoping SubId: %v", s.SubId)
+	}
+	return rv
 }
 
 func (s Submission) monitorJobs() {
