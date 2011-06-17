@@ -28,38 +28,37 @@ import (
 //master
 
 type Killable struct {
-	Pid string
+	Pid   string
 	SubId string
-	JobId string	
+	JobId string
 }
 
-func (k * Killable) Kill () {
+func (k *Killable) Kill() {
 	log("killing %v", k)
 	KillPid(k.Pid)
 }
 
 
 type JobKiller struct {
-	Killchan chan string
-	Donechan chan * Killable
-	Registerchan chan * Killable
-	
-	killables map[string] * Killable
-	
+	Killchan     chan string
+	Donechan     chan *Killable
+	Registerchan chan *Killable
+
+	killables map[string]*Killable
 }
 
-func NewJobKiller()( jk * JobKiller) {
-	jk = &JobKiller{Killchan:make(chan string,3),Donechan: make( chan * Killable, 3),Registerchan: make( chan * Killable, 3),killables: map[string] * Killable{}}
+func NewJobKiller() (jk *JobKiller) {
+	jk = &JobKiller{Killchan: make(chan string, 3), Donechan: make(chan *Killable, 3), Registerchan: make(chan *Killable, 3), killables: map[string]*Killable{}}
 	go jk.KillJobs()
 	return
 }
 
-func (jk * JobKiller) KillJobs () {
+func (jk *JobKiller) KillJobs() {
 	for {
 		select {
 		case SubId := <-jk.Killchan:
 			vlog("looking for  killables with subid %v", SubId)
-			for _,kb := range jk.killables {
+			for _, kb := range jk.killables {
 				if kb.SubId == SubId {
 					kb.Kill()
 				}
@@ -67,15 +66,11 @@ func (jk * JobKiller) KillJobs () {
 			vlog("done looking for  killables with subid %v", SubId)
 		case kb := <-jk.Registerchan:
 			vlog("regestering killable %v", kb)
-			jk.killables[fmt.Sprintf("%v%v",kb.SubId,kb.JobId)]=kb
-		case kb := <- jk.Donechan:
+			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb
+		case kb := <-jk.Donechan:
 			vlog("removing killable %v", kb)
-			jk.killables[fmt.Sprintf("%v%v",kb.SubId,kb.JobId)]=kb,false
-			
+			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb, false
+
 		}
 	}
 }
-	
-	
-	
-	
