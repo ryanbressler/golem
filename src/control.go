@@ -54,7 +54,7 @@ func KillPid(pid string) {
 		return
 	}
 	log("Killing Pid: %v", pid)
-	_, err = exec.Run(killcmd, []string{killcmd,pid}, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
+	_, err = exec.Run(killcmd, []string{killcmd, pid}, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
 	if err != nil {
 		log("%v", err)
 	}
