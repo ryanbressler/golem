@@ -38,7 +38,7 @@ var useTls bool = true
 var usepw bool = false
 var hash = sha256.New() // or whatever
 var hashedpw string
-var brodcastChans []chan *clientMsg
+
 
 const (
 	//Message type constants
