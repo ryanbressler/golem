@@ -159,16 +159,16 @@ def main():
 		data = {'command':cmd}
 		print "Submiting run request to %s."%(url)
 		doPost(url,data,jobs,pwd)
-	if command == "list":
+	if cmd == "list":
 		re = urllib2.urlopen(url)
 		print re.Read()
-	if command == "stop":
+	if cmd == "stop":
 		jobid = sys.argv[cmdi+1]
-		doPost(url+jobid+"/stop,data,jobs,pwd)
-	if command == "status":
+		doPost(url+jobid+"/stop",{},"",pwd)
+	if cmd == "status":
 		jobid = sys.argv[cmdi+1]
 		re = urllib2.urlopen(url+jobid)
-		print re.Read()
+		print re.read()
 	if cmd == "restart":
 		doPost(master+"/admin/restart",{},"",pwd)
 	if cmd == "die":
@@ -177,8 +177,6 @@ def main():
 	if cmd == "ls":
 		print "not yet implemented"
 	
-	if cmd == "status":
-		print "not yet implemented"
 		
 	
 	
