@@ -38,8 +38,13 @@ except ImportError:
 
 usage = """Usage golem.py hostname [-p password] command and args
 where command and args can be:
-run n job_executable exeutable args
-runlist listofjobs
+run n job_executable exeutable args : run job_executable n times with the supplied args
+runlist listofjobs.txt  			: run each line (n n job_executable exeutable args) of the file 
+list 								: list statuses of all submissions on cluster
+status subid 						: get status of a single submission
+stop subid 							: stop a submission
+restart 							: cycle all golem proccess on the cluster...use only for udating core components
+die 								: kill everything ... rarelly used
 """
 
 
@@ -154,7 +159,16 @@ def main():
 		data = {'command':cmd}
 		print "Submiting run request to %s."%(url)
 		doPost(url,data,jobs,pwd)
-		
+	if command == "list":
+		re = urllib2.urlopen(url)
+		print re.Read()
+	if command == "stop":
+		jobid = sys.argv[cmdi+1]
+		doPost(url+jobid+"/stop,data,jobs,pwd)
+	if command == "status":
+		jobid = sys.argv[cmdi+1]
+		re = urllib2.urlopen(url+jobid)
+		print re.Read()
 	if cmd == "restart":
 		doPost(master+"/admin/restart",{},"",pwd)
 	if cmd == "die":
