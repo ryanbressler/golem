@@ -46,24 +46,6 @@ func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
 
 }
 
-func RestartIn(waitn int64) {
-	log("Restart in %v nanoseconds", waitn)
-	time.Sleep(waitn)
-	log("Restarting.")
-	_, err := exec.Run(os.Args[0], os.Args, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
-	if err != nil {
-		log("%v", err)
-	}
-	log("Exiting.")
-	os.Exit(0)
-}
-
-func DieIn(waitn int64) {
-	log("Die in %v nanoseconds", waitn)
-	time.Sleep(waitn)
-	log("Exiting.")
-	os.Exit(0)
-}
 
 func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 	log("Starting job from json: %v", jsonjob)
