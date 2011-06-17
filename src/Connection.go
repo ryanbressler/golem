@@ -72,7 +72,7 @@ func (con Connection) GetMsgs() {
 			log("EOF recieved on websocket.")
 			con.Socket.Close()
 			if isMaster != true {
-				os.Exit(0)
+				DieIn(10000000000)
 			}
 
 			return //TODO: recover

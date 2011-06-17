@@ -33,7 +33,7 @@ import (
 //master
 
 type Master struct {
-	subMap        map[string]*Submission //buffered channel for creating jobs
+	subMap        map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
 	jobChan       chan *Job              //buffered channel for creating jobs
 	subidChan     chan int               //buffered channel for use as an incrementer to keep track of submissions
 	brodcastChans []chan *clientMsg
@@ -58,6 +58,7 @@ func (m *Master) RunMaster(hostname string, password string) {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { m.rootHandler(w, r) })
 	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { m.jobHandler(w, r) })
+	http.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) { m.adminHandler(w, r) })
 	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.nodeHandler(ws) }))
 
 	//relys on global useTls being set
@@ -76,7 +77,35 @@ func (m *Master) rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hello. This is a golem master node:\n http://code.google.com/p/golem/")
 }
 
+func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
+	log("admin request.")
 
+	w.Header().Set("Content-Type", "text/plain")
+	switch r.Method {
+	case "POST":
+		if usepw {
+			if hashPw(r.Header.Get("Password")) != hashedpw {
+				fmt.Fprintf(w, "Bad password.")
+				return
+			}
+		}
+		spliturl := strings.Split(r.URL.Path, "/", -1)
+		nsplit := len(spliturl)
+		if nsplit > 2 {
+			switch spliturl[2] {
+			case "restart":
+				m.Broadcast(&clientMsg{Type: RESTART})
+				fmt.Fprintf(w, "Restarting in 5 seconds.") //5 seconds is node
+				go RestartIn(3000000000)
+			case "die":
+				m.Broadcast(&clientMsg{Type: DIE})
+				fmt.Fprintf(w, "Dieing in 5 seconds.")
+				go DieIn(3000000000)
+			}
+		}
+
+	}
+}
 //restfull api for managing jobs handled on /jobs/
 //TODO: refactor the whole jobs rest interface
 func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +134,7 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, "null")
 				log("Request for non submission: %v", subid)
 			}
-		case nsplit == 4 && spliturl[3] != "": //TODO: combine this with above and refactor out verb logic
+		case nsplit == 4 && spliturl[3] != "": //TODO: move this to post and refactor rest logic
 			subid := spliturl[2]
 			verb := spliturl[3]
 			switch verb {
@@ -118,7 +147,7 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 						log("Broadcasting stop message for SubId: %v", subid)
 						m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
 					}
-					fmt.Fprintf(w, "%v",worked)
+					fmt.Fprintf(w, "%v", worked)
 				} else {
 
 					fmt.Fprintf(w, "false")
@@ -176,18 +205,21 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Master) Broadcast(msg *clientMsg) {
+	log("Broadcasting message %v to %v nodes.", *msg, len(m.brodcastChans))
 	for _, chn := range m.brodcastChans {
 		chn <- msg
 	}
+	vlog("Broadcasting done.")
 
 }
 
 //start routinges to manage nodes as they conect
 func (m *Master) nodeHandler(ws *websocket.Conn) {
 	log("Node connectiong from %v.", ws.LocalAddr().String())
-	bcChan := make(chan *clientMsg, 1)
-	m.monitorNode(NewConnection(ws), bcChan)
+	bcChan := make(chan *clientMsg, 0)
 	m.brodcastChans = append(m.brodcastChans, bcChan)
+	m.monitorNode(NewConnection(ws), bcChan)
+
 }
 
 
@@ -244,6 +276,7 @@ func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
 			vlog("%v has %v running. Waiting for job or message.", nodename, running)
 			select {
 			case bcMsg := <-bcChan:
+				log("%v sending broadcast message %v", nodename, *bcMsg)
 				con.OutChan <- *bcMsg
 			case job := <-m.jobChan:
 				m.sendJob(&con, job)
@@ -258,6 +291,7 @@ func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
 			vlog("%v has %v running. Waiting for message.", nodename, running)
 			select {
 			case bcMsg := <-bcChan:
+				log("%v sending broadcast message %v", nodename, *bcMsg)
 				con.OutChan <- *bcMsg
 			case msg = <-con.InChan:
 				//log("Got msg from %v", nodename)
