@@ -106,8 +106,103 @@ func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 
 	}
 }
+
 //restfull api for managing jobs handled on /jobs/
 //TODO: refactor the whole jobs rest interface
+
+//parser for rest jobs request
+func (m *Master) parseJobRestUrl(path string) (jobid string, verb string) {
+	spliturl := strings.Split(path, "/", -1)
+	pathParts := make([]string, 0, 2)
+	for _, part := range spliturl {
+		if part != "" {
+			pathParts = append(pathParts, part)
+		}
+	}
+	nparts := len(pathParts)
+	jobid = ""
+	verb = ""
+	switch {
+	case nparts == 2:
+		jobid = pathParts[1]
+	case nparts == 3:
+		jobid = pathParts[1]
+		verb = pathParts[2]
+	}
+	vlog("Parsed job request id:\"%v\" verb:\"%v\"", jobid, verb)
+	return
+
+}
+
+func (m *Master) jobIdGetHandler(w http.ResponseWriter, r *http.Request, subid string) {
+	_, isin := m.subMap[subid]
+	if isin {
+		fmt.Fprintf(w, "%v", m.subMap[subid].DescribeSelfJson())
+	} else {
+		fmt.Fprintf(w, "null")
+		log("Request for non submission: %v", subid)
+	}
+}
+
+func (m *Master) jobGetHandler(w http.ResponseWriter, r *http.Request) {
+	jobdescs := make([]string, 0)
+	for _, s := range m.subMap {
+		jobdescs = append(jobdescs, s.DescribeSelfJson())
+	}
+	fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
+}
+
+func (m *Master) jobIdStopPostHandler(w http.ResponseWriter, r *http.Request, subid string) {
+	worked := false
+	_, isin := m.subMap[subid]
+	if isin {
+		worked = m.subMap[subid].Stop()
+		if worked {
+			log("Broadcasting stop message for SubId: %v", subid)
+			m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
+		}
+		fmt.Fprintf(w, "%v", worked)
+	} else {
+
+		fmt.Fprintf(w, "not found.")
+		log("stop Request for non submission: %v", subid)
+	}
+}
+
+func (m *Master) jobPostHandler(w http.ResponseWriter, r *http.Request) {
+	vlog("getting json from form")
+	mpreader, err := r.MultipartReader()
+	if err != nil {
+		log("Error getting multipart reader: %v", err)
+	}
+
+	frm, err := mpreader.ReadForm(10000)
+	if err != nil {
+		log("Error reading multipart form: %v", err)
+	}
+	cmd := frm.Value["command"][0]
+	log("command: %s", cmd)
+
+	rJobs := make([]RequestedJob, 0, 100)
+	jsonfile, err := frm.File["jsonfile"][0].Open()
+	if err != nil {
+		log("Error opening file from request: %v", err)
+	}
+	dec := json.NewDecoder(jsonfile)
+	if err := dec.Decode(&rJobs); err != nil {
+		fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
+		log("json parse error: %v\n json: %v", err)
+		return
+	}
+	jsonfile.Close()
+
+	s := NewSubmission(&rJobs, m.jobChan)
+	m.subMap[s.SubId] = s
+	log("Created submission: %v", s.SubId)
+	fmt.Fprintf(w, "%v", s.DescribeSelfJson())
+}
+
+//http handler
 func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("Jobs request.")
 
@@ -115,47 +210,14 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		log("Method = GET.")
-		spliturl := strings.Split(r.URL.Path, "/", -1)
-		nsplit := len(spliturl)
-		vlog("path: %v, nsplit: %v %v %v %v", r.URL.Path, nsplit, spliturl[0], spliturl[1], spliturl[2])
+		subid, verb := m.parseJobRestUrl(r.URL.Path)
 		switch {
-		case nsplit == 3 && spliturl[2] == "":
-			jobdescs := make([]string, 0)
-			for _, s := range m.subMap {
-				jobdescs = append(jobdescs, s.DescribeSelfJson())
-			}
-			fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
-		case nsplit == 3 || (nsplit == 4 && spliturl[3] == ""):
-			subid := spliturl[2]
-			_, isin := m.subMap[subid]
-			if isin {
-				fmt.Fprintf(w, "%v", m.subMap[subid].DescribeSelfJson())
-			} else {
-				fmt.Fprintf(w, "null")
-				log("Request for non submission: %v", subid)
-			}
-		case nsplit == 4 && spliturl[3] != "": //TODO: move this to post and refactor rest logic
-			subid := spliturl[2]
-			verb := spliturl[3]
-			switch verb {
-			case "stop":
-				worked := false
-				_, isin := m.subMap[subid]
-				if isin {
-					worked = m.subMap[subid].Stop()
-					if worked {
-						log("Broadcasting stop message for SubId: %v", subid)
-						m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
-					}
-					fmt.Fprintf(w, "%v", worked)
-				} else {
-
-					fmt.Fprintf(w, "false")
-					log("stop Request for non submission: %v", subid)
-				}
-			default:
-				fmt.Fprint(w, "{\"Error\":\"Verb '%s' not impelmented.\"}")
-			}
+		case subid != "":
+			m.jobIdGetHandler(w, r, subid)
+		case subid == "" && verb == "":
+			m.jobGetHandler(w, r)
+		default:
+			fmt.Fprintf(w, "Unsupported Request")
 		}
 
 	case "POST":
@@ -169,37 +231,15 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			log("Password verified")
 		}
-
-		vlog("getting json from form")
-		mpreader, err := r.MultipartReader()
-		if err != nil {
-			log("Error getting multipart reader: %v", err)
+		subid, verb := m.parseJobRestUrl(r.URL.Path)
+		switch {
+		case subid != "" && verb == "stop":
+			m.jobIdStopPostHandler(w, r, subid)
+		case subid == "" && verb == "":
+			m.jobPostHandler(w, r)
+		default:
+			fmt.Fprintf(w, "Unsupported Request")
 		}
-
-		frm, err := mpreader.ReadForm(10000)
-		if err != nil {
-			log("Error reading multipart form: %v", err)
-		}
-		cmd := frm.Value["command"][0]
-		log("command: %s", cmd)
-
-		rJobs := make([]RequestedJob, 0, 100)
-		jsonfile, err := frm.File["jsonfile"][0].Open()
-		if err != nil {
-			log("Error opening file from request: %v", err)
-		}
-		dec := json.NewDecoder(jsonfile)
-		if err := dec.Decode(&rJobs); err != nil {
-			fmt.Fprintf(w, "{\"Error\":\"%s\"}", err)
-			log("json parse error: %v\n json: %v", err)
-			return
-		}
-		jsonfile.Close()
-
-		s := NewSubmission(&rJobs, m.jobChan)
-		m.subMap[s.SubId] = s
-		log("Created submission: %v", s.SubId)
-		fmt.Fprintf(w, "%v", s.DescribeSelfJson())
 
 	}
 }
