@@ -52,12 +52,12 @@ def encode_multipart_formdata(data, filebody):
         L.append('Content-Disposition: form-data; name="%s"' % key)
         L.append('')
         L.append(value)
-
-	L.append('--' + BOUNDARY)
-	L.append('Content-Disposition: form-data; name="jsonfile"; filename="data.json"')
-	L.append('Content-Type: text/plain')
-	L.append('')
-	L.append(filebody)
+	if filebody != "":
+		L.append('--' + BOUNDARY)
+		L.append('Content-Disposition: form-data; name="jsonfile"; filename="data.json"')
+		L.append('Content-Type: text/plain')
+		L.append('')
+		L.append(filebody)
     L.append('--' + BOUNDARY + '--')
     L.append('')
     body = CRLF.join(L)
@@ -155,14 +155,18 @@ def main():
 		print "Submiting run request to %s."%(url)
 		doPost(url,data,jobs,pwd)
 		
+	if cmd == "restart":
+		doPost(master+"/admin/restart",{},"",pwd)
+	if cmd == "die":
+		doPost(master+"/admin/die",{},"",pwd)
+	
 	if cmd == "ls":
 		print "not yet implemented"
 	
 	if cmd == "status":
 		print "not yet implemented"
 		
-	if cmd == "kill":
-		print "not yet implemented"
+	
 	
 	
 

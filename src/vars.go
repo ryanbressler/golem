@@ -38,7 +38,7 @@ var useTls bool = true
 var usepw bool = false
 var hash = sha256.New() // or whatever
 var hashedpw string
-
+var brodcastChans []chan *clientMsg
 
 const (
 	//Message type constants
@@ -53,4 +53,7 @@ const (
 
 	JOBFINISHED = 7 //sent from client on job finish, body is json job SubId set
 	JOBERROR    = 8 //sent from client on job error, body is json job, SubId set
+
+	RESTART = 9  //Sent by master to nodes telling them to resart and reconnec themselves.
+	DIE     = 10 //tell nodes to shutdown.
 )
