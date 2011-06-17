@@ -170,9 +170,17 @@ def main():
 		re = urllib2.urlopen(url+jobid)
 		print re.read()
 	if cmd == "restart":
-		doPost(master+"/admin/restart",{},"",pwd)
+		input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
+		if input == "Y":
+			doPost(master+"/admin/restart",{},"",pwd)
+		else:
+			print "Canceled"
 	if cmd == "die":
-		doPost(master+"/admin/die",{},"",pwd)
+		input = raw_input("This kill the entire cluster down and is almost never used. Enter \"Y\" to continue.>")
+		if input == "Y":
+			doPost(master+"/admin/die",{},"",pwd)
+		else:
+			print "Canceled"
 	
 	if cmd == "ls":
 		print "not yet implemented"
