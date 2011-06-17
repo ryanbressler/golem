@@ -47,7 +47,8 @@ restart 							: cycle all golem proccess on the cluster...use only for udating 
 die 								: kill everything ... rarelly used
 """
 
-
+"""multipart encodes a form. data should be a dictionary of the the form fields and filebody 
+should be a string of the body of the file"""
 def encode_multipart_formdata(data, filebody):
     BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
     CRLF = '\r\n'
@@ -69,7 +70,13 @@ def encode_multipart_formdata(data, filebody):
     content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
     return content_type, body
 
+"""
+posts a multipart form to url, paramMap should be a dictionary of the form fields, json data 
+should be a string of the body of the file (json in our case) and password should be the password 
+to icnlude in the header
+"""
 def doPost(url, paramMap, jsondata,password):
+
 	u = urlparse.urlparse(url)
 	
 	content_type, body =encode_multipart_formdata(paramMap,jsondata)

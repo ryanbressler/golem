@@ -13,6 +13,7 @@ GOFILES=\
 	master.go\
 	scribe.go\
 	control.go\
+	jobkiller.go\
 	node.go\
 	tls.go\
 	main.go\

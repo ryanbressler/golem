@@ -47,7 +47,7 @@ func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
 }
 
 
-func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
+func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string,jk * JobKiller) {
 	log("Starting job from json: %v", jsonjob)
 	con := *cn
 
@@ -75,6 +75,8 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 	}
 	go pipeToChan(c.Stdout, COUT, job.SubId, con.OutChan)
 	go pipeToChan(c.Stderr, CERROR, job.SubId, con.OutChan)
+	kb :=  &Killable{Pid: fmt.Sprintf("%v",c.Process.Pid) ,SubId: job.SubId, JobId: fmt.Sprintf("%v", job.JobId)}
+	jk.Registerchan<-kb
 	//wait for the job to finish
 	w, err := c.Wait(0)
 	if err != nil {
@@ -89,6 +91,7 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string) {
 	} else {
 		replyc <- &clientMsg{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 	}
+	jk.Donechan<-kb
 
 }
 
@@ -101,8 +104,10 @@ func CheckIn(c *Connection) {
 	}
 }
 
+
 func RunNode(atOnce int, master string) {
 	running := 0
+	jk:=NewJobKiller()
 	log("Running as %v process node owned by %v", atOnce, master)
 
 	ws, err := wsDialToMaster(master, useTls)
@@ -130,10 +135,11 @@ func RunNode(atOnce int, master string) {
 			log("Got master msg")
 			switch msg.Type {
 			case START:
-				go startJob(&mcon, replyc, msg.Body)
+				go startJob(&mcon, replyc, msg.Body,jk)
 				running++
 			case STOP:
 				log("Got stop message: %v", msg)
+				jk.Killchan<-msg.SubId
 			case RESTART:
 				log("Got restart message: %v", msg)
 				RestartIn(5000000000)
