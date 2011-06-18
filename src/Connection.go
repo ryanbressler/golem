@@ -27,6 +27,7 @@ import (
 	"os"
 	"websocket"
 	"json"
+	"bufio"
 )
 
 type Connection struct {
@@ -81,6 +82,9 @@ func (con Connection) GetMsgs() {
 			}
 
 			return //TODO: recover
+		case err == bufio.ErrBufferFull:
+			log("buffer full, restarting json decoder: %v", err)
+			decoder = json.NewDecoder(con.Socket)
 		case err != nil:
 			log("error parseing client msg json: %v", err)
 			continue
