@@ -21,7 +21,7 @@ package main
 
 import ()
 
-//job requested over rest api
+//job requested over rest api includea a [] of args and the number of times to run it
 type RequestedJob struct {
 	Count int
 	Args  []string

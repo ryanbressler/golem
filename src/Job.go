@@ -23,7 +23,7 @@ import (
 	"json"
 )
 
-//Internal Job Representation
+//Internal Job Representation used primairly as the body of job related messages
 type Job struct {
 	SubId  string
 	LineId int
@@ -31,6 +31,7 @@ type Job struct {
 	Args   []string
 }
 
+//NewJob creates a job struct from a json string (usually a message body)
 func NewJob(jsonjob string) *Job {
 	var job Job
 

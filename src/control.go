@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-//restarts his process using the origional commands in waitn nanoseconds
+//restarts his process using the origional commands after waitn nanoseconds then die
 func RestartIn(waitn int64) {
 	log("Restart in %v nanoseconds", waitn)
 	time.Sleep(waitn)
@@ -47,6 +47,7 @@ func DieIn(waitn int64) {
 }
 
 //kill the supplied pid... uses the kill command, there must be a better way to do this
+//TODO: find a better way to do this
 func KillPid(pid string) {
 	killcmd, err := exec.LookPath("kill")
 	if err != nil {

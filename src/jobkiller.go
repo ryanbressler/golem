@@ -24,36 +24,39 @@ import (
 )
 
 
-/////////////////////////////////////////////////
-//master
-
+//killable links a SubId and JobId which uniquelly describe a job with a pid that can be used to 
+//kill it
 type Killable struct {
 	Pid   string
 	SubId string
 	JobId string
 }
 
+//Killable.Kill() kills the killable via KillPid (linux kill).
 func (k *Killable) Kill() {
 	log("killing %v", k)
 	KillPid(k.Pid)
 }
 
-
+//A job killer is created to monitor and kill jobs
 type JobKiller struct {
-	Killchan     chan string
-	Donechan     chan *Killable
-	Registerchan chan *Killable
+	Killchan     chan string    //used to send in the SubId of jobs to kill
+	Donechan     chan *Killable //used to indicate that a job is done and should no longer be killable
+	Registerchan chan *Killable //used to register a job as a killable
 
-	killables map[string]*Killable
+	killables map[string]*Killable //internal stcuture to keep track of killables by subid+jobId (as strings)
 }
 
+//creates a Job Killer and starts its goroutine KillJobs
 func NewJobKiller() (jk *JobKiller) {
 	jk = &JobKiller{Killchan: make(chan string, 3), Donechan: make(chan *Killable, 3), Registerchan: make(chan *Killable, 3), killables: map[string]*Killable{}}
-	go jk.KillJobs()
+	go jk.killJobs()
 	return
 }
 
-func (jk *JobKiller) KillJobs() {
+//killJobs should be run as a go routine, it monitors its job killers channel  upkeeps the 
+//internal map of killables and locates jobs that ned to be killed.
+func (jk *JobKiller) killJobs() {
 	for {
 		select {
 		case SubId := <-jk.Killchan:

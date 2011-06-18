@@ -36,7 +36,7 @@ except ImportError:
 	supporttls=False
 	print "Error importing tlslite."
 
-usage = """Usage golem.py hostname [-p password] command and args
+usage = """Usage: golem.py hostname [-p password] command and args
 where command and args can be:
 run n job_executable exeutable args : run job_executable n times with the supplied args
 runlist listofjobs.txt  			: run each line (n n job_executable exeutable args) of the file 

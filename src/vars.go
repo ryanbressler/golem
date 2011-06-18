@@ -36,12 +36,12 @@ var useTls bool = true
 
 //password
 var usepw bool = false
-var hash = sha256.New() // or whatever
-var hashedpw string
+var hash = sha256.New() // use the same hasher
+var hashedpw string     //the master password
 
 
 const (
-	//Message type constants
+	//Message type constants ... should maybe be in clientMsg.go
 	HELLO   = 1 //sent from client to master on connect, body is bumber of jobs at once
 	CHECKIN = 2 //sent from client every minute to keep conection alive
 
