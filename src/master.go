@@ -32,6 +32,8 @@ import (
 /////////////////////////////////////////////////
 //master
 
+
+//THe master struct contains things that the master node needs but other nodes don't
 type Master struct {
 	subMap        map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
 	jobChan       chan *Job              //buffered channel for creating jobs
@@ -39,6 +41,7 @@ type Master struct {
 	brodcastChans []chan *clientMsg
 }
 
+//create a master node and initalize its channels
 func NewMaster() *Master {
 	m := Master{
 		subMap:        map[string]*Submission{},
@@ -48,6 +51,7 @@ func NewMaster() *Master {
 
 }
 
+//start the masters http server (load balancing starts as needed)
 func (m *Master) RunMaster(hostname string, password string) {
 	log("Running as master at %v", hostname)
 
@@ -77,6 +81,7 @@ func (m *Master) rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hello. This is a golem master node:\n http://code.google.com/p/golem/")
 }
 
+//handler for /admin. ... controlls restarting and killing the cluster
 func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 	log("admin request.")
 
@@ -134,6 +139,8 @@ func (m *Master) parseJobRestUrl(path string) (jobid string, verb string) {
 
 }
 
+//Rest full hanlders
+//handler for a GET by job id /jobs/jobid
 func (m *Master) jobIdGetHandler(w http.ResponseWriter, r *http.Request, subid string) {
 	_, isin := m.subMap[subid]
 	if isin {
@@ -144,6 +151,7 @@ func (m *Master) jobIdGetHandler(w http.ResponseWriter, r *http.Request, subid s
 	}
 }
 
+//handler for a GET of /jobs/
 func (m *Master) jobGetHandler(w http.ResponseWriter, r *http.Request) {
 	jobdescs := make([]string, 0)
 	for _, s := range m.subMap {
@@ -152,6 +160,8 @@ func (m *Master) jobGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
 }
 
+//handler for a job stop POST request
+// /jobs/jobid/stop
 func (m *Master) jobIdStopPostHandler(w http.ResponseWriter, r *http.Request, subid string) {
 	worked := false
 	_, isin := m.subMap[subid]
@@ -169,6 +179,7 @@ func (m *Master) jobIdStopPostHandler(w http.ResponseWriter, r *http.Request, su
 	}
 }
 
+//handler for a POST of a submission to /jobs/
 func (m *Master) jobPostHandler(w http.ResponseWriter, r *http.Request) {
 	vlog("getting json from form")
 	mpreader, err := r.MultipartReader()
@@ -202,7 +213,7 @@ func (m *Master) jobPostHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%v", s.DescribeSelfJson())
 }
 
-//http handler
+//actuall http handler for /jobs/ parses the url and method and sends to one of the above methods
 func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("Jobs request.")
 
@@ -244,6 +255,7 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Broadcast sends a message to ever connected client
 func (m *Master) Broadcast(msg *clientMsg) {
 	log("Broadcasting message %v to %v nodes.", *msg, len(m.brodcastChans))
 	for _, chn := range m.brodcastChans {
@@ -253,7 +265,8 @@ func (m *Master) Broadcast(msg *clientMsg) {
 
 }
 
-//start routinges to manage nodes as they conect
+//websocket handler for connecting nodes on /master/
+// creates the nodes broadcast chan and starts monitoring it
 func (m *Master) nodeHandler(ws *websocket.Conn) {
 	log("Node connectiong from %v.", ws.LocalAddr().String())
 	bcChan := make(chan *clientMsg, 0)
@@ -263,10 +276,9 @@ func (m *Master) nodeHandler(ws *websocket.Conn) {
 }
 
 
-//wait for a job from jobChan, turn it into a json messags
-//wait for the Connection socket to not be in use then send it to 
-//the client. This may deadlock if the client is waiting for messages
-//so the client checks in. TODO: test if the InUse lock is needed.
+//takes a connection and job, turns job into a json messags and send it into the connections out box.
+//This seems to sleep or deadlock if left alone to long so the client checks in every 
+//60 seconds.
 func (m *Master) sendJob(n *Connection, j *Job) {
 
 	con := *n
@@ -284,6 +296,7 @@ func (m *Master) sendJob(n *Connection, j *Job) {
 
 //This waits for a handshake from a node then
 //monitors messages and starts jobs as needed
+//takes the connection and a chan to listen for broadcast messages on.
 func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
 	con := *n
 	nodename := con.Socket.LocalAddr().String()
@@ -343,6 +356,8 @@ func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
 
 }
 
+//handle the diffrent messages a client can send and return the updated number of jobs
+//that client is running
 func (m *Master) clientMsgSwitch(nodename string, msg *clientMsg, running int) int {
 	switch msg.Type {
 	default:

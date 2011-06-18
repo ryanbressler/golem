@@ -24,6 +24,10 @@ import (
 	"fmt"
 )
 
+//
+//log is a wrapper for fmt.Printf that prepends the time
+//log("error is %v, n is %v", err, n)
+//log("hello")
 func log(format string, a ...interface{}) {
 	t := time.LocalTime()
 	format = t.String() + ": " + format + "\n"
@@ -31,6 +35,7 @@ func log(format string, a ...interface{}) {
 
 }
 
+//vlog is a wrapper for log that only prints in verbose mode
 func vlog(format string, a ...interface{}) {
 	if verbose {
 		log(format, a...)

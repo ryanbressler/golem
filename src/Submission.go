@@ -43,6 +43,7 @@ type Submission struct {
 	FinishedJobsChan chan int
 	ErroredJobsChan  chan int
 	stopChan         chan int
+	runningChan      chan bool
 }
 
 
@@ -67,7 +68,8 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 		FinishedJobsChan: make(chan int, 1),
 		ErroredJobsChan:  make(chan int, 1),
 		TotalJobsChan:    make(chan int, 1),
-		stopChan:         make(chan int, 0)}
+		stopChan:         make(chan int, 0),
+		runningChan:      make(chan bool, 1)}
 	totalJobs := 0
 	for _, vals := range s.Jobs {
 		totalJobs += vals.Count
@@ -75,6 +77,7 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 	s.TotalJobsChan <- totalJobs
 	s.FinishedJobsChan <- 0
 	s.ErroredJobsChan <- 0
+	s.runningChan <- true
 	go s.monitorJobs()
 	go s.writeIo()
 	go s.submitJobs(jobChan)
@@ -87,24 +90,31 @@ func (s *Submission) DescribeSelfJson() string {
 	TotalJobs := <-s.TotalJobsChan
 	FinishedJobs := <-s.FinishedJobsChan
 	ErroredJobs := <-s.ErroredJobsChan
+	running := <-s.runningChan
 	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
-	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs)
+	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v \"Running\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running)
 	s.TotalJobsChan <- TotalJobs
 	s.FinishedJobsChan <- FinishedJobs
 	s.ErroredJobsChan <- ErroredJobs
+	s.runningChan <- running
 	return rv
 }
 
 func (s *Submission) Stop() bool {
 	rv := false
-	select {
-	case s.stopChan <- 1:
-		rv = true
-		log("Stoped submission for SubId: %v", s.SubId)
-	case <-time.After(250000000):
-		rv = false
-		log("Time out stoping SubId: %v", s.SubId)
+	running := <-s.runningChan
+	if running {
+		select {
+		case s.stopChan <- 1:
+			rv = true
+			log("Stoped submission for SubId: %v", s.SubId)
+			running = false
+		case <-time.After(250000000):
+			rv = false
+			log("Time out stoping SubId: %v", s.SubId)
+		}
 	}
+	s.runningChan <- running
 	return rv
 }
 
@@ -124,6 +134,7 @@ func (s Submission) monitorJobs() {
 		TotalJobs := <-s.TotalJobsChan
 		FinishedJobs := <-s.FinishedJobsChan
 		ErroredJobs := <-s.ErroredJobsChan
+		running := <-s.runningChan
 
 		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 		if TotalJobs == (FinishedJobs + ErroredJobs) {
@@ -132,8 +143,10 @@ func (s Submission) monitorJobs() {
 			s.TotalJobsChan <- TotalJobs
 			s.FinishedJobsChan <- FinishedJobs
 			s.ErroredJobsChan <- ErroredJobs
+			s.runningChan <- false
 			return
 		}
+		s.runningChan <- running
 		s.TotalJobsChan <- TotalJobs
 		s.FinishedJobsChan <- FinishedJobs
 		s.ErroredJobsChan <- ErroredJobs

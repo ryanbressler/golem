@@ -26,6 +26,7 @@ import (
 
 //////////////////////////////////////////////
 //main method
+//parse args and start as master, node or scribe
 func main() {
 	var atOnce int
 	var hostname string

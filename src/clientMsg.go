@@ -22,6 +22,7 @@ package main
 import ()
 
 //messages sent between server and client
+// types are defined in vars.go
 type clientMsg struct {
 	Type  int
 	SubId string

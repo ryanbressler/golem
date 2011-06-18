@@ -29,7 +29,7 @@ import (
 
 //////////////////////
 //tls
-
+//connect a websocket to the master as a client
 func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Error) {
 
 	origin, err := os.Hostname()
@@ -52,12 +52,14 @@ func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Erro
 
 }
 
+//get the cert file paths for running as the master
 func getCertFilePaths() (string, string) {
 	certf := os.ShellExpand("$HOME/.golem/certificate.pem")
 	keyf := os.ShellExpand("$HOME/.golem/key.pem")
 	return certf, keyf
 }
 
+//returns our custom tls configuration
 func getTlsConfig() (*tls.Config, os.Error) {
 	certf, keyf := getCertFilePaths()
 	cert, err := tls.LoadX509KeyPair(certf, keyf)
@@ -70,6 +72,7 @@ func getTlsConfig() (*tls.Config, os.Error) {
 
 }
 
+//a replacment for ListenAndServeTLS that loads our custom confiuration usage is identical to http.ListenAndServe
 func ConfigListenAndServeTLS(hostname string, handler http.Handler) os.Error {
 	cfg, err := getTlsConfig()
 	if err != nil {
@@ -88,7 +91,8 @@ func ConfigListenAndServeTLS(hostname string, handler http.Handler) os.Error {
 	return nil
 }
 
-//relys on global useTls being set
+//this is the main function to setup a server as used by the master, usage is identical to 
+//http.ListenAndServe but this relys on global useTls being set
 func ListenAndServeTLSorNot(hostname string, handler http.Handler) os.Error {
 	if useTls {
 		if err := ConfigListenAndServeTLS(hostname, nil); err != nil {
