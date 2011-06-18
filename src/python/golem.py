@@ -168,7 +168,7 @@ def main():
 		doPost(url,data,jobs,pwd)
 	if cmd == "list":
 		re = urllib2.urlopen(url)
-		print re.Read()
+		print re.read()
 	if cmd == "stop":
 		jobid = sys.argv[cmdi+1]
 		doPost(url+jobid+"/stop",{},"",pwd)
