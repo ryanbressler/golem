@@ -38,12 +38,13 @@ except ImportError:
 usage = """Usage: golem.py hostname [-p password] command and args
 where command and args can be:
 run n job_executable exeutable args : run job_executable n times with the supplied args
-runlist listofjobs.txt  			: run each line (n n job_executable exeutable args) of the file 
-list 								: list statuses of all submissions on cluster
-status subid 						: get status of a single submission
-stop subid 							: stop a submission
-restart 							: cycle all golem proccess on the cluster...use only for udating core components
-die 								: kill everything ... rarelly used
+runlist listofjobs.txt              : run each line (n n job_executable exeutable args) of the file 
+list                                : list statuses of all submissions on cluster
+status subid                        : get status of a single submission
+stop subid                          : stop a submission
+nodes                               : list the nodes connected to the cluster
+restart                             : cycle all golem proccess on the cluster...use only for udating core components
+die                                 : kill everything ... rarelly used
 """
 
 """multipart encodes a form. data should be a dictionary of the the form fields and filebody 
@@ -203,6 +204,9 @@ def main():
 	if cmd == "status":
 		jobid = sys.argv[cmdi+1]
 		doGet(url+jobid)
+		
+	if cmd == "nodes":
+		doGet(master+"/admin/")
 		
 	if cmd == "restart":
 		input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
