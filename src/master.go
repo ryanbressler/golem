@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"websocket"
 	"json"
-	"strconv"
 	"strings"
 )
 
@@ -38,7 +37,7 @@ type Master struct {
 	subMap        map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
 	jobChan       chan *Job              //buffered channel for creating jobs
 	subidChan     chan int               //buffered channel for use as an incrementer to keep track of submissions
-	brodcastChans []chan *clientMsg
+	NodeHandles [] * NodeHandle
 }
 
 //create a master node and initalize its channels
@@ -46,7 +45,7 @@ func NewMaster() *Master {
 	m := Master{
 		subMap:        map[string]*Submission{},
 		jobChan:       make(chan *Job, 0),
-		brodcastChans: make([]chan *clientMsg, 0, 0)}
+		NodeHandles: make([]* NodeHandle, 0, 0)}
 	return &m
 
 }
@@ -257,9 +256,9 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 
 //Broadcast sends a message to ever connected client
 func (m *Master) Broadcast(msg *clientMsg) {
-	log("Broadcasting message %v to %v nodes.", *msg, len(m.brodcastChans))
-	for _, chn := range m.brodcastChans {
-		chn <- msg
+	log("Broadcasting message %v to %v nodes.", *msg, len(m.NodeHandles))
+	for _, nh := range m.NodeHandles {
+		nh.BroadcastChan <- msg
 	}
 	vlog("Broadcasting done.")
 
@@ -269,92 +268,12 @@ func (m *Master) Broadcast(msg *clientMsg) {
 // creates the nodes broadcast chan and starts monitoring it
 func (m *Master) nodeHandler(ws *websocket.Conn) {
 	log("Node connectiong from %v.", ws.LocalAddr().String())
-	bcChan := make(chan *clientMsg, 0)
-	m.brodcastChans = append(m.brodcastChans, bcChan)
-	m.monitorNode(NewConnection(ws), bcChan)
+	nh := NewNodeHandle(NewConnection(ws),m)
+	m.NodeHandles = append (m.NodeHandles, nh) 
+	nh.Monitor()
 
 }
 
-
-//takes a connection and job, turns job into a json messags and send it into the connections out box.
-//This seems to sleep or deadlock if left alone to long so the client checks in every 
-//60 seconds.
-func (m *Master) sendJob(n *Connection, j *Job) {
-
-	con := *n
-	job := *j
-	log("Sending job %v to %v", job, con.Socket.LocalAddr().String())
-	jobjson, err := json.Marshal(job)
-	if err != nil {
-		log("error json.Marshaling job: %v", err)
-
-	}
-	msg := clientMsg{Type: START, Body: string(jobjson)}
-	con.OutChan <- msg
-
-}
-
-//This waits for a handshake from a node then
-//monitors messages and starts jobs as needed
-//takes the connection and a chan to listen for broadcast messages on.
-func (m *Master) monitorNode(n *Connection, bcChan chan *clientMsg) {
-	con := *n
-	nodename := con.Socket.LocalAddr().String()
-	//number to run at once
-	atOnce := 0
-	//number running
-	running := 0
-	var msg clientMsg
-
-	//wait for client handshake
-	msg = <-con.InChan
-
-	if msg.Type == HELLO {
-		val, err := strconv.Atoi(msg.Body)
-		if err != nil {
-			log("error parsing client hello: %v", err)
-			return
-		}
-		atOnce = val
-	} else {
-		log("%v didn't say hello as first message.", nodename)
-		return
-	}
-	log("%v says hello and asks for %v jobs.", nodename, msg.Body)
-
-	//control loop
-	for {
-		switch {
-		case running < atOnce:
-			vlog("%v has %v running. Waiting for job or message.", nodename, running)
-			select {
-			case bcMsg := <-bcChan:
-				log("%v sending broadcast message %v", nodename, *bcMsg)
-				con.OutChan <- *bcMsg
-			case job := <-m.jobChan:
-				m.sendJob(&con, job)
-				running++
-				vlog("%v got job, %v running.", nodename, running)
-			case msg = <-con.InChan:
-				vlog("%v Got msg", nodename)
-				running = m.clientMsgSwitch(nodename, &msg, running)
-				vlog("%v msg handled", nodename)
-			}
-		default:
-			vlog("%v has %v running. Waiting for message.", nodename, running)
-			select {
-			case bcMsg := <-bcChan:
-				log("%v sending broadcast message %v", nodename, *bcMsg)
-				con.OutChan <- *bcMsg
-			case msg = <-con.InChan:
-				//log("Got msg from %v", nodename)
-				running = m.clientMsgSwitch(nodename, &msg, running)
-			}
-		}
-
-	}
-
-}
 
 //handle the diffrent messages a client can send and return the updated number of jobs
 //that client is running
