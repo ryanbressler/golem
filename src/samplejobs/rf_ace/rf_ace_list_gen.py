@@ -43,14 +43,13 @@ def main(start, end, inputMatrixFile, associations_dir, commandsOut, gosubmit):
 	permutations = config.getint("RF_ACE_Parameters", "permutations")
 	pvalue_t = config.get("RF_ACE_Parameters", "pvalue_t")
 	nodesize = config.get("RF_ACE_Parameters", "nodesize")
-	alpha = config.get("RF_ACE_Parameters", "alpha")
 	pythonBin = config.get("PYTHON", "pythonbin")
 	golemPwd = config.get("GOLEM", "golempwd")
 	if (not associations_dir.endswith('/')):
 		associations_dir = associations_dir + "/"
 	while start < end:
 			#/proj/ilyalab/TCGA/rf-ace/bin/rf_ace -I ../KruglyakGenewisePhenoProteomics.NEW.transposed.csv -i 0 -n 100 -m 1000 -p 20 -O associations_0.out
-			cmd = "1 %s -I %s -i %i -n %i -m %i -p %i -t %s -O %sassociations_%i.out" %(execpath, inputMatrixFile, start, numtrees, mtry, permutations, pvalue_t, associations_dir, start)
+			cmd = "1 %s -I %s -i %i -n %i -m %i --nodesize %s -p %i -t %s -O %sassociations_%i.out" %(execpath, inputMatrixFile, start, numtrees, mtry, nodesize, permutations, pvalue_t, associations_dir, start)
 			commandwriter.write(cmd + "\n");
 			start = start + 1
 	commandwriter.close()
