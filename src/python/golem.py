@@ -22,7 +22,6 @@ import sys
 try: import json #python 2.6 included simplejson as json
 except ImportError: import simplejson as json
 import urllib
-import urllib2
 import httplib
 import urlparse
 import os
@@ -69,6 +68,35 @@ def encode_multipart_formdata(data, filebody):
     body = CRLF.join(L)
     content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
     return content_type, body
+
+"""
+posts a multipart form to url, paramMap should be a dictionary of the form fields, json data 
+should be a string of the body of the file (json in our case) and password should be the password 
+to icnlude in the header
+"""
+def doGet(url):
+	u = urlparse.urlparse(url)
+	conn=0
+	if u.scheme == "http":
+		conn = httplib.HTTPConnection(u.hostname,u.port)
+	else:
+
+		conn = HTTPTLSConnection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
+	
+		
+	conn.request("GET", u.path)
+
+	resp = conn.getresponse()
+	if resp.status == 200:
+		output = resp.read()
+		try:
+			print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
+		except:
+			print output
+	else:
+		print resp.status, resp.reason
+
+	conn.close()
 
 """
 posts a multipart form to url, paramMap should be a dictionary of the form fields, json data 
@@ -167,15 +195,15 @@ def main():
 		print "Submiting run request to %s."%(url)
 		doPost(url,data,jobs,pwd)
 	if cmd == "list":
-		re = urllib2.urlopen(url)
-		print re.read()
+		doGet(url)
+		
 	if cmd == "stop":
 		jobid = sys.argv[cmdi+1]
 		doPost(url+jobid+"/stop",{},"",pwd)
 	if cmd == "status":
 		jobid = sys.argv[cmdi+1]
-		re = urllib2.urlopen(url+jobid)
-		print re.read()
+		doGet(url+jobid)
+		
 	if cmd == "restart":
 		input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
 		if input == "Y":
