@@ -34,18 +34,18 @@ import (
 
 //THe master struct contains things that the master node needs but other nodes don't
 type Master struct {
-	subMap        map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
-	jobChan       chan *Job              //buffered channel for creating jobs
-	subidChan     chan int               //buffered channel for use as an incrementer to keep track of submissions
-	NodeHandles [] * NodeHandle
+	subMap      map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
+	jobChan     chan *Job              //buffered channel for creating jobs
+	subidChan   chan int               //buffered channel for use as an incrementer to keep track of submissions
+	NodeHandles []*NodeHandle
 }
 
 //create a master node and initalize its channels
 func NewMaster() *Master {
 	m := Master{
-		subMap:        map[string]*Submission{},
-		jobChan:       make(chan *Job, 0),
-		NodeHandles: make([]* NodeHandle, 0, 0)}
+		subMap:      map[string]*Submission{},
+		jobChan:     make(chan *Job, 0),
+		NodeHandles: make([]*NodeHandle, 0, 0)}
 	return &m
 
 }
@@ -107,6 +107,12 @@ func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 				go DieIn(3000000000)
 			}
 		}
+	case "GET":
+		nodedescs := make([]string, 0, len(m.NodeHandles))
+		for _, n := range m.NodeHandles {
+			nodedescs = append(nodedescs, n.DescribeSelfJson())
+		}
+		fmt.Fprintf(w, "[%v]", strings.Join(nodedescs, ",\n"))
 
 	}
 }
@@ -268,8 +274,8 @@ func (m *Master) Broadcast(msg *clientMsg) {
 // creates the nodes broadcast chan and starts monitoring it
 func (m *Master) nodeHandler(ws *websocket.Conn) {
 	log("Node connectiong from %v.", ws.LocalAddr().String())
-	nh := NewNodeHandle(NewConnection(ws),m)
-	m.NodeHandles = append (m.NodeHandles, nh) 
+	nh := NewNodeHandle(NewConnection(ws), m)
+	m.NodeHandles = append(m.NodeHandles, nh)
 	nh.Monitor()
 
 }
