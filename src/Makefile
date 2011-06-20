@@ -14,6 +14,7 @@ GOFILES=\
 	scribe.go\
 	control.go\
 	jobkiller.go\
+	uniqueid.go\
 	node.go\
 	tls.go\
 	main.go\
