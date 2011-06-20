@@ -22,7 +22,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"crypto/rand"
 	"time"
 )
 
@@ -51,15 +50,10 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 	rJobs := *js
 	//subId := <-subidChan
 	//subidChan <- subId + 1
-	subId := make([]byte, 16)
-	_, err := rand.Read(subId)
-	if err != nil {
-		log("Error generating rand subId: %v", err)
-	}
-	subIds := fmt.Sprintf("%x", subId)
+	subId := UniqueId()
 	s := Submission{
-		Uri:              fmt.Sprintf("/jobs/%v", subIds),
-		SubId:            subIds,
+		Uri:              fmt.Sprintf("/jobs/%v", subId),
+		SubId:            subId,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
 		Jobs:             rJobs,
