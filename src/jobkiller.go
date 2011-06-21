@@ -60,7 +60,7 @@ func (jk *JobKiller) killJobs() {
 	for {
 		select {
 		case SubId := <-jk.Killchan:
-			vlog("looking for  killables with subid %v", SubId)
+			log("looking for  killables with subid %v", SubId)
 			for _, kb := range jk.killables {
 				if kb.SubId == SubId {
 					kb.Kill()
