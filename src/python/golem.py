@@ -207,7 +207,8 @@ def main():
 		
 	if cmd == "nodes":
 		doGet(master+"/admin/")
-		
+	if cmd == "resize":
+		doPost(master+"/admin/"+sys.argv[cmdi+1]+"/resize/"+sys.argv[cmdi+2],{},"",pwd)
 	if cmd == "restart":
 		input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
 		if input == "Y":

@@ -25,6 +25,7 @@ import (
 	"websocket"
 	"json"
 	"strings"
+	"strconv"
 )
 
 
@@ -37,7 +38,7 @@ type Master struct {
 	subMap      map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
 	jobChan     chan *Job              //buffered channel for creating jobs
 	subidChan   chan int               //buffered channel for use as an incrementer to keep track of submissions
-	NodeHandles []*NodeHandle
+	NodeHandles map[string]*NodeHandle
 }
 
 //create a master node and initalize its channels
@@ -45,7 +46,7 @@ func NewMaster() *Master {
 	m := Master{
 		subMap:      map[string]*Submission{},
 		jobChan:     make(chan *Job, 0),
-		NodeHandles: make([]*NodeHandle, 0, 0)}
+		NodeHandles: map[string]*NodeHandle{}}
 	return &m
 
 }
@@ -93,42 +94,65 @@ func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		spliturl := strings.Split(r.URL.Path, "/", -1)
+		spliturl := splitRestUrl(r.URL.Path)
 		nsplit := len(spliturl)
-		if nsplit > 2 {
-			switch spliturl[2] {
-			case "restart":
-				m.Broadcast(&clientMsg{Type: RESTART})
-				fmt.Fprintf(w, "Restarting in 5 seconds.") //5 seconds is node
-				go RestartIn(3000000000)
-			case "die":
-				m.Broadcast(&clientMsg{Type: DIE})
-				fmt.Fprintf(w, "Dieing in 5 seconds.")
-				go DieIn(3000000000)
+		switch {
+		case nsplit == 2 && spliturl[1] == "restart":
+			m.Broadcast(&clientMsg{Type: RESTART})
+			fmt.Fprintf(w, "Restarting in 5 seconds.") //5 seconds is node
+			go RestartIn(3000000000)
+		case nsplit == 2 && spliturl[1] == "die":
+			m.Broadcast(&clientMsg{Type: DIE})
+			fmt.Fprintf(w, "Dieing in 5 seconds.")
+			go DieIn(3000000000)
+		case nsplit == 4 && spliturl[2] == "resize":
+			nodeid := spliturl[1]
+			newmax, err := strconv.Atoi(spliturl[3])
+			if err != nil {
+				log("error parsing new max size: %v", err)
+				return
 			}
+			_, isin := m.NodeHandles[nodeid]
+			if isin {
+				m.NodeHandles[nodeid].ReSize(newmax)
+				fmt.Fprintf(w, "%v", m.NodeHandles[nodeid].DescribeSelfJson())
+			} else {
+				fmt.Fprintf(w, "null")
+				log("Request for non node: %v", nodeid)
+			}
+
 		}
 	case "GET":
-		nodedescs := make([]string, 0, len(m.NodeHandles))
-		for _, n := range m.NodeHandles {
-			nodedescs = append(nodedescs, n.DescribeSelfJson())
+		pathParts := splitRestUrl(r.URL.Path)
+		nparts := len(pathParts)
+		switch {
+		default:
+			nodedescs := make([]string, 0, len(m.NodeHandles))
+			for _, n := range m.NodeHandles {
+				nodedescs = append(nodedescs, n.DescribeSelfJson())
+			}
+			fmt.Fprintf(w, "[%v]", strings.Join(nodedescs, ",\n"))
+		case nparts == 2:
+			nodeid := pathParts[1]
+			_, isin := m.NodeHandles[nodeid]
+			if isin {
+				fmt.Fprintf(w, "%v", m.NodeHandles[nodeid].DescribeSelfJson())
+			} else {
+				fmt.Fprintf(w, "null")
+				log("Request for non node: %v", nodeid)
+			}
 		}
-		fmt.Fprintf(w, "[%v]", strings.Join(nodedescs, ",\n"))
 
 	}
 }
+
 
 //restfull api for managing jobs handled on /jobs/
 //TODO: refactor the whole jobs rest interface
 
 //parser for rest jobs request
 func (m *Master) parseJobRestUrl(path string) (jobid string, verb string) {
-	spliturl := strings.Split(path, "/", -1)
-	pathParts := make([]string, 0, 2)
-	for _, part := range spliturl {
-		if part != "" {
-			pathParts = append(pathParts, part)
-		}
-	}
+	pathParts := splitRestUrl(path)
 	nparts := len(pathParts)
 	jobid = ""
 	verb = ""
@@ -275,39 +299,7 @@ func (m *Master) Broadcast(msg *clientMsg) {
 func (m *Master) nodeHandler(ws *websocket.Conn) {
 	log("Node connectiong from %v.", ws.LocalAddr().String())
 	nh := NewNodeHandle(NewConnection(ws), m)
-	m.NodeHandles = append(m.NodeHandles, nh)
+	m.NodeHandles[nh.NodeId] = nh
 	nh.Monitor()
 
-}
-
-
-//handle the diffrent messages a client can send and return the updated number of jobs
-//that client is running
-func (m *Master) clientMsgSwitch(nodename string, msg *clientMsg, running int) int {
-	switch msg.Type {
-	default:
-		//cout <- msg.Body
-	case CHECKIN:
-		vlog("%v checks in", nodename)
-	case COUT:
-		vlog("%v got cout", nodename)
-		m.subMap[msg.SubId].CoutFileChan <- msg.Body
-	case CERROR:
-		vlog("%v got cerror", nodename)
-		m.subMap[msg.SubId].CerrFileChan <- msg.Body
-	case JOBFINISHED:
-
-		log("%v says job finished: %v running: %v", nodename, msg.Body, running)
-		running--
-		m.subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
-		vlog("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
-
-	case JOBERROR:
-		log("%v says job error: %v running: %v", nodename, msg.Body, running)
-		running--
-		m.subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
-		vlog("%v finished sent to Sub: %v running: %v", nodename, msg.Body, running)
-
-	}
-	return running
 }
