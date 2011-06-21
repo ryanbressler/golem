@@ -16,6 +16,7 @@ GOFILES=\
 	jobkiller.go\
 	uniqueid.go\
 	nodehandle.go\
+	rest.go\
 	node.go\
 	tls.go\
 	main.go\

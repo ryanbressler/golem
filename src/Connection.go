@@ -69,7 +69,7 @@ func (con Connection) SendMsgs() {
 //goroutine to monitor websocket and put the messages in the InChan
 //usually started in NewConnection
 func (con Connection) GetMsgs() {
-	
+
 	for {
 		decoder := json.NewDecoder(con.Socket)
 		var msg clientMsg
