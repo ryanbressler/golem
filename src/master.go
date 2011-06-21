@@ -292,12 +292,20 @@ func (m *Master) Broadcast(msg *clientMsg) {
 
 }
 
+
+//goroutine to remove nodehandles from the map used to store them as they disconect
+func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
+	<-nh.Con.DiedChan
+	m.NodeHandles[nh.NodeId] = nh, false
+}
+
 //websocket handler for connecting nodes on /master/
 // creates the nodes broadcast chan and starts monitoring it
 func (m *Master) nodeHandler(ws *websocket.Conn) {
 	log("Node connectiong from %v.", ws.LocalAddr().String())
 	nh := NewNodeHandle(NewConnection(ws), m)
 	m.NodeHandles[nh.NodeId] = nh
+	go m.RemoveNodeOnDeath(nh)
 	nh.Monitor()
 
 }
