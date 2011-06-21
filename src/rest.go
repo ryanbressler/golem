@@ -20,15 +20,16 @@
 package main
 
 import (
-	"fmt"
-	"crypto/rand"
+	"strings"
 )
 
-func UniqueId() string {
-	subId := make([]byte, 16)
-	_, err := rand.Read(subId)
-	if err != nil {
-		log("Error generating rand subId: %v", err)
+func splitRestUrl(path string) []string {
+	spliturl := strings.Split(path, "/", -1)
+	pathParts := make([]string, 0, 2)
+	for _, part := range spliturl {
+		if part != "" {
+			pathParts = append(pathParts, part)
+		}
 	}
-	return fmt.Sprintf("%x", subId)
+	return pathParts
 }
