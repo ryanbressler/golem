@@ -85,6 +85,11 @@ func (nh *NodeHandle) DescribeSelfJson() string {
 	return rv
 }
 
+func (nh *NodeHandle) ReSize(NewMaxJobs int) {
+	<-nh.MaxJobs
+	nh.MaxJobs <- NewMaxJobs
+}
+
 //takes a  job, turns job into a json messags and send it into the connections out box.
 //This seems to sleep or deadlock if left alone to long so the client checks in every 
 //60 seconds.
@@ -104,7 +109,6 @@ func (nh *NodeHandle) SendJob(j *Job) {
 
 func (nh *NodeHandle) Monitor() {
 	//control loop
-	m := *nh.Master
 	for {
 		running := <-nh.Running
 		nh.Running <- running
@@ -118,7 +122,7 @@ func (nh *NodeHandle) Monitor() {
 			case bcMsg := <-nh.BroadcastChan:
 				log("%v sending broadcast message %v", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
-			case job := <-m.jobChan:
+			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
 				running := <-nh.Running
 				nh.Running <- running + 1
@@ -126,7 +130,7 @@ func (nh *NodeHandle) Monitor() {
 			case msg := <-nh.Con.InChan:
 				vlog("%v Got msg", nh.Hostname)
 				running := <-nh.Running
-				nh.Running <- nh.Master.clientMsgSwitch(nh.Hostname, &msg, running)
+				nh.Running <- nh.clientMsgSwitch(&msg, running)
 				vlog("%v msg handled", nh.Hostname)
 			}
 		default:
@@ -138,10 +142,41 @@ func (nh *NodeHandle) Monitor() {
 			case msg := <-nh.Con.InChan:
 				//log("Got msg from %v", nh.Hostname)
 				running := <-nh.Running
-				nh.Running <- nh.Master.clientMsgSwitch(nh.Hostname, &msg, running)
+				nh.Running <- nh.clientMsgSwitch(&msg, running)
 			}
 		}
 
 	}
 
+}
+
+//handle the diffrent messages a client can send and return the updated number of jobs
+//that client is running
+func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg, running int) int {
+	switch msg.Type {
+	default:
+		//cout <- msg.Body
+	case CHECKIN:
+		vlog("%v checks in", nh.Hostname)
+	case COUT:
+		vlog("%v got cout", nh.Hostname)
+		nh.Master.subMap[msg.SubId].CoutFileChan <- msg.Body
+	case CERROR:
+		vlog("%v got cerror", nh.Hostname)
+		nh.Master.subMap[msg.SubId].CerrFileChan <- msg.Body
+	case JOBFINISHED:
+
+		log("%v says job finished: %v running: %v", nh.Hostname, msg.Body, running)
+		running--
+		nh.Master.subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
+		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
+
+	case JOBERROR:
+		log("%v says job error: %v running: %v", nh.Hostname, msg.Body, running)
+		running--
+		nh.Master.subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
+		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
+
+	}
+	return running
 }
