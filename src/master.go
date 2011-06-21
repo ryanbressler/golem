@@ -195,11 +195,9 @@ func (m *Master) jobIdStopPostHandler(w http.ResponseWriter, r *http.Request, su
 	worked := false
 	_, isin := m.subMap[subid]
 	if isin {
+		//log("Broadcasting stop message for SubId: %v", subid)
+		//m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
 		worked = m.subMap[subid].Stop()
-		if worked {
-			log("Broadcasting stop message for SubId: %v", subid)
-			m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
-		}
 		fmt.Fprintf(w, "%v", worked)
 	} else {
 
