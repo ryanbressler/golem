@@ -30,7 +30,12 @@ func RestartIn(waitn int64) {
 	log("Restart in %v nanoseconds", waitn)
 	time.Sleep(waitn)
 	log("Restarting.")
-	_, err := exec.Run(os.Args[0], os.Args, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
+	cmd, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		log("exec %s: %s\n", os.Args, err)
+		return
+	}
+	_, err = exec.Run(cmd, os.Args, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
 	if err != nil {
 		log("%v", err)
 	}
