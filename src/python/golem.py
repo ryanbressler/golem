@@ -43,6 +43,7 @@ list                                : list statuses of all submissions on cluste
 status subid                        : get status of a single submission
 stop subid                          : stop a submission
 nodes                               : list the nodes connected to the cluster
+resize nodeid newmax                : change the number of jobs a node takes at once
 restart                             : cycle all golem proccess on the cluster...use only for udating core components
 die                                 : kill everything ... rarelly used
 """
