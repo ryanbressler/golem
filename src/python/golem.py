@@ -98,7 +98,7 @@ def doGet(url):
 	else:
 		print resp.status, resp.reason
 
-	conn.close()
+	#conn.close()
 
 """
 posts a multipart form to url, paramMap should be a dictionary of the form fields, json data 
@@ -140,7 +140,7 @@ def doPost(url, paramMap, jsondata,password):
 	else:
 		print resp.status, resp.reason
 
-	conn.close()
+	#conn.close()
 
 def main():
 	if len(sys.argv)==1:
