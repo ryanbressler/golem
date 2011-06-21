@@ -78,7 +78,7 @@ func (con Connection) GetMsgs() {
 		case err == os.EOF:
 			log("EOF recieved on websocket.")
 			con.Socket.Close()
-			if isMaster != true {
+			if isMaster == true {
 				DieIn(10000000000)
 			}
 
