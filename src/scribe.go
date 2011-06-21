@@ -68,36 +68,38 @@ func (s *Scribe) RunScribe(hostname string, password string) {
 
 //web handlers
 //Root Handler.  Show JSON or redirect to HTML
-func (m *Scribe) rootHandler(w http.ResponseWriter, r *http.Request) {
-	log("root request")
+func (s *Scribe) rootHandler(w http.ResponseWriter, r *http.Request) {
+	log("ROOT [%v %v]", r.Method, r.URL.Path)
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprint(w, "Hello. This is a golem scribe node:\n http://code.google.com/p/golem/")
 }
 
 // REST API [GET/POST] for all jobs and individual jobs 
-func (m *Scribe) jobsHandler(w http.ResponseWriter, r *http.Request) {
-	log("Jobs request")
+func (s *Scribe) jobsHandler(w http.ResponseWriter, r *http.Request) {
+	spliturl := strings.Split(r.URL.Path, "/", -1)
+	nsplit := len(spliturl)
+	jobid := spliturl[2]
 
-	w.Header().Set("Content-Type", "text/plain")
+	log("JOBS [%v %v %v %v]", r.Method, r.URL.Path, nsplit, jobid)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// TODO : 404 when no verbs found
+
 	switch r.Method {
 	case "GET":
-		log("Method = GET.")
-		spliturl := strings.Split(r.URL.Path, "/", -1)
-		nsplit := len(spliturl)
-		vlog("path: %v, nsplit: %v %v %v %v", r.URL.Path, nsplit, spliturl[0], spliturl[1], spliturl[2])
 		switch {
-		case nsplit == 3 && spliturl[2] == "":
-			vlog("jobs")
-		case nsplit == 3:
-			subid := spliturl[2]
-			vlog("job: %v", subid)
-		case nsplit == 4:
-			subid := spliturl[3]
-			vlog("job verbs: %v", subid)
+		case nsplit == 3 && jobid == "":
+			s.retrieveAllJobs(w)
+			return
+		case nsplit == 3 && jobid != "":
+			s.retrieveJob(w, jobid)
+			return
+		default:
+			w.WriteHeader(404)
 		}
 
 	case "POST":
-		log("Method = POST.")
 		// TODO : Move to password.go
 		if usepw {
 			pw := hashPw(r.Header.Get("Password"))
@@ -109,9 +111,50 @@ func (m *Scribe) jobsHandler(w http.ResponseWriter, r *http.Request) {
 			log("Password verified")
 		}
 
-		vlog("getting json from form")
-		reqjson := r.FormValue("data")
-		vlog("json is : %v", reqjson)
-		// TODO : Persist JSON to database
+		switch {
+		case nsplit == 3 && jobid == "":
+			s.persistJob(w, r)
+			return
+		case nsplit == 3 && jobid != "":
+			// operation not supported
+			w.WriteHeader(501)
+			return
+		case nsplit == 4:
+			verb := spliturl[3]
+			switch verb {
+			case "stop":
+				s.stopJob(w, jobid)
+				return
+			case "delete":
+				s.deleteJob(w, jobid)
+				return
+			default:
+				w.WriteHeader(404)
+			}
+		}
+	default:
+		w.WriteHeader(404)
 	}
+}
+
+
+func (s *Scribe) retrieveAllJobs(w http.ResponseWriter) {
+	log("retrieveAllJobs")
+}
+
+func (s *Scribe) retrieveJob(w http.ResponseWriter, jobid string) {
+	log("retrieveJob:%v", jobid)
+}
+
+func (s *Scribe) persistJob(w http.ResponseWriter, r *http.Request) {
+	reqjson := r.FormValue("data")
+	log("persistJob:%v", reqjson)
+}
+
+func (s *Scribe) stopJob(w http.ResponseWriter, jobid string) {
+	log("stopJob:%v", jobid)
+}
+
+func (s *Scribe) deleteJob(w http.ResponseWriter, jobid string) {
+	log("deleteJob:%v", jobid)
 }
