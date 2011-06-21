@@ -31,14 +31,18 @@ import (
 )
 
 type Connection struct {
-	Socket  *websocket.Conn //the socket that the connection wraps
-	OutChan chan clientMsg  // the out box. send messages with c.OutChan<-msg
-	InChan  chan clientMsg  // the in box. getmsg:=<-c.InChan
+	Socket   *websocket.Conn //the socket that the connection wraps
+	OutChan  chan clientMsg  // the out box. send messages with c.OutChan<-msg
+	InChan   chan clientMsg  // the in box. getmsg:=<-c.InChan
+	DiedChan chan int        // send died message out on this
 }
 
 //Wraps a websocket in a connection starts the goroutines that recieve and send messages
 func NewConnection(Socket *websocket.Conn) *Connection {
-	n := Connection{Socket: Socket, OutChan: make(chan clientMsg, 10), InChan: make(chan clientMsg, 10)}
+	n := Connection{Socket: Socket,
+		OutChan:  make(chan clientMsg, 10),
+		InChan:   make(chan clientMsg, 10),
+		DiedChan: make(chan int, 1)}
 	go n.GetMsgs()
 	go n.SendMsgs()
 	return &n
@@ -81,7 +85,7 @@ func (con Connection) GetMsgs() {
 			if isMaster != true {
 				DieIn(10000000000)
 			}
-
+			con.DiedChan <- 1
 			return //TODO: recover
 		case err == bufio.ErrBufferFull:
 			log("buffer full, restarting json decoder: %v", err)
