@@ -35,6 +35,7 @@ func main() {
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
+	flag.BoolVar(&isRest, "r", false, "Start as REST node.")
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
 	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
 	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
@@ -53,6 +54,9 @@ func main() {
 	} else if isScribe {
 		s := NewScribe()
 		s.RunScribe(hostname, password)
+	} else if isRest {
+		r := NewRestOnJob(NewSimpleJobDispatcher())
+		r.RunRestOnJob(hostname, password)
 	} else {
 		RunNode(atOnce, hostname)
 	}

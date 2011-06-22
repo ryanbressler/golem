@@ -10,6 +10,7 @@ GOFILES=\
 	Job.go\
 	Connection.go\
 	Submission.go\
+	restOnJob.go\
 	master.go\
 	scribe.go\
 	control.go\
