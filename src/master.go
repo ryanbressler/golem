@@ -100,11 +100,11 @@ func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case nsplit == 2 && spliturl[1] == "restart":
 			m.Broadcast(&clientMsg{Type: RESTART})
-			fmt.Fprintf(w, "Restarting in 5 seconds.") //5 seconds is node
+			fmt.Fprintf(w, "Restarting in 10 seconds.")
 			go RestartIn(3000000000)
 		case nsplit == 2 && spliturl[1] == "die":
 			m.Broadcast(&clientMsg{Type: DIE})
-			fmt.Fprintf(w, "Dieing in 5 seconds.")
+			fmt.Fprintf(w, "Dieing in 10 seconds.")
 			go DieIn(3000000000)
 		case nsplit == 4 && spliturl[2] == "resize":
 			nodeid := spliturl[1]

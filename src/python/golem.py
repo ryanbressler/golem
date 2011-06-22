@@ -25,15 +25,13 @@ import urllib
 import httplib
 import urlparse
 import os
+import socket
 supporttls=True
-try: 
-	from tlslite.integration.HTTPTLSConnection import HTTPTLSConnection
-	from tlslite.X509 import X509
-	from tlslite.X509CertChain import X509CertChain
-	from tlslite.utils.keyfactory import parsePEMKey
+try: import ssl
 except ImportError:
 	supporttls=False
-	print "Error importing tlslite."
+ 	print "Error importing ssl."
+
 
 usage = """Usage: golem.py hostname [-p password] command and args
 where command and args can be:
@@ -47,6 +45,29 @@ resize nodeid newmax                : change the number of jobs a node takes at 
 restart                             : cycle all golem proccess on the cluster...use only for udating core components
 die                                 : kill everything ... rarelly used
 """
+
+class HTTPSTLSv1Connection(httplib.HTTPConnection):
+        "This class allows communication via TLS, it is version of httplib.HTTPSConnection that specifies TLSv1."
+
+        default_port = httplib.HTTPS_PORT
+
+        def __init__(self, host, port=None, key_file=None, cert_file=None,
+                     strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
+                     source_address=None):
+            httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
+                                    source_address)
+            self.key_file = key_file
+            self.cert_file = cert_file
+
+        def connect(self):
+            "Connect to a host on a given (TLS) port."
+
+            sock = socket.create_connection((self.host, self.port),
+                                            self.timeout, self.source_address)
+            if self._tunnel_host:
+                self.sock = sock
+                self._tunnel()
+            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file, False,ssl.CERT_NONE,ssl.PROTOCOL_TLSv1)
 
 """multipart encodes a form. data should be a dictionary of the the form fields and filebody 
 should be a string of the body of the file"""
@@ -83,7 +104,7 @@ def doGet(url):
 		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
 
-		conn = HTTPTLSConnection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
+		conn = HTTPSTLSv1Connection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
 	
 		
 	conn.request("GET", u.path)
@@ -125,7 +146,7 @@ def doPost(url, paramMap, jsondata,password):
 		conn = httplib.HTTPConnection(u.hostname,u.port)
 	else:
 
-		conn = HTTPTLSConnection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
+		conn = HTTPSTLSv1Connection(u.hostname,u.port)#,privateKey=key,certChain=X509CertChain([cert]))
 	
 		
 	conn.request("POST", u.path, body, headers)
@@ -196,7 +217,7 @@ def main():
 		data = {'command':cmd}
 		print "Submiting run request to %s."%(url)
 		doPost(url,data,jobs,pwd)
-	if cmd == "list":
+	if cmd == "jobs" or cmd == "list":
 		doGet(url)
 		
 	if cmd == "stop":
@@ -223,8 +244,6 @@ def main():
 		else:
 			print "Canceled"
 	
-	if cmd == "ls":
-		print "not yet implemented"
 	
 		
 	

@@ -39,6 +39,7 @@ var useTls bool = true
 var usepw bool = false
 var hash = sha256.New() // use the same hasher
 var hashedpw string     //the master password
+var certpath string
 
 
 const (

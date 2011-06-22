@@ -142,7 +142,7 @@ func RunNode(atOnce int, master string) {
 				jk.Killchan <- msg.SubId
 			case RESTART:
 				log("Got restart message: %v", msg)
-				RestartIn(5000000000)
+				RestartIn(8000000000)
 			case DIE:
 				log("Got die message: %v", msg)
 				DieIn(0)

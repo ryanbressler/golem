@@ -24,6 +24,11 @@ import (
 	"websocket"
 	"os"
 	"crypto/tls"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/rand"
+	"encoding/pem"
+	"time"
 	"http"
 )
 
@@ -61,14 +66,32 @@ func getCertFilePaths() (string, string) {
 
 //returns our custom tls configuration
 func getTlsConfig() (*tls.Config, os.Error) {
-	certf, keyf := getCertFilePaths()
-	cert, err := tls.LoadX509KeyPair(certf, keyf)
-	if err != nil {
-		vlog("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
-		return nil, err
+	if certpath!=""{
+		
+	}
+	certs := []tls.Certificate{}
+	if isMaster {
+		var cert tls.Certificate
+		var err os.Error
+		switch {
+		case certpath!="":
+			certf, keyf := getCertFilePaths()
+			cert, err = tls.LoadX509KeyPair(certf, keyf)
+			if err != nil {
+				vlog("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
+				return nil, err
+			}
+		default:
+			cert, err =GenerateTlsCert()
+			if err != nil {
+				log("Error generating tls cert: %v", err)
+			}
+		}
+		
+		certs = append(certs, cert)
 	}
 
-	return &tls.Config{Certificates: []tls.Certificate{cert}, AuthenticateClient: true}, nil
+	return &tls.Config{Certificates: certs, AuthenticateClient: true}, nil
 
 }
 
@@ -89,6 +112,55 @@ func ConfigListenAndServeTLS(hostname string, handler http.Handler) os.Error {
 		return err
 	}
 	return nil
+}
+
+
+//Create tls certificate
+func GenerateTlsCert()(cert tls.Certificate, err os.Error){
+	hostname, err := os.Hostname()
+	if err != nil {
+		log("Error getting hostname")
+		return
+	}
+	
+	priv, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log("failed to generate private key: %s", err)
+		return
+	}
+	
+	now := time.Seconds()
+	
+	template := x509.Certificate{
+		SerialNumber: []byte{0},
+		
+		//SignatureAlgorithm: x509.MD5WithRSA,
+		PublicKeyAlgorithm: x509.RSA,
+		Subject: x509.Name{
+			CommonName:   hostname,
+			Organization: []string{"Golem"},
+		},
+		NotBefore: time.SecondsToUTC(now - 300),
+		NotAfter:  time.SecondsToUTC(now + 60*60*24*365), // valid for 1 year.
+	
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+	}
+	
+	
+	certbyte, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		log("Failed to create certificate: %s", err)
+		return 
+	}
+	
+	cert, err =  tls.X509KeyPair(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certbyte}), pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}))
+	if err != nil {
+		log("Failed to X509KeyPair certificate: %s", err)
+		return 
+	}
+	return
+	
 }
 
 //this is the main function to setup a server as used by the master, usage is identical to 
