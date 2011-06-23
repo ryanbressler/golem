@@ -31,8 +31,8 @@ import (
 // REST interface for JobDispatchers
 type RestOnJob struct {
 	dispatcher JobDispatcher
-	hostname string
-	password string
+	hostname   string
+	password   string
 }
 
 type JobDispatcher interface {
@@ -119,7 +119,9 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 
 // Do Nothing JobDispatcher implementation
 type IKnowNothingJobDispatcher struct {
+
 }
+
 func (sjd IKnowNothingJobDispatcher) RetrieveAll(params map[string]string) string {
 	log("RetrieveAll")
 	return "{ items:[], numberOfItems: 0, uri:'/jobs' }"

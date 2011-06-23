@@ -61,7 +61,7 @@ func (m *Master) RunMaster(hostname string, password string) {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { m.rootHandler(w, r) })
-	http.Handle("/html/", http.FileServer("html","/html"))
+	http.Handle("/html/", http.FileServer("html", "/html"))
 	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { m.jobHandler(w, r) })
 	http.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) { m.adminHandler(w, r) })
 	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.nodeHandler(ws) }))

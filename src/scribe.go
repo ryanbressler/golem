@@ -53,7 +53,7 @@ func (s *Scribe) RunScribe(hostname string, password string) {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { s.rootHandler(w, r) })
-    http.Handle("/html/", http.FileServer("html","/html"))
+	http.Handle("/html/", http.FileServer("html", "/html"))
 	http.HandleFunc("/jobs", func(w http.ResponseWriter, r *http.Request) { s.jobsHandler(w, r) })
 	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { s.jobsHandler(w, r) })
 
