@@ -38,7 +38,7 @@ func main() {
 	flag.BoolVar(&isRest, "r", false, "Start as REST node.")
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
 	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
-	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections." )
+	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections.")
 	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
 	flag.StringVar(&password, "p", "", "The password to require with job submission.")
 	flag.BoolVar(&verbose, "v", false, "Use verbose logging.")
@@ -56,7 +56,7 @@ func main() {
 		s := NewScribe()
 		s.RunScribe(hostname, password)
 	} else if isRest {
-		r := RestOnJob{ dispatcher: IKnowNothingJobDispatcher{}, hostname: hostname, password: password}
+		r := RestOnJob{dispatcher: IKnowNothingJobDispatcher{}, hostname: hostname, password: password}
 		r.MakeReady()
 	} else {
 		RunNode(atOnce, hostname)
