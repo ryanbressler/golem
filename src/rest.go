@@ -33,3 +33,20 @@ func splitRestUrl(path string) []string {
 	}
 	return pathParts
 }
+
+//parser for rest jobs request
+func parseJobUri(path string) (jobid string, verb string) {
+	pathParts := splitRestUrl(path)
+	nparts := len(pathParts)
+	jobid = ""
+	verb = ""
+	switch {
+	case nparts == 2:
+		jobid = pathParts[1]
+	case nparts == 3:
+		jobid = pathParts[1]
+		verb = pathParts[2]
+	}
+	vlog("Parsed job request id:\"%v\" verb:\"%v\"", jobid, verb)
+	return
+}

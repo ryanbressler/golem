@@ -56,8 +56,8 @@ func main() {
 		s := NewScribe()
 		s.RunScribe(hostname, password)
 	} else if isRest {
-		r := NewRestOnJob(NewSimpleJobDispatcher())
-		r.RunRestOnJob(hostname, password)
+		r := RestOnJob{ dispatcher: IKnowNothingJobDispatcher{}, hostname: hostname, password: password}
+		r.MakeReady()
 	} else {
 		RunNode(atOnce, hostname)
 	}
