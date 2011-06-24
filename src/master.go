@@ -196,8 +196,21 @@ func (m *Master) jobIdStopPostHandler(w http.ResponseWriter, r *http.Request, su
 	worked := false
 	_, isin := m.subMap[subid]
 	if isin {
-		//log("Broadcasting stop message for SubId: %v", subid)
-		//m.Broadcast(&clientMsg{Type: STOP, SubId: subid})
+		worked = m.subMap[subid].Stop()
+		fmt.Fprintf(w, "%v", worked)
+	} else {
+
+		fmt.Fprintf(w, "not found.")
+		log("stop Request for non submission: %v", subid)
+	}
+}
+
+func (m *Master) jobIdKillPostHandler(w http.ResponseWriter, r *http.Request, subid string) {
+	worked := false
+	_, isin := m.subMap[subid]
+	if isin {
+		log("Broadcasting kill message for SubId: %v", subid)
+		m.Broadcast(&clientMsg{Type: KILL, SubId: subid})
 		worked = m.subMap[subid].Stop()
 		fmt.Fprintf(w, "%v", worked)
 	} else {
@@ -274,6 +287,8 @@ func (m *Master) jobHandler(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case subid != "" && verb == "stop":
 			m.jobIdStopPostHandler(w, r, subid)
+		case subid != "" && verb == "kill":
+			m.jobIdKillPostHandler(w, r, subid)
 		case subid == "" && verb == "":
 			m.jobPostHandler(w, r)
 		default:

@@ -75,7 +75,7 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string, jk *JobKil
 	}
 	go pipeToChan(c.Stdout, COUT, job.SubId, con.OutChan)
 	go pipeToChan(c.Stderr, CERROR, job.SubId, con.OutChan)
-	kb := &Killable{Pid: fmt.Sprintf("%v", c.Process.Pid), SubId: job.SubId, JobId: fmt.Sprintf("%v", job.JobId)}
+	kb := &Killable{Pid: c.Process.Pid, SubId: job.SubId, JobId: job.JobId}
 	jk.Registerchan <- kb
 	//wait for the job to finish
 	w, err := c.Wait(0)
@@ -137,8 +137,8 @@ func RunNode(atOnce int, master string) {
 			case START:
 				go startJob(&mcon, replyc, msg.Body, jk)
 				running++
-			case STOP:
-				log("Got stop message: %v", msg)
+			case KILL:
+				log("Got KILL message for subit : %v", msg.SubId)
 				jk.Killchan <- msg.SubId
 			case RESTART:
 				log("Got restart message: %v", msg)

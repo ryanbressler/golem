@@ -27,9 +27,9 @@ import (
 //killable links a SubId and JobId which uniquelly describe a job with a pid that can be used to 
 //kill it
 type Killable struct {
-	Pid   string
+	Pid   int
 	SubId string
-	JobId string
+	JobId int
 }
 
 //Killable.Kill() kills the killable via KillPid (linux kill).

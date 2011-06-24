@@ -43,19 +43,19 @@ var certpath string
 
 
 const (
-	//Message type constants ... should maybe be in clientMsg.go
-	HELLO   = 1 //sent from client to master on connect, body is bumber of jobs at once
-	CHECKIN = 2 //sent from client every minute to keep conection alive
+	//Message type constants ... should maybe be in clientMsg.go 
+	HELLO   = iota //sent from client to master on connect, body is bumber of jobs at once
+	CHECKIN        //sent from client every minute to keep conection alive
 
-	START = 3 //sent from master to start job, body is json job
-	STOP  = 4 //sent from master to stop jobs, SubId indicates what jobs to stop.
+	START //sent from master to start job, body is json job
+	KILL  //sent from master to stop jobs, SubId indicates what jobs to stop.
 
-	COUT   = 5 //cout from clent, body is line of cout
-	CERROR = 6 //cout from clent, body is line of cerror
+	COUT   //cout from clent, body is line of cout
+	CERROR //cout from clent, body is line of cerror
 
-	JOBFINISHED = 7 //sent from client on job finish, body is json job SubId set
-	JOBERROR    = 8 //sent from client on job error, body is json job, SubId set
+	JOBFINISHED //sent from client on job finish, body is json job SubId set
+	JOBERROR    //sent from client on job error, body is json job, SubId set
 
-	RESTART = 9  //Sent by master to nodes telling them to resart and reconnec themselves.
-	DIE     = 10 //tell nodes to shutdown.
+	RESTART //Sent by master to nodes telling them to resart and reconnec themselves.
+	DIE     //tell nodes to shutdown.
 )

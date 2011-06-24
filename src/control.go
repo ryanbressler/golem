@@ -23,6 +23,7 @@ import (
 	"os"
 	"exec"
 	"time"
+	"syscall"
 )
 
 //restarts his process using the origional commands after waitn nanoseconds then die
@@ -53,15 +54,9 @@ func DieIn(waitn int64) {
 
 //kill the supplied pid... uses the kill command, there must be a better way to do this
 //TODO: find a better way to do this
-func KillPid(pid string) {
-	killcmd, err := exec.LookPath("kill")
-	if err != nil {
-		log("kill not found")
-		return
-	}
-	log("Killing Pid: %v", pid)
-	_, err = exec.Run(killcmd, []string{killcmd, pid}, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
-	if err != nil {
-		log("%v", err)
-	}
+func KillPid(pid int) {
+	log("Killing pid %v", pid)
+	errno := syscall.Kill(pid, syscall.SIGCHLD)
+	log("Returned errno: %v", errno)
+
 }
