@@ -52,10 +52,8 @@ class HTTPSTLSv1Connection(httplib.HTTPConnection):
         default_port = httplib.HTTPS_PORT
 
         def __init__(self, host, port=None, key_file=None, cert_file=None,
-                     strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
-                     source_address=None):
-            httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
-                                    source_address)
+                     strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+            httplib.HTTPConnection.__init__(self, host, port, strict, timeout)
             self.key_file = key_file
             self.cert_file = cert_file
 
@@ -63,7 +61,7 @@ class HTTPSTLSv1Connection(httplib.HTTPConnection):
             "Connect to a host on a given (TLS) port."
 
             sock = socket.create_connection((self.host, self.port),
-                                            self.timeout, self.source_address)
+                                            self.timeout)
             if self._tunnel_host:
                 self.sock = sock
                 self._tunnel()
@@ -223,6 +221,9 @@ def main():
 	if cmd == "stop":
 		jobid = sys.argv[cmdi+1]
 		doPost(url+jobid+"/stop",{},"",pwd)
+	if cmd == "kill":
+		jobid = sys.argv[cmdi+1]
+		doPost(url+jobid+"/kill",{},"",pwd)
 	if cmd == "status":
 		jobid = sys.argv[cmdi+1]
 		doGet(url+jobid)
