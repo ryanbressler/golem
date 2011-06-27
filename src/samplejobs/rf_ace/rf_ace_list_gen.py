@@ -69,6 +69,7 @@ if __name__=="__main__":
 		if (not os.path.exists(associations_dir) and not opts.local_mode):
                 	try:
                         	os.makedirs(associations_dir)
+				os.system('chmod 777 ' + associations_dir)
                 	except OSError:
                         	print "Associations output path does not exist and mkdir failed %s, exiting" %associations_dir
 				sys.exit(-1)
