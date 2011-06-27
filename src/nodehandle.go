@@ -83,7 +83,7 @@ func (nh *NodeHandle) MarshalJSON() ([]byte, os.Error) {
 
 	nh.Running <- running
 	nh.MaxJobs <- atOnce
-	return []byte(rv),nil
+	return []byte(rv), nil
 }
 
 func (nh *NodeHandle) ReSize(NewMaxJobs int) {
