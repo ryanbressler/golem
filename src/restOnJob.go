@@ -21,6 +21,7 @@ package main
 import (
 	"http"
 	"fmt"
+	"os"
 )
 
 
@@ -36,12 +37,10 @@ type RestOnJob struct {
 }
 
 type JobDispatcher interface {
-	RetrieveAll(params map[string]string) string // json
-	Retrieve(jobId string) string                // json
-	NewJob(params map[string]string) string      //json
-	Stop(jobId string) string                    //json
-	Archive(jobId string) string                 //json
-	Log(jobId string, w http.ResponseWriter)
+	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
+	Retrieve(jobId string) (json string, err os.Error)
+	NewJob(r *http.Request) (jobId string, err os.Error)
+	Stop(jobId string) (err os.Error)
 }
 
 // initializes the REST control node
@@ -79,6 +78,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 	// w.Header().Set("Content-Type", "application/json")
 
 	// TODO : Add logic to retrieve outputs from job
+	// TODO : Manage errors
 
 	switch r.Method {
 	case "GET":
@@ -86,9 +86,19 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "":
-			fmt.Fprint(w, j.dispatcher.Retrieve(jobId))
+			json, err := j.dispatcher.Retrieve(jobId)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			fmt.Fprint(w, json)
 		case jobId == "" && verb == "":
-			fmt.Fprint(w, j.dispatcher.RetrieveAll(map[string]string{}))
+			json, _, err := j.dispatcher.RetrieveAll(r)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			fmt.Fprint(w, json)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -110,10 +120,18 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		case jobId != "" && verb == "stop":
 			fmt.Fprint(w, j.dispatcher.Stop(jobId))
 		case jobId == "" && verb == "":
-			fmt.Fprint(w, j.dispatcher.NewJob(map[string]string{}))
+			jobId, err := j.dispatcher.NewJob(r)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			fmt.Fprint(w, "{ uri: '/jobs/%v' id:'%v' )", jobId)
 		default:
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 		}
+
+	default:
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
@@ -122,29 +140,26 @@ type IKnowNothingJobDispatcher struct {
 
 }
 
-func (sjd IKnowNothingJobDispatcher) RetrieveAll(params map[string]string) string {
+func (sjd IKnowNothingJobDispatcher) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
-	return "{ items:[], numberOfItems: 0, uri:'/jobs' }"
+	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
+	numberOfItems = 0
+	err = nil
+	return
 }
-func (sjd IKnowNothingJobDispatcher) Retrieve(jobId string) string {
+func (sjd IKnowNothingJobDispatcher) Retrieve(jobId string) (json string, err os.Error) {
 	log("Retrieve:%v", jobId)
-	return fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
+	err = nil
+	return
 }
-func (sjd IKnowNothingJobDispatcher) NewJob(params map[string]string) string {
+func (sjd IKnowNothingJobDispatcher) NewJob(r *http.Request) (jobId string, err os.Error) {
 	log("NewJob")
-	jobId := UniqueId()
-	return sjd.Retrieve(jobId)
+	jobId = UniqueId()
+	err = nil
+	return
 }
-func (sjd IKnowNothingJobDispatcher) Stop(jobId string) string {
+func (sjd IKnowNothingJobDispatcher) Stop(jobId string) os.Error {
 	log("Stop:%v", jobId)
-	return sjd.Retrieve(jobId)
-}
-func (sjd IKnowNothingJobDispatcher) Archive(jobId string) string {
-	log("Archive:%v", jobId)
-	return sjd.Retrieve(jobId)
-}
-func (sjd IKnowNothingJobDispatcher) Log(jobId string, w http.ResponseWriter) {
-	log("Log:%v", jobId)
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("Some output content\nYippe!!!"))
+	return os.NewError("unable to stop")
 }
