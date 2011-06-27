@@ -116,7 +116,8 @@ func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 			_, isin := m.NodeHandles[nodeid]
 			if isin {
 				m.NodeHandles[nodeid].ReSize(newmax)
-				fmt.Fprintf(w, "%v", m.NodeHandles[nodeid].DescribeSelfJson())
+				val,_:=m.NodeHandles[nodeid].MarshalJSON()
+				fmt.Fprintf(w, "%v", string(val))
 			} else {
 				fmt.Fprintf(w, "null")
 				log("Request for non node: %v", nodeid)
@@ -130,14 +131,16 @@ func (m *Master) adminHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 			nodedescs := make([]string, 0, len(m.NodeHandles))
 			for _, n := range m.NodeHandles {
-				nodedescs = append(nodedescs, n.DescribeSelfJson())
+				val,_:=n.MarshalJSON()
+				nodedescs = append(nodedescs,string(val))
 			}
 			fmt.Fprintf(w, "[%v]", strings.Join(nodedescs, ",\n"))
 		case nparts == 2:
 			nodeid := pathParts[1]
 			_, isin := m.NodeHandles[nodeid]
 			if isin {
-				fmt.Fprintf(w, "%v", m.NodeHandles[nodeid].DescribeSelfJson())
+				val,_:=m.NodeHandles[nodeid].MarshalJSON()
+				fmt.Fprintf(w, "%v", string(val))
 			} else {
 				fmt.Fprintf(w, "null")
 				log("Request for non node: %v", nodeid)
@@ -174,7 +177,8 @@ func (m *Master) parseJobRestUrl(path string) (jobid string, verb string) {
 func (m *Master) jobIdGetHandler(w http.ResponseWriter, r *http.Request, subid string) {
 	_, isin := m.subMap[subid]
 	if isin {
-		fmt.Fprintf(w, "%v", m.subMap[subid].DescribeSelfJson())
+		val,_:=m.subMap[subid].MarshalJSON()
+		fmt.Fprintf(w, "%v",  string(val))
 	} else {
 		fmt.Fprintf(w, "null")
 		log("Request for non submission: %v", subid)
@@ -185,7 +189,8 @@ func (m *Master) jobIdGetHandler(w http.ResponseWriter, r *http.Request, subid s
 func (m *Master) jobGetHandler(w http.ResponseWriter, r *http.Request) {
 	jobdescs := make([]string, 0)
 	for _, s := range m.subMap {
-		jobdescs = append(jobdescs, s.DescribeSelfJson())
+		val,_:=s.MarshalJSON()
+		jobdescs = append(jobdescs, string(val))
 	}
 	fmt.Fprintf(w, "[%v]", strings.Join(jobdescs, ",\n"))
 }
@@ -251,7 +256,8 @@ func (m *Master) jobPostHandler(w http.ResponseWriter, r *http.Request) {
 	s := NewSubmission(&rJobs, m.jobChan)
 	m.subMap[s.SubId] = s
 	log("Created submission: %v", s.SubId)
-	fmt.Fprintf(w, "%v", s.DescribeSelfJson())
+	val,_:=s.MarshalJSON()
+	fmt.Fprintf(w, "%v", string(val))
 }
 
 //actuall http handler for /jobs/ parses the url and method and sends to one of the above methods

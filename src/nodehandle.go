@@ -24,6 +24,7 @@ import (
 	"json"
 	"strconv"
 	"fmt"
+	"os"
 )
 
 
@@ -74,7 +75,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	return &nh
 }
 
-func (nh *NodeHandle) DescribeSelfJson() string {
+func (nh *NodeHandle) MarshalJSON() ([]byte, os.Error) {
 	running := <-nh.Running
 	atOnce := <-nh.MaxJobs
 
@@ -82,7 +83,7 @@ func (nh *NodeHandle) DescribeSelfJson() string {
 
 	nh.Running <- running
 	nh.MaxJobs <- atOnce
-	return rv
+	return []byte(rv),nil
 }
 
 func (nh *NodeHandle) ReSize(NewMaxJobs int) {

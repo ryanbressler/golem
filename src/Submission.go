@@ -80,7 +80,7 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 
 }
 
-func (s *Submission) DescribeSelfJson() string {
+func (s *Submission) MarshalJSON() ([]byte, os.Error) {
 	TotalJobs := <-s.TotalJobsChan
 	FinishedJobs := <-s.FinishedJobsChan
 	ErroredJobs := <-s.ErroredJobsChan
@@ -91,7 +91,7 @@ func (s *Submission) DescribeSelfJson() string {
 	s.FinishedJobsChan <- FinishedJobs
 	s.ErroredJobsChan <- ErroredJobs
 	s.runningChan <- running
-	return rv
+	return []byte(rv),nil
 }
 
 func (s *Submission) Stop() bool {
