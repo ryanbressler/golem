@@ -41,6 +41,7 @@ type JobDispatcher interface {
 	Retrieve(jobId string) (json string, err os.Error)
 	NewJob(r *http.Request) (jobId string, err os.Error)
 	Stop(jobId string) (err os.Error)
+	Kill(jobId string) (err os.Error)
 }
 
 // initializes the REST control node
@@ -162,4 +163,8 @@ func (sjd IKnowNothingJobDispatcher) NewJob(r *http.Request) (jobId string, err 
 func (sjd IKnowNothingJobDispatcher) Stop(jobId string) os.Error {
 	log("Stop:%v", jobId)
 	return os.NewError("unable to stop")
+}
+func (sjd IKnowNothingJobDispatcher) Kill(jobId string) os.Error {
+	log("Kill:%v", jobId)
+	return os.NewError("unable to kill")
 }
