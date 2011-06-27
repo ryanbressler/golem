@@ -52,6 +52,9 @@ func main() {
 	if isMaster {
 		m := NewMaster()
 		m.RunMaster(hostname, password)
+
+		//x := RestOnJob{dispatcher: m, hostname: hostname, password: password}
+		//x.MakeReady()
 	} else if isScribe {
 		s := NewScribe()
 		s.RunScribe(hostname, password)
