@@ -91,7 +91,7 @@ func (s *Submission) MarshalJSON() ([]byte, os.Error) {
 	s.FinishedJobsChan <- FinishedJobs
 	s.ErroredJobsChan <- ErroredJobs
 	s.runningChan <- running
-	return []byte(rv),nil
+	return []byte(rv), nil
 }
 
 func (s *Submission) Stop() bool {
