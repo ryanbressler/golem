@@ -26,6 +26,7 @@ import (
 	"json"
 	"strings"
 	"strconv"
+	"os"
 )
 
 
@@ -330,4 +331,68 @@ func (m *Master) nodeHandler(ws *websocket.Conn) {
 	go m.RemoveNodeOnDeath(nh)
 	nh.Monitor()
 
+}
+
+// Job and Node Controllers
+type MasterJobController struct {
+
+}
+
+func (mc MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+	log("RetrieveAll")
+	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
+	numberOfItems = 0
+	err = nil
+	return
+}
+func (mc MasterJobController) Retrieve(jobId string) (json string, err os.Error) {
+	log("Retrieve:%v", jobId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
+	err = nil
+	return
+}
+func (mc MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
+	log("NewJob")
+	jobId = UniqueId()
+	err = nil
+	return
+}
+func (mc MasterJobController) Stop(jobId string) os.Error {
+	log("Stop:%v", jobId)
+	return os.NewError("unable to stop")
+}
+func (mc MasterJobController) Kill(jobId string) os.Error {
+	log("Kill:%v", jobId)
+	return os.NewError("unable to kill")
+}
+
+// Do Nothing Node Controller implementation
+type MasterNodeController struct {
+
+}
+
+func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+	log("RetrieveAll")
+	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
+	numberOfItems = 0
+	err = nil
+	return
+}
+func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error) {
+	log("Retrieve:%v", nodeId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/nodes/%v' }", nodeId)
+	err = nil
+	return
+}
+func (c MasterNodeController) Restart(nodeId string) os.Error {
+	log("Restart:%v", nodeId)
+	return os.NewError("unable to restart")
+}
+func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
+	log("Resize:%v,%i", nodeId, numberOfThreads)
+	return os.NewError("unable to resize")
+}
+func (c MasterNodeController) Kill(nodeId string) os.Error {
+	log("Kill:%v", nodeId)
+	return os.NewError("unable to kill")
 }

@@ -53,8 +53,8 @@ func main() {
 		m := NewMaster()
 		m.RunMaster(hostname, password)
 
-		//x := RestOnJob{jobController: m, nodeController: m, hostname: hostname, password: password}
-		//x.MakeReady()
+		// x := RestOnJob{jobController: MasterJobController{}, nodeController: MasterNodeController{}, hostname: hostname, password: password}
+		// x.MakeReady()
 	} else if isScribe {
 		s := NewScribe()
 		s.RunScribe(hostname, password)
