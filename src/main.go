@@ -53,13 +53,13 @@ func main() {
 		m := NewMaster()
 		m.RunMaster(hostname, password)
 
-		//x := RestOnJob{dispatcher: m, hostname: hostname, password: password}
+		//x := RestOnJob{jobController: m, nodeController: m, hostname: hostname, password: password}
 		//x.MakeReady()
 	} else if isScribe {
 		s := NewScribe()
 		s.RunScribe(hostname, password)
 	} else if isRest {
-		r := RestOnJob{dispatcher: IKnowNothingJobDispatcher{}, hostname: hostname, password: password}
+		r := RestOnJob{jobController: IKnowNothingJobController{}, nodeController: IKnowNothingNodeController{}, hostname: hostname, password: password}
 		r.MakeReady()
 	} else {
 		RunNode(atOnce, hostname)
