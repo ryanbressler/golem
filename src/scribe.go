@@ -22,137 +22,83 @@ package main
 import (
 	"http"
 	"fmt"
-	"strings"
+	"os"
 )
 
 
 /////////////////////////////////////////////////
 //scribe
-
 type Scribe struct {
-	subMap        map[string]*Submission //buffered channel for creating jobs
-	jobChan       chan *Job              //buffered channel for creating jobs
-	subidChan     chan int               //buffered channel for use as an incrementer to keep track of submissions
-	brodcastChans []chan *clientMsg
+	jobController  JobController
+	nodeController NodeController
 }
 
 func NewScribe() *Scribe {
-	s := Scribe{
-		subMap:        map[string]*Submission{},
-		jobChan:       make(chan *Job, 0),
-		brodcastChans: make([]chan *clientMsg, 0, 0)}
+	s := Scribe{jobController: ScribeJobController{}, nodeController: ScribeNodeController{}}
 	return &s
 }
 
-func (s *Scribe) RunScribe(hostname string, password string) {
-	log("Running as scribe at %v", hostname)
+// Job and Node Controllers
+type ScribeJobController struct {
 
-	if password != "" {
-		usepw = true
-		hashedpw = hashPw(password)
-	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { s.rootHandler(w, r) })
-	http.Handle("/html/", http.FileServer("html", "/html"))
-	http.HandleFunc("/jobs", func(w http.ResponseWriter, r *http.Request) { s.jobsHandler(w, r) })
-	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { s.jobsHandler(w, r) })
-
-	//relys on global useTls being set
-	if err := ListenAndServeTLSorNot(hostname, nil); err != nil {
-		log("ListenAndServeTLSorNot Error : %v", err)
-		return
-	}
 }
 
-//web handlers
-//Root Handler.  Show JSON or redirect to HTML
-func (s *Scribe) rootHandler(w http.ResponseWriter, r *http.Request) {
-	log("ROOT [%v %v]", r.Method, r.URL.Path)
-	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprint(w, "Hello. This is a golem scribe node:\n http://code.google.com/p/golem/")
+func (mc ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+	log("RetrieveAll")
+	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
+	numberOfItems = 0
+	err = nil
+	return
 }
-
-// REST API [GET/POST] for all jobs and individual jobs 
-func (s *Scribe) jobsHandler(w http.ResponseWriter, r *http.Request) {
-	spliturl := strings.Split(r.URL.Path, "/", -1)
-	nsplit := len(spliturl)
-	jobid := spliturl[2]
-
-	log("JOBS [%v %v %v %v]", r.Method, r.URL.Path, nsplit, jobid)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	// TODO : 404 when no verbs found
-
-	switch r.Method {
-	case "GET":
-		switch {
-		case nsplit == 3 && jobid == "":
-			s.retrieveAllJobs(w)
-			return
-		case nsplit == 3 && jobid != "":
-			s.retrieveJob(w, jobid)
-			return
-		default:
-			w.WriteHeader(404)
-		}
-
-	case "POST":
-		// TODO : Move to password.go
-		if usepw {
-			pw := hashPw(r.Header.Get("Password"))
-			log("Verifying password.")
-			if hashedpw != pw {
-				fmt.Fprint(w, "Passwords do not match.")
-				return
-			}
-			log("Password verified")
-		}
-
-		switch {
-		case nsplit == 3 && jobid == "":
-			s.persistJob(w, r)
-			return
-		case nsplit == 3 && jobid != "":
-			// operation not supported
-			w.WriteHeader(501)
-			return
-		case nsplit == 4:
-			verb := spliturl[3]
-			switch verb {
-			case "stop":
-				s.stopJob(w, jobid)
-				return
-			case "delete":
-				s.deleteJob(w, jobid)
-				return
-			default:
-				w.WriteHeader(404)
-			}
-		}
-	default:
-		w.WriteHeader(404)
-	}
+func (mc ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
+	log("Retrieve:%v", jobId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
+	err = nil
+	return
 }
-
-
-func (s *Scribe) retrieveAllJobs(w http.ResponseWriter) {
-	log("retrieveAllJobs")
-}
-
-func (s *Scribe) retrieveJob(w http.ResponseWriter, jobid string) {
-	log("retrieveJob:%v", jobid)
-}
-
-func (s *Scribe) persistJob(w http.ResponseWriter, r *http.Request) {
+func (mc ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	reqjson := r.FormValue("data")
-	log("persistJob:%v", reqjson)
+	log("NewJob:%v", reqjson)
+	jobId = UniqueId()
+	err = nil
+	return
+}
+func (mc ScribeJobController) Stop(jobId string) os.Error {
+	log("Stop:%v", jobId)
+	return os.NewError("unable to stop")
+}
+func (mc ScribeJobController) Kill(jobId string) os.Error {
+	log("Kill:%v", jobId)
+	return os.NewError("unable to kill")
 }
 
-func (s *Scribe) stopJob(w http.ResponseWriter, jobid string) {
-	log("stopJob:%v", jobid)
+// Do Nothing Node Controller implementation
+type ScribeNodeController struct {
+
 }
 
-func (s *Scribe) deleteJob(w http.ResponseWriter, jobid string) {
-	log("deleteJob:%v", jobid)
+func (c ScribeNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+	log("RetrieveAll")
+	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
+	numberOfItems = 0
+	err = nil
+	return
+}
+func (c ScribeNodeController) Retrieve(nodeId string) (json string, err os.Error) {
+	log("Retrieve:%v", nodeId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/nodes/%v' }", nodeId)
+	err = nil
+	return
+}
+func (c ScribeNodeController) Restart(nodeId string) os.Error {
+	log("Restart:%v", nodeId)
+	return os.NewError("unable to restart")
+}
+func (c ScribeNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
+	log("Resize:%v,%i", nodeId, numberOfThreads)
+	return os.NewError("unable to resize")
+}
+func (c ScribeNodeController) Kill(nodeId string) os.Error {
+	log("Kill:%v", nodeId)
+	return os.NewError("unable to kill")
 }
