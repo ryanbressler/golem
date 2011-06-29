@@ -30,26 +30,34 @@ def golemSubmit(pythonBin, golemPwd, commandsFile):
 	print "submitting to golem: " + cmd
 	os.system(cmd)
 
-def main(start, end, inputMatrixFile, associations_dir, commandsOut, gosubmit):
+def main(start, end, inputMatrixFile, associations_dir, commandsOut, gosubmit, local):
 	config = ConfigParser.RawConfigParser()
 	config.read('./rf_ace.config')
 	commandwriter = open(commandsOut, 'w')
 	if (not os.path.exists('./rf_ace.config')):
 		print "rf_ace.config file is missing"
 		sys.exit(-1)
-	execpath = config.get("RF_ACE_Parameters", "execpath")
+	rf_version = config.get("RF_ACE_Parameters", "execpath")
 	mtry = config.getint("RF_ACE_Parameters", "mtry")
 	numtrees = config.getint("RF_ACE_Parameters", "numtrees")
 	permutations = config.getint("RF_ACE_Parameters", "permutations")
 	pvalue_t = config.get("RF_ACE_Parameters", "pvalue_t")
 	nodesize = config.get("RF_ACE_Parameters", "nodesize")
+	if (not local):
+		readmewriter = open(associations_dir + "/README", 'w')
+		readmewriter.write("Submission to GOLEM using RF-ACE Scheduler\nFeature Matrix %s\nDate Submitted %s\n" %(inputMatrixFile, time.ctime()))
+		readmewriter.write("RF_ACE version %s\n" %rf_version)
+		readmewriter.write("mtry %i numtrees %i permutations %i pvalue %s nodesize %s\n" %(mtry, numtrees, permutations, pvalue_t, nodesize))			
+		readmewriter.write("Contact Sheila/Jake\n")
+		readmewriter.close()
+
 	pythonBin = config.get("PYTHON", "pythonbin")
 	golemPwd = config.get("GOLEM", "golempwd")
 	if (not associations_dir.endswith('/')):
 		associations_dir = associations_dir + "/"
 	while start < end:
 			#/proj/ilyalab/TCGA/rf-ace/bin/rf_ace -I ../KruglyakGenewisePhenoProteomics.NEW.transposed.csv -i 0 -n 100 -m 1000 -p 20 -O associations_0.out
-			cmd = "1 %s -I %s -i %i -n %i -m %i --nodesize %s -p %i -t %s -O %sassociations_%i.out" %(execpath, inputMatrixFile, start, numtrees, mtry, nodesize, permutations, pvalue_t, associations_dir, start)
+			cmd = "1 %s -I %s -i %i -n %i -m %i --nodesize %s -p %i -t %s -O %sassociations_%i.out" %(rf_version, inputMatrixFile, start, numtrees, mtry, nodesize, permutations, pvalue_t, associations_dir, start)
 			commandwriter.write(cmd + "\n");
 			start = start + 1
 	commandwriter.close()
@@ -57,7 +65,7 @@ def main(start, end, inputMatrixFile, associations_dir, commandsOut, gosubmit):
 		golemSubmit(pythonBin, golemPwd, commandwriter.name)
 
 if __name__=="__main__":
-	parser = optparse.OptionParser(usage="usage: %prog [options] filetureStart[start at 0] featureEnd, inputMatrixFile, associationsDir, commandsOutfile",version="%prog 1.0")
+	parser = optparse.OptionParser(description="Check rf_ace.config for appropriate tunings and rf-ace version\n\nusage: %prog [options] filetureStart[start at 0] featureEnd, inputMatrixFile, associationsDir, commandsOutfile",version="%prog 1.0")
 	parser.add_option('-l', '--local', help="local mode, will not check whether matrix file and output directory exists, important that you confirmed that the feature matrix and associations output path are valid before submitting jobs to grid", dest='local_mode', default=False, action='store_true')
 	parser.add_option('-s', '--submit', help="Inclusion of this flag will tell the program to submit job list to GOLEM - if you are running this from local, it is important to validate that your input matrix and output directory exists", dest='go_submit', default=False, action='store_true')
 	(opts, args) = parser.parse_args()
@@ -76,7 +84,7 @@ if __name__=="__main__":
 		if (not os.path.exists(matrix_file) and not opts.local_mode):
 	                print "%s is not a valid file, exiting" % matrix_file
                         sys.exit(-1)
-		main(int(args[0]), int(args[1]), matrix_file, associations_dir, commandsOutfile, opts.go_submit)
+		main(int(args[0]), int(args[1]), matrix_file, associations_dir, commandsOutfile, opts.go_submit, opts.local_mode)
 	else:
 		print 'Try python(2.5+) rf_ace_list_gen.py --help'
 		sys.exit(1)
