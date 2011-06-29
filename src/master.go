@@ -36,18 +36,22 @@ import (
 
 //THe master struct contains things that the master node needs but other nodes don't
 type Master struct {
-	subMap      map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
-	jobChan     chan *Job              //buffered channel for creating jobs
-	subidChan   chan int               //buffered channel for use as an incrementer to keep track of submissions
-	NodeHandles map[string]*NodeHandle
+	subMap         map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
+	jobChan        chan *Job              //buffered channel for creating jobs
+	subidChan      chan int               //buffered channel for use as an incrementer to keep track of submissions
+	NodeHandles    map[string]*NodeHandle
+	jobController  JobController
+	nodeController NodeController
 }
 
 //create a master node and initalize its channels
 func NewMaster() *Master {
 	m := Master{
-		subMap:      map[string]*Submission{},
-		jobChan:     make(chan *Job, 0),
-		NodeHandles: map[string]*NodeHandle{}}
+		subMap:         map[string]*Submission{},
+		jobChan:        make(chan *Job, 0),
+		NodeHandles:    map[string]*NodeHandle{},
+		jobController:  MasterJobController{},
+		nodeController: MasterNodeController{}}
 	return &m
 
 }
