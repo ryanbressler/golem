@@ -47,11 +47,13 @@ type Master struct {
 //create a master node and initalize its channels
 func NewMaster() *Master {
 	m := Master{
-		subMap:         map[string]*Submission{},
-		jobChan:        make(chan *Job, 0),
-		NodeHandles:    map[string]*NodeHandle{},
-		jobController:  MasterJobController{},
-		nodeController: MasterNodeController{}}
+		subMap:      map[string]*Submission{},
+		jobChan:     make(chan *Job, 0),
+		NodeHandles: map[string]*NodeHandle{}}
+
+	m.jobController = MasterJobController{master: m}
+	m.nodeController = MasterNodeController{master: m}
+
 	return &m
 
 }
@@ -339,7 +341,7 @@ func (m *Master) nodeHandler(ws *websocket.Conn) {
 
 // Job and Node Controllers
 type MasterJobController struct {
-
+	master Master
 }
 
 func (mc MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
@@ -372,13 +374,19 @@ func (mc MasterJobController) Kill(jobId string) os.Error {
 
 // Do Nothing Node Controller implementation
 type MasterNodeController struct {
-
+	master Master
 }
 
 func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
-	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
-	numberOfItems = 0
+
+	numberOfItems = len(c.master.NodeHandles)
+	jsonArray := make([]string, 0, numberOfItems)
+	for _, n := range c.master.NodeHandles {
+		val, _ := n.MarshalJSON()
+		jsonArray = append(jsonArray, string(val))
+	}
+	json = strings.Join(jsonArray, ",")
 	err = nil
 	return
 }
@@ -390,13 +398,31 @@ func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error
 }
 func (c MasterNodeController) Restart(nodeId string) os.Error {
 	log("Restart:%v", nodeId)
-	return os.NewError("unable to restart")
+
+	c.master.Broadcast(&clientMsg{Type: RESTART})
+	log("Restarting node %v in 10 seconds.", nodeId)
+	go RestartIn(3000000000)
+
+	return nil
 }
 func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
 	log("Resize:%v,%i", nodeId, numberOfThreads)
 	return os.NewError("unable to resize")
+
+	node, isin := c.master.NodeHandles[nodeId]
+	if isin {
+		node.ReSize(numberOfThreads)
+		return nil
+	}
+
+	return os.NewError("node not found")
 }
 func (c MasterNodeController) Kill(nodeId string) os.Error {
 	log("Kill:%v", nodeId)
-	return os.NewError("unable to kill")
+
+	c.master.Broadcast(&clientMsg{Type: DIE})
+	log("Node %v dying in 10 seconds.", nodeId)
+	go DieIn(3000000000)
+
+	return nil
 }
