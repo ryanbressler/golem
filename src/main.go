@@ -56,7 +56,7 @@ func main() {
 		//x.MakeReady()
 	} else if isScribe {
 		s := Scribe{}
-		x := RestOnJob{jobController: ScribeJobController{scribe:s}, nodeController: ScribeNodeController{scribe:s}, hostname: hostname, password: password}
+		x := RestOnJob{jobController: ScribeJobController{scribe: s}, nodeController: ScribeNodeController{scribe: s}, hostname: hostname, password: password}
 		x.MakeReady()
 	} else if isRest {
 		r := RestOnJob{jobController: IKnowNothingJobController{}, nodeController: IKnowNothingNodeController{}, hostname: hostname, password: password}
