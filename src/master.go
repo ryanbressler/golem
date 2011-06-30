@@ -39,8 +39,6 @@ type Master struct {
 	jobChan        chan *Job              //buffered channel for creating jobs
 	subidChan      chan int               //buffered channel for use as an incrementer to keep track of submissions
 	NodeHandles    map[string]*NodeHandle
-	jobController  JobController
-	nodeController NodeController
 }
 
 //create a master node and initalize its channels
@@ -49,12 +47,7 @@ func NewMaster() *Master {
 		subMap:      map[string]*Submission{},
 		jobChan:     make(chan *Job, 0),
 		NodeHandles: map[string]*NodeHandle{}}
-
-	m.jobController = MasterJobController{master: m}
-	m.nodeController = MasterNodeController{master: m}
-
 	return &m
-
 }
 
 //start the masters http server (load balancing starts as needed)
