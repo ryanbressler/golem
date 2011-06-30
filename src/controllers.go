@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strings"
 	"os"
+	"json"
 )
 
 // Controllers
@@ -46,30 +47,99 @@ type ScribeNodeController struct {
 // Implementations
 func (mc MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
-	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
-	numberOfItems = 0
+
+    jsonArray := make([]string, 0)
+    for _, s := range mc.master.subMap {
+		val, _ := s.MarshalJSON()
+		jsonArray = append(jsonArray, string(val))
+	}
+	numberOfItems = len(jsonArray)
+	json = strings.Join(jsonArray, ",")
 	err = nil
 	return
 }
 func (mc MasterJobController) Retrieve(jobId string) (json string, err os.Error) {
 	log("Retrieve:%v", jobId)
-	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
-	err = nil
-	return
+
+	job, isin := mc.master.subMap[jobId]
+	if isin {
+		val, jsonerr := job.MarshalJSON()
+		if jsonerr != nil {
+		    err = jsonerr
+		} else {
+            json = string(val)
+		}
+		return
+	}
+
+	err = os.NewError("job not found")
+    return
 }
 func (mc MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	log("NewJob")
-	jobId = UniqueId()
-	err = nil
+
+	mpreader, err := r.MultipartReader()
+	if err != nil {
+		log("NewJob: multipart reader: %v", err)
+		return
+	}
+
+	frm, err := mpreader.ReadForm(10000)
+	if err != nil {
+		log("NewJob: multipart form: %v", err)
+		return
+	}
+
+	cmd := frm.Value["command"][0]
+	log("NewJob: command: %s", cmd)
+
+	rJobs := make([]RequestedJob, 0, 100)
+	jsonfile, err := frm.File["jsonfile"][0].Open()
+	if err != nil {
+		log("NewJob: opening file: %v", err)
+		return
+	}
+
+	dec := json.NewDecoder(jsonfile)
+	if err := dec.Decode(&rJobs); err != nil {
+		log("NewJob: json decode: %v\n json: %v", err)
+		return
+	}
+
+	jsonfile.Close()
+
+	s := NewSubmission(&rJobs, mc.master.jobChan)
+	jobId = s.SubId
+	mc.master.subMap[jobId] = s
+	log("NewJob: %v", jobId)
+
 	return
 }
 func (mc MasterJobController) Stop(jobId string) os.Error {
 	log("Stop:%v", jobId)
-	return os.NewError("unable to stop")
+
+	job, isin := mc.master.subMap[jobId]
+	if isin {
+		if job.Stop() {
+		    return nil
+		}
+        return os.NewError("unable to stop")
+	}
+	return os.NewError("job not found")
 }
 func (mc MasterJobController) Kill(jobId string) os.Error {
 	log("Kill:%v", jobId)
-	return os.NewError("unable to kill")
+
+	job, isin := mc.master.subMap[jobId]
+	if isin {
+		log("Broadcasting kill message for: %v", jobId)
+		mc.master.Broadcast(&clientMsg{Type: KILL, SubId: jobId})
+		if job.Stop() {
+		    return nil
+		}
+		return os.NewError("unable to stop/kill")
+	}
+	return os.NewError("job not found")
 }
 
 func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
