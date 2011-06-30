@@ -185,11 +185,11 @@ func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Erro
 func (c MasterNodeController) Kill(nodeId string) os.Error {
 	log("Kill:%v", nodeId)
 
-    c.master.Broadcast(&clientMsg{Type: DIE})
-    log("Node %v dying in 10 seconds.", nodeId)
-    go DieIn(3000000000)
+	c.master.Broadcast(&clientMsg{Type: DIE})
+	log("Node %v dying in 10 seconds.", nodeId)
+	go DieIn(3000000000)
 
-    return nil
+	return nil
 }
 
 func (c ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
