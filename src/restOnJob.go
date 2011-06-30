@@ -62,15 +62,15 @@ func (j *RestOnJob) MakeReady() {
 		hashedpw = hashPw(j.password)
 	}
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
+	http.Handle("/html/", http.FileServer("html", "/html"))
+	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { j.jobHandler(w, r) })
+
 	//relys on global useTls being set
 	if err := ListenAndServeTLSorNot(j.hostname, nil); err != nil {
 		log("ListenAndServeTLSorNot Error : %v", err)
 		return
 	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
-	http.Handle("/html/", http.FileServer("html", "/html"))
-	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { j.jobHandler(w, r) })
 }
 
 // web handlers
@@ -128,7 +128,12 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "" && verb == "stop":
-			fmt.Fprint(w, j.jobController.Stop(jobId))
+		    err := j.jobController.Stop(jobId)
+		     if err != nil {
+		        w.WriteHeader(http.StatusBadRequest)
+		        return
+		     }
+            w.WriteHeader(http.StatusOK)
 		case jobId == "" && verb == "":
 			jobId, err := j.jobController.NewJob(r)
 			if err != nil {
