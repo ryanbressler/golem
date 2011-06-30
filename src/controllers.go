@@ -28,11 +28,11 @@ import (
 
 // Controllers
 type MasterJobController struct {
-	master Master
+	master *Master
 }
 
 type MasterNodeController struct {
-	master Master
+	master *Master
 }
 
 // Implementations
