@@ -11,6 +11,7 @@ GOFILES=\
 	Connection.go\
 	Submission.go\
 	restOnJob.go\
+	controllers.go\
 	master.go\
 	scribe.go\
 	control.go\
