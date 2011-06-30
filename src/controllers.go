@@ -35,6 +35,14 @@ type MasterNodeController struct {
 	master *Master
 }
 
+type ScribeJobController struct {
+    scribe Scribe
+}
+
+type ScribeNodeController struct {
+    scribe Scribe
+}
+
 // Implementations
 func (mc MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
@@ -112,4 +120,60 @@ func (c MasterNodeController) Kill(nodeId string) os.Error {
 	go DieIn(3000000000)
 
 	return nil
+}
+
+func (mc ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+	log("RetrieveAll")
+	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
+	numberOfItems = 0
+	err = nil
+	return
+}
+func (mc ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
+	log("Retrieve:%v", jobId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
+	err = nil
+	return
+}
+func (mc ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
+	reqjson := r.FormValue("data")
+	log("NewJob:%v", reqjson)
+	jobId = UniqueId()
+	err = nil
+	return
+}
+func (mc ScribeJobController) Stop(jobId string) os.Error {
+	log("Stop:%v", jobId)
+	return os.NewError("unable to stop")
+}
+func (mc ScribeJobController) Kill(jobId string) os.Error {
+	log("Kill:%v", jobId)
+	return os.NewError("unable to kill")
+}
+
+
+func (c ScribeNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+	log("RetrieveAll")
+	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
+	numberOfItems = 0
+	err = nil
+	return
+}
+func (c ScribeNodeController) Retrieve(nodeId string) (json string, err os.Error) {
+	log("Retrieve:%v", nodeId)
+	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/nodes/%v' }", nodeId)
+	err = nil
+	return
+}
+func (c ScribeNodeController) Restart(nodeId string) os.Error {
+	log("Restart:%v", nodeId)
+	return os.NewError("unable to restart")
+}
+func (c ScribeNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
+	log("Resize:%v,%i", nodeId, numberOfThreads)
+	return os.NewError("unable to resize")
+}
+func (c ScribeNodeController) Kill(nodeId string) os.Error {
+	log("Kill:%v", nodeId)
+	return os.NewError("unable to kill")
 }
