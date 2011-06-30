@@ -37,19 +37,19 @@ type MasterNodeController struct {
 }
 
 type ScribeJobController struct {
-    scribe Scribe
+	scribe Scribe
 }
 
 type ScribeNodeController struct {
-    scribe Scribe
+	scribe Scribe
 }
 
 // Implementations
 func (mc MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
-    jsonArray := make([]string, 0)
-    for _, s := range mc.master.subMap {
+	jsonArray := make([]string, 0)
+	for _, s := range mc.master.subMap {
 		val, _ := s.MarshalJSON()
 		jsonArray = append(jsonArray, string(val))
 	}
@@ -65,15 +65,15 @@ func (mc MasterJobController) Retrieve(jobId string) (json string, err os.Error)
 	if isin {
 		val, jsonerr := job.MarshalJSON()
 		if jsonerr != nil {
-		    err = jsonerr
+			err = jsonerr
 		} else {
-            json = string(val)
+			json = string(val)
 		}
 		return
 	}
 
 	err = os.NewError("job not found")
-    return
+	return
 }
 func (mc MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	log("NewJob")
@@ -121,9 +121,9 @@ func (mc MasterJobController) Stop(jobId string) os.Error {
 	job, isin := mc.master.subMap[jobId]
 	if isin {
 		if job.Stop() {
-		    return nil
+			return nil
 		}
-        return os.NewError("unable to stop")
+		return os.NewError("unable to stop")
 	}
 	return os.NewError("job not found")
 }
@@ -135,7 +135,7 @@ func (mc MasterJobController) Kill(jobId string) os.Error {
 		log("Broadcasting kill message for: %v", jobId)
 		mc.master.Broadcast(&clientMsg{Type: KILL, SubId: jobId})
 		if job.Stop() {
-		    return nil
+			return nil
 		}
 		return os.NewError("unable to stop/kill")
 	}
