@@ -157,8 +157,9 @@ func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberO
 }
 func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error) {
 	log("Retrieve:%v", nodeId)
-	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/nodes/%v' }", nodeId)
-	err = nil
+	node := c.master.NodeHandles[nodeId]
+	val, err := node.MarshalJSON()
+	json = string(val)
 	return
 }
 func (c MasterNodeController) Restart(nodeId string) os.Error {
@@ -172,7 +173,6 @@ func (c MasterNodeController) Restart(nodeId string) os.Error {
 }
 func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
 	log("Resize:%v,%i", nodeId, numberOfThreads)
-	return os.NewError("unable to resize")
 
 	node, isin := c.master.NodeHandles[nodeId]
 	if isin {
@@ -185,11 +185,11 @@ func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Erro
 func (c MasterNodeController) Kill(nodeId string) os.Error {
 	log("Kill:%v", nodeId)
 
-	c.master.Broadcast(&clientMsg{Type: DIE})
-	log("Node %v dying in 10 seconds.", nodeId)
-	go DieIn(3000000000)
+    c.master.Broadcast(&clientMsg{Type: DIE})
+    log("Node %v dying in 10 seconds.", nodeId)
+    go DieIn(3000000000)
 
-	return nil
+    return nil
 }
 
 func (c ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
