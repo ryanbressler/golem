@@ -81,16 +81,23 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 }
 
 func (s *Submission) MarshalJSON() ([]byte, os.Error) {
+	vlog("sniffing toataljobs")
 	TotalJobs := <-s.TotalJobsChan
+	s.TotalJobsChan <- TotalJobs
+	vlog("sniffing finished jobs")
 	FinishedJobs := <-s.FinishedJobsChan
+	s.FinishedJobsChan <- FinishedJobs
+	vlog("sniffing errored jobs")
 	ErroredJobs := <-s.ErroredJobsChan
+	s.ErroredJobsChan <- ErroredJobs
+	vlog("sniffing running jobs")
 	running := <-s.runningChan
+	s.runningChan <- running
+
 	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v \"Running\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running)
-	s.TotalJobsChan <- TotalJobs
-	s.FinishedJobsChan <- FinishedJobs
-	s.ErroredJobsChan <- ErroredJobs
-	s.runningChan <- running
+
+	vlog("Returning description")
 	return []byte(rv), nil
 }
 
@@ -126,24 +133,23 @@ func (s Submission) monitorJobs() {
 			s.FinishedJobsChan <- FinishedJobs
 		}
 		TotalJobs := <-s.TotalJobsChan
+		s.TotalJobsChan <- TotalJobs
 		FinishedJobs := <-s.FinishedJobsChan
+		s.FinishedJobsChan <- FinishedJobs
 		ErroredJobs := <-s.ErroredJobsChan
+		s.ErroredJobsChan <- ErroredJobs
+
 		running := <-s.runningChan
 
 		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 		if TotalJobs == (FinishedJobs + ErroredJobs) {
 			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, FinishedJobs, ErroredJobs)
 			//s.killChan <- 1 //TODO: clean up submission object here
-			s.TotalJobsChan <- TotalJobs
-			s.FinishedJobsChan <- FinishedJobs
-			s.ErroredJobsChan <- ErroredJobs
 			s.runningChan <- false
 			return
 		}
 		s.runningChan <- running
-		s.TotalJobsChan <- TotalJobs
-		s.FinishedJobsChan <- FinishedJobs
-		s.ErroredJobsChan <- ErroredJobs
+
 	}
 
 }
