@@ -128,6 +128,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+
 			fmt.Fprintf(w, "{ uri: '/jobs/%v' id:'%v' }", jobId, jobId)
 		default:
 			w.WriteHeader(http.StatusNotFound)
