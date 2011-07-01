@@ -36,6 +36,7 @@ type RestOnJob struct {
 	nodeController NodeController
 	hostname       string
 	password       string
+	hashedpw      string
 }
 
 type JobController interface {
@@ -58,10 +59,7 @@ type NodeController interface {
 func (j *RestOnJob) MakeReady() {
 	log("running at %v", j.hostname)
 
-	if j.password != "" {
-		usepw = true
-		hashedpw = hashPw(j.password)
-	}
+    j.storePassword()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
 	http.Handle("/html/", http.FileServer("html", "/html"))
@@ -118,15 +116,10 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 		log("Method = POST.")
-		if usepw {
-			pw := hashPw(r.Header.Get("Password"))
-			log("Verifying password.")
-			if hashedpw != pw {
-				fmt.Fprint(w, "Passwords do not match.")
-				return
-			}
-			log("Password verified")
-		}
+        if j.checkPassword(r) == false {
+            w.WriteHeader(http.StatusForbidden)
+            return
+        }
 
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
@@ -183,12 +176,10 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		if usepw {
-			if hashPw(r.Header.Get("Password")) != hashedpw {
-				fmt.Fprintf(w, "Bad password.")
-				return
-			}
-		}
+        if j.checkPassword(r) == false {
+            w.WriteHeader(http.StatusForbidden)
+            return
+        }
 
 		err := j.postNodeHandler(r)
 		if err != nil {
@@ -218,4 +209,20 @@ func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
 		return j.nodeController.Resize(nodeId, numberOfThreads)
 	}
 	return nil
+}
+
+func (j *RestOnJob) storePassword() {
+	if j.password != "" {
+		usepw = true
+		j.hashedpw = hashPw(j.password)
+	}
+}
+
+func (j *RestOnJob) checkPassword(r *http.Request) bool {
+    if usepw {
+        pw := hashPw(r.Header.Get("Password"))
+        log("Verifying password.")
+        return j.hashedpw != pw
+    }
+    return true
 }
