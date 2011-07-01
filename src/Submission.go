@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -20,9 +20,9 @@
 package main
 
 import (
-	"json"
 	"fmt"
 	"os"
+	"time"
 )
 
 
@@ -31,71 +31,133 @@ import (
 /// TODO: Kill submissions once they finish.
 
 type Submission struct {
-	SubId        int
-	CoutFileChan chan string
-	CerrFileChan chan string
-	Jobs         []RequestedJob
-	ErrorChan    chan *Job
-	FinishedChan chan *Job
-	TotalJobs    int
-	FinishedJobs int
-	ErroredJobs  int
-	killChan     chan int
+	Uri              string
+	SubId            string
+	CoutFileChan     chan string
+	CerrFileChan     chan string
+	Jobs             []RequestedJob
+	ErrorChan        chan *Job
+	FinishedChan     chan *Job
+	TotalJobsChan    chan int
+	FinishedJobsChan chan int
+	ErroredJobsChan  chan int
+	stopChan         chan int
+	runningChan      chan bool
 }
 
 
-func NewSubmission(reqjson string) *Submission {
-	rJobs := make([]RequestedJob, 0, 100)
-	if err := json.Unmarshal([]byte(reqjson), &rJobs); err != nil {
-		log("%v", err)
-	}
-	subId := <-subidChan
-	subidChan <- subId + 1
-	s := Submission{SubId: subId,
-		CoutFileChan: make(chan string, 10),
-		CerrFileChan: make(chan string, 10),
-		Jobs:         rJobs,
-		ErrorChan:    make(chan *Job, 1),
-		FinishedChan: make(chan *Job, 1),
-		FinishedJobs: 0,
-		ErroredJobs:  0,
-		TotalJobs:    0,
-		killChan:     make(chan int, 0)}
+func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
+	rJobs := *js
+	//subId := <-subidChan
+	//subidChan <- subId + 1
+	subId := UniqueId()
+	s := Submission{
+		Uri:              fmt.Sprintf("/jobs/%v", subId),
+		SubId:            subId,
+		CoutFileChan:     make(chan string, iobuffersize),
+		CerrFileChan:     make(chan string, iobuffersize),
+		Jobs:             rJobs,
+		ErrorChan:        make(chan *Job, 1),
+		FinishedChan:     make(chan *Job, 1),
+		FinishedJobsChan: make(chan int, 1),
+		ErroredJobsChan:  make(chan int, 1),
+		TotalJobsChan:    make(chan int, 1),
+		stopChan:         make(chan int, 0),
+		runningChan:      make(chan bool, 1)}
+	totalJobs := 0
 	for _, vals := range s.Jobs {
-		s.TotalJobs += vals.Count
+		totalJobs += vals.Count
 	}
+	s.TotalJobsChan <- totalJobs
+	s.FinishedJobsChan <- 0
+	s.ErroredJobsChan <- 0
+	s.runningChan <- true
 	go s.monitorJobs()
 	go s.writeIo()
-	go s.submitJobs()
+	go s.submitJobs(jobChan)
 
 	return &s
 
 }
 
+func (s *Submission) MarshalJSON() ([]byte, os.Error) {
+	TotalJobs := <-s.TotalJobsChan
+	FinishedJobs := <-s.FinishedJobsChan
+	ErroredJobs := <-s.ErroredJobsChan
+	running := <-s.runningChan
+	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
+	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v \"Running\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running)
+	s.TotalJobsChan <- TotalJobs
+	s.FinishedJobsChan <- FinishedJobs
+	s.ErroredJobsChan <- ErroredJobs
+	s.runningChan <- running
+	return []byte(rv), nil
+}
+
+func (s *Submission) Stop() bool {
+	rv := false
+	running := <-s.runningChan
+	if running {
+		select {
+		case s.stopChan <- 1:
+			rv = true
+			log("Stoped submission for SubId: %v", s.SubId)
+			running = false
+		case <-time.After(250000000):
+			rv = false
+			log("Time out stoping SubId: %v", s.SubId)
+		}
+	}
+	s.runningChan <- running
+	return rv
+}
+
 func (s Submission) monitorJobs() {
 	for {
+
 		select {
 		case <-s.ErrorChan:
-			s.ErroredJobs++
+			ErroredJobs := <-s.ErroredJobsChan
+			ErroredJobs++
+			s.ErroredJobsChan <- ErroredJobs
 		case <-s.FinishedChan:
-			s.FinishedJobs++
+			FinishedJobs := <-s.FinishedJobsChan
+			FinishedJobs++
+			s.FinishedJobsChan <- FinishedJobs
 		}
-		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, s.FinishedJobs, s.ErroredJobs, s.TotalJobs)
-		if s.TotalJobs == (s.FinishedJobs + s.ErroredJobs) {
-			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, s.FinishedJobs, s.ErroredJobs)
+		TotalJobs := <-s.TotalJobsChan
+		FinishedJobs := <-s.FinishedJobsChan
+		ErroredJobs := <-s.ErroredJobsChan
+		running := <-s.runningChan
+
+		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
+		if TotalJobs == (FinishedJobs + ErroredJobs) {
+			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, FinishedJobs, ErroredJobs)
 			//s.killChan <- 1 //TODO: clean up submission object here
+			s.TotalJobsChan <- TotalJobs
+			s.FinishedJobsChan <- FinishedJobs
+			s.ErroredJobsChan <- ErroredJobs
+			s.runningChan <- false
 			return
 		}
+		s.runningChan <- running
+		s.TotalJobsChan <- TotalJobs
+		s.FinishedJobsChan <- FinishedJobs
+		s.ErroredJobsChan <- ErroredJobs
 	}
 
 }
 
-func (s Submission) submitJobs() {
+func (s Submission) submitJobs(jobChan chan *Job) {
 	jobId := 0
 	for lineId, vals := range s.Jobs {
 		for i := 0; i < vals.Count; i++ {
-			jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}
-			jobId++
+			select {
+			case jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}:
+				jobId++
+			case <-s.stopChan:
+				return //TODO: add indication that we stopped
+			}
 		}
 	}
 	log("All jobs submitted for SubId: %v", s.SubId)

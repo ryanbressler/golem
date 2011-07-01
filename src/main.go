@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -26,29 +26,37 @@ import (
 
 //////////////////////////////////////////////
 //main method
+//parse args and start as master, node or scribe
 func main() {
+	var atOnce int
+	var hostname string
+	var unsecure bool
+	var password string
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
-	var atOnce int
+	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
-	var hostname string
 	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
-	var unsecure bool
+	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections.")
 	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
-	var password string
 	flag.StringVar(&password, "p", "", "The password to require with job submission.")
+	flag.BoolVar(&verbose, "v", false, "Use verbose logging.")
+	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
 
 	flag.Parse()
 	if unsecure {
 		useTls = false
 	}
 
-	switch isMaster {
-	case true:
+	if isMaster {
 		m := NewMaster()
-		m.RunMaster(hostname, password)
-	default:
+		x := RestOnJob{jobController: MasterJobController{master: m}, nodeController: MasterNodeController{master: m}, hostname: hostname, password: password}
+		x.MakeReady()
+	} else if isScribe {
+		s := Scribe{}
+		x := RestOnJob{jobController: ScribeJobController{scribe: s}, nodeController: ScribeNodeController{scribe: s}, hostname: hostname, password: password}
+		x.MakeReady()
+	} else {
 		RunNode(atOnce, hostname)
 	}
-
 }

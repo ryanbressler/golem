@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@ package main
 
 import ()
 
-//job requested over rest api
+//job requested over rest api includea a [] of args and the number of times to run it
 type RequestedJob struct {
 	Count int
 	Args  []string

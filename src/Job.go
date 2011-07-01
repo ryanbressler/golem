@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -23,14 +23,15 @@ import (
 	"json"
 )
 
-//Internal Job Representation
+//Internal Job Representation used primairly as the body of job related messages
 type Job struct {
-	SubId  int
+	SubId  string
 	LineId int
 	JobId  int
 	Args   []string
 }
 
+//NewJob creates a job struct from a json string (usually a message body)
 func NewJob(jsonjob string) *Job {
 	var job Job
 

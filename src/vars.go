@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -23,41 +23,38 @@ import (
 	"crypto/sha256"
 )
 
-//TODO: make these vars not declared when not needed
+
+var verbose = false
+var iobuffersize = 1000
 
 //
 var isMaster bool
-
-//buffered channel for use as an incrementer to keep track of submissions
-var subidChan = make(chan int, 1)
-
-//buffered channel for creating jobs
-var jobChan = make(chan *Job, 0)
-
-
-//map of submissions by id
-var subMap = map[int]*Submission{}
+var isScribe bool
 
 //tls configurability
 var useTls bool = true
 
 //password
 var usepw bool = false
-var hash = sha256.New() // or whatever
-var hashedpw string
+var hash = sha256.New() // use the same hasher
+var hashedpw string     //the master password
+var certpath string
 
 
 const (
-	//Message type constants
-	HELLO = 1
+	//Message type constants ... should maybe be in clientMsg.go 
+	HELLO   = iota //sent from client to master on connect, body is bumber of jobs at once
+	CHECKIN        //sent from client every minute to keep conection alive
 
+	START //sent from master to start job, body is json job
+	KILL  //sent from master to stop jobs, SubId indicates what jobs to stop.
 
-	START   = 3
-	CHECKIN = 4
+	COUT   //cout from clent, body is line of cout
+	CERROR //cout from clent, body is line of cerror
 
-	COUT   = 5
-	CERROR = 6
+	JOBFINISHED //sent from client on job finish, body is json job SubId set
+	JOBERROR    //sent from client on job error, body is json job, SubId set
 
-	JOBFINISHED = 7
-	JOBERROR    = 8
+	RESTART //Sent by master to nodes telling them to resart and reconnec themselves.
+	DIE     //tell nodes to shutdown.
 )

@@ -20,14 +20,33 @@
 package main
 
 import (
-	"fmt"
-	"io"
+	"strings"
 )
 
-//returned a hased version of the password for keeping around
-func hashPw(password string) string {
-	hash.Reset()
-	io.WriteString(hash, password) //TODO: plus salt, or whatever 
-	return fmt.Sprintf("%x", hash.Sum())
+func splitRestUrl(path string) []string {
+	spliturl := strings.Split(path, "/", -1)
+	pathParts := make([]string, 0, 2)
+	for _, part := range spliturl {
+		if part != "" {
+			pathParts = append(pathParts, part)
+		}
+	}
+	return pathParts
+}
 
+//parser for rest jobs request
+func parseJobUri(path string) (jobid string, verb string) {
+	pathParts := splitRestUrl(path)
+	nparts := len(pathParts)
+	jobid = ""
+	verb = ""
+	switch {
+	case nparts == 2:
+		jobid = pathParts[1]
+	case nparts == 3:
+		jobid = pathParts[1]
+		verb = pathParts[2]
+	}
+	vlog("Parsed job request id:\"%v\" verb:\"%v\"", jobid, verb)
+	return
 }

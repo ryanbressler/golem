@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -24,9 +24,20 @@ import (
 	"fmt"
 )
 
+//
+//log is a wrapper for fmt.Printf that prepends the time
+//log("error is %v, n is %v", err, n)
+//log("hello")
 func log(format string, a ...interface{}) {
 	t := time.LocalTime()
 	format = t.String() + ": " + format + "\n"
 	fmt.Printf(format, a...)
 
+}
+
+//vlog is a wrapper for log that only prints in verbose mode
+func vlog(format string, a ...interface{}) {
+	if verbose {
+		log(format, a...)
+	}
 }

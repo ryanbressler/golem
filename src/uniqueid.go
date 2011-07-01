@@ -21,13 +21,14 @@ package main
 
 import (
 	"fmt"
-	"io"
+	"crypto/rand"
 )
 
-//returned a hased version of the password for keeping around
-func hashPw(password string) string {
-	hash.Reset()
-	io.WriteString(hash, password) //TODO: plus salt, or whatever 
-	return fmt.Sprintf("%x", hash.Sum())
-
+func UniqueId() string {
+	subId := make([]byte, 16)
+	_, err := rand.Read(subId)
+	if err != nil {
+		log("Error generating rand subId: %v", err)
+	}
+	return fmt.Sprintf("%x", subId)
 }

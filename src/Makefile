@@ -10,7 +10,15 @@ GOFILES=\
 	Job.go\
 	Connection.go\
 	Submission.go\
+	restOnJob.go\
+	controllers.go\
 	master.go\
+	scribe.go\
+	control.go\
+	jobkiller.go\
+	uniqueid.go\
+	nodehandle.go\
+	rest.go\
 	node.go\
 	tls.go\
 	main.go\

@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2003-2010 Institute for Systems Biology
+   Copyright (C) 2003-2011 Institute for Systems Biology
                            Seattle, Washington, USA.
 
    This library is free software; you can redistribute it and/or
@@ -22,8 +22,9 @@ package main
 import ()
 
 //messages sent between server and client
+// types are defined in vars.go
 type clientMsg struct {
 	Type  int
-	SubId int
+	SubId string
 	Body  string
 }

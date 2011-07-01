@@ -19,15 +19,8 @@
 */
 package main
 
-import (
-	"fmt"
-	"io"
-)
-
-//returned a hased version of the password for keeping around
-func hashPw(password string) string {
-	hash.Reset()
-	io.WriteString(hash, password) //TODO: plus salt, or whatever 
-	return fmt.Sprintf("%x", hash.Sum())
+/////////////////////////////////////////////////
+//scribe
+type Scribe struct {
 
 }
