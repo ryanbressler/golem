@@ -27,24 +27,9 @@ import (
 	"json"
 )
 
-// Controllers
 type MasterJobController struct {
 	master *Master
 }
-
-type MasterNodeController struct {
-	master *Master
-}
-
-type ScribeJobController struct {
-	scribe Scribe
-}
-
-type ScribeNodeController struct {
-	scribe Scribe
-}
-
-// Implementations
 func (c MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
@@ -132,7 +117,6 @@ func (c MasterJobController) Kill(jobId string) os.Error {
 
 	job, isin := c.master.subMap[jobId]
 	if isin {
-		log("Broadcasting kill message for: %v", jobId)
 		c.master.Broadcast(&clientMsg{Type: KILL, SubId: jobId})
 		if job.Stop() {
 			return nil
@@ -142,6 +126,9 @@ func (c MasterJobController) Kill(jobId string) os.Error {
 	return os.NewError("job not found")
 }
 
+type MasterNodeController struct {
+	master *Master
+}
 func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
@@ -192,6 +179,9 @@ func (c MasterNodeController) Kill() os.Error {
 	return nil
 }
 
+type ScribeJobController struct {
+	scribe Scribe
+}
 func (c ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
@@ -221,7 +211,9 @@ func (c ScribeJobController) Kill(jobId string) os.Error {
 	return os.NewError("unable to kill")
 }
 
-
+type ScribeNodeController struct {
+	scribe Scribe
+}
 func (c ScribeNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
