@@ -104,12 +104,12 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Fprint(w, json)
 		case jobId == "" && verb == "":
-			json, _, err := j.jobController.RetrieveAll(r)
+			json, numberOfItems, err := j.jobController.RetrieveAll(r)
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			fmt.Fprint(w, json)
+			fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -136,7 +136,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			fmt.Fprint(w, "{ uri: '/jobs/%v' id:'%v' )", jobId)
+			fmt.Fprintf(w, "{ uri: '/jobs/%v' id:'%v' )", jobId, jobId)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -167,11 +167,11 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		default:
-			json, _, err := j.nodeController.RetrieveAll(r)
+			json, numberOfItems, err := j.nodeController.RetrieveAll(r)
 			if err != nil {
 				w.WriteHeader(500)
 			} else {
-				fmt.Fprintf(w, "{ items:[%v] }", json)
+				fmt.Fprintf(w, "{ items:[%v], numberOfItems: %d }", json, numberOfItems)
 			}
 			return
 		}
@@ -222,7 +222,7 @@ func (j *RestOnJob) checkPassword(r *http.Request) bool {
 	if usepw {
 		pw := hashPw(r.Header.Get("Password"))
 		log("Verifying password.")
-		return j.hashedpw != pw
+		return j.hashedpw == pw
 	}
 	return true
 }
