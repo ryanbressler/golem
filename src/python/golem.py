@@ -39,7 +39,8 @@ run n job_executable exeutable args : run job_executable n times with the suppli
 runlist listofjobs.txt              : run each line (n n job_executable exeutable args) of the file 
 list                                : list statuses of all submissions on cluster
 status subid                        : get status of a single submission
-stop subid                          : stop a submission
+stop subid                          : stop a submission from submitting more jobs but let running jobs finish
+kill subid                          : stop a submission from submitting more jobs and kill running jobs
 nodes                               : list the nodes connected to the cluster
 resize nodeid newmax                : change the number of jobs a node takes at once
 restart                             : cycle all golem proccess on the cluster...use only for udating core components
