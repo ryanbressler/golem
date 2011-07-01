@@ -171,7 +171,7 @@ def main():
 	pwd = ""
 	if sys.argv[2] == "-p":
 		pwd = sys.argv[3]	
-	cmdi = 4
+		cmdi = 4
 	
 	
 	cmd = sys.argv[cmdi]
