@@ -44,7 +44,7 @@ type Retriever interface {
 	Retrieve(itemId string) (json string, err os.Error)
 }
 type JobController interface {
-    Retriever
+	Retriever
 	NewJob(r *http.Request) (jobId string, err os.Error)
 	Stop(jobId string) (err os.Error)
 	Kill(jobId string) (err os.Error)
@@ -101,7 +101,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		case jobId != "":
 			j.retrieve(jobId, j.jobController, w)
 		case jobId == "" && verb == "":
-		    j.retrieveAll(j.jobController, w)
+			j.retrieveAll(j.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -152,7 +152,7 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		case nparts == 2:
 			j.retrieve(pathParts[1], j.nodeController, w)
 		default:
-		    j.retrieveAll(j.nodeController, w)
+			j.retrieveAll(j.nodeController, w)
 		}
 	case "POST":
 		if j.checkPassword(r) == false {
@@ -207,19 +207,19 @@ func (j *RestOnJob) checkPassword(r *http.Request) bool {
 }
 
 func (j *RestOnJob) retrieve(itemId string, r Retriever, w http.ResponseWriter) {
-        json, err := r.Retrieve(itemId)
-        if err != nil {
-            w.WriteHeader(http.StatusNotFound)
-            return
-        }
-        fmt.Fprint(w, json)
+	json, err := r.Retrieve(itemId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	fmt.Fprint(w, json)
 }
 
 func (j *RestOnJob) retrieveAll(r Retriever, w http.ResponseWriter) {
-    json, numberOfItems, err := r.RetrieveAll()
-    if err != nil {
-        w.WriteHeader(http.StatusNotFound)
-        return
-    }
-    fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
+	json, numberOfItems, err := r.RetrieveAll()
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
 }
