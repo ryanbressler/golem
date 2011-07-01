@@ -43,17 +43,17 @@ func NewMaster() *Master {
 		subMap:      map[string]*Submission{},
 		jobChan:     make(chan *Job, 0),
 		NodeHandles: map[string]*NodeHandle{}}
-    http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.Listen(ws) }))
+	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.Listen(ws) }))
 	return &m
 }
 
 func (m *Master) Listen(ws *websocket.Conn) {
-        log("Node connecting from %v.", ws.LocalAddr().String())
+	log("Node connecting from %v.", ws.LocalAddr().String())
 
-        nh := NewNodeHandle(NewConnection(ws), m)
-        m.NodeHandles[nh.NodeId] = nh
-        go m.RemoveNodeOnDeath(nh)
-        nh.Monitor()
+	nh := NewNodeHandle(NewConnection(ws), m)
+	m.NodeHandles[nh.NodeId] = nh
+	go m.RemoveNodeOnDeath(nh)
+	nh.Monitor()
 }
 
 //Broadcast sends a message to ever connected client
