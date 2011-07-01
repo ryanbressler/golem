@@ -35,7 +35,6 @@ func main() {
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
-	flag.BoolVar(&isRest, "r", false, "Start as REST node.")
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
 	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
 	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections.")
@@ -51,16 +50,12 @@ func main() {
 
 	if isMaster {
 		m := NewMaster()
-		m.RunMaster(hostname, password)
-		//x := RestOnJob{jobController: MasterJobController{master:m}, nodeController: MasterNodeController{master:m}, hostname: hostname, password: password}
-		//x.MakeReady()
+		x := RestOnJob{jobController: MasterJobController{master:m}, nodeController: MasterNodeController{master:m}, hostname: hostname, password: password}
+		x.MakeReady()
 	} else if isScribe {
 		s := Scribe{}
 		x := RestOnJob{jobController: ScribeJobController{scribe: s}, nodeController: ScribeNodeController{scribe: s}, hostname: hostname, password: password}
 		x.MakeReady()
-	} else if isRest {
-		r := RestOnJob{jobController: IKnowNothingJobController{}, nodeController: IKnowNothingNodeController{}, hostname: hostname, password: password}
-		r.MakeReady()
 	} else {
 		RunNode(atOnce, hostname)
 	}

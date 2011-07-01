@@ -22,6 +22,7 @@ import (
 	"http"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 
@@ -48,9 +49,9 @@ type JobController interface {
 type NodeController interface {
 	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
 	Retrieve(nodeId string) (json string, err os.Error)
-	Restart(nodeId string) os.Error
+	Restart() os.Error
+	Kill() os.Error
 	Resize(nodeId string, numberOfThreads int) os.Error
-	Kill(nodeId string) os.Error
 }
 
 // initializes the REST control node
@@ -62,15 +63,17 @@ func (j *RestOnJob) MakeReady() {
 		hashedpw = hashPw(j.password)
 	}
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
+	http.Handle("/html/", http.FileServer("html", "/html"))
+	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { j.jobHandler(w, r) })
+	http.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
+	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
+
 	//relys on global useTls being set
 	if err := ListenAndServeTLSorNot(j.hostname, nil); err != nil {
 		log("ListenAndServeTLSorNot Error : %v", err)
 		return
 	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
-	http.Handle("/html/", http.FileServer("html", "/html"))
-	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { j.jobHandler(w, r) })
 }
 
 // web handlers
@@ -128,7 +131,12 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "" && verb == "stop":
-			fmt.Fprint(w, j.jobController.Stop(jobId))
+		    err := j.jobController.Stop(jobId)
+		     if err != nil {
+		        w.WriteHeader(http.StatusBadRequest)
+		        return
+		     }
+            w.WriteHeader(http.StatusOK)
 		case jobId == "" && verb == "":
 			jobId, err := j.jobController.NewJob(r)
 			if err != nil {
@@ -145,66 +153,69 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Do Nothing Job Controller implementation
-type IKnowNothingJobController struct {
+func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
+	log("nodeHandler")
 
+	w.Header().Set("Content-Type", "text/plain")
+	// w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case "GET":
+		pathParts := splitRestUrl(r.URL.Path)
+		nparts := len(pathParts)
+		switch {
+		case nparts == 2:
+			nodeId := pathParts[1]
+			json, err := j.nodeController.Retrieve(nodeId)
+			if err != nil {
+			    w.WriteHeader(404)
+			} else {
+			    fmt.Fprint(w, json)
+			}
+			return
+		default:
+		    json, _, err := j.nodeController.RetrieveAll(r)
+		    if err != nil {
+		        w.WriteHeader(500)
+		    } else {
+		        fmt.Fprintf(w, "{ items:[%v] }", json)
+		    }
+		    return
+		}
+	case "POST":
+		if usepw {
+			if hashPw(r.Header.Get("Password")) != hashedpw {
+				fmt.Fprintf(w, "Bad password.")
+				return
+			}
+		}
+
+		err := j.postNodeHandler(r)
+        if err != nil {
+            w.WriteHeader(500)
+        } else {
+            w.WriteHeader(200)
+        }
+	}
 }
 
-func (sjd IKnowNothingJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
-	log("RetrieveAll")
-	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
-	numberOfItems = 0
-	err = nil
-	return
-}
-func (sjd IKnowNothingJobController) Retrieve(jobId string) (json string, err os.Error) {
-	log("Retrieve:%v", jobId)
-	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
-	err = nil
-	return
-}
-func (sjd IKnowNothingJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	log("NewJob")
-	jobId = UniqueId()
-	err = nil
-	return
-}
-func (sjd IKnowNothingJobController) Stop(jobId string) os.Error {
-	log("Stop:%v", jobId)
-	return os.NewError("unable to stop")
-}
-func (sjd IKnowNothingJobController) Kill(jobId string) os.Error {
-	log("Kill:%v", jobId)
-	return os.NewError("unable to kill")
-}
+func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
+    spliturl := splitRestUrl(r.URL.Path)
+    nsplit := len(spliturl)
+    switch {
+    case nsplit == 2 && spliturl[1] == "restart":
+        return j.nodeController.Restart()
 
-// Do Nothing Node Controller implementation
-type IKnowNothingNodeController struct {
+    case nsplit == 2 && spliturl[1] == "die":
+        return j.nodeController.Kill()
 
-}
-
-func (c IKnowNothingNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
-	log("RetrieveAll")
-	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
-	numberOfItems = 0
-	err = nil
-	return
-}
-func (c IKnowNothingNodeController) Retrieve(nodeId string) (json string, err os.Error) {
-	log("Retrieve:%v", nodeId)
-	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/nodes/%v' }", nodeId)
-	err = nil
-	return
-}
-func (c IKnowNothingNodeController) Restart(nodeId string) os.Error {
-	log("Restart:%v", nodeId)
-	return os.NewError("unable to restart")
-}
-func (c IKnowNothingNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	log("Resize:%v,%i", nodeId, numberOfThreads)
-	return os.NewError("unable to resize")
-}
-func (c IKnowNothingNodeController) Kill(nodeId string) os.Error {
-	log("Kill:%v", nodeId)
-	return os.NewError("unable to kill")
+    case nsplit == 4 && spliturl[2] == "resize":
+        nodeId := spliturl[1]
+        numberOfThreads, err := strconv.Atoi(spliturl[3])
+        if err != nil {
+            return err
+        }
+        return j.nodeController.Resize(nodeId, numberOfThreads)
+    }
+    return nil
 }
