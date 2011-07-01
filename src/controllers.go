@@ -31,7 +31,7 @@ type MasterJobController struct {
 	master *Master
 }
 
-func (c MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c MasterJobController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
 	jsonArray := make([]string, 0)
@@ -131,7 +131,7 @@ type MasterNodeController struct {
 	master *Master
 }
 
-func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c MasterNodeController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
 	numberOfItems = len(c.master.NodeHandles)
@@ -151,7 +151,7 @@ func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error
 	json = string(val)
 	return
 }
-func (c MasterNodeController) Restart() os.Error {
+func (c MasterNodeController) RestartAll() os.Error {
 	log("Restart")
 
 	c.master.Broadcast(&clientMsg{Type: RESTART})
@@ -171,7 +171,7 @@ func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Erro
 
 	return os.NewError("node not found")
 }
-func (c MasterNodeController) Kill() os.Error {
+func (c MasterNodeController) KillAll() os.Error {
 	log("Kill")
 
 	c.master.Broadcast(&clientMsg{Type: DIE})
@@ -185,7 +185,7 @@ type ScribeJobController struct {
 	scribe Scribe
 }
 
-func (c ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c ScribeJobController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
 	numberOfItems = 0
@@ -218,7 +218,7 @@ type ScribeNodeController struct {
 	scribe Scribe
 }
 
-func (c ScribeNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c ScribeNodeController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
 	numberOfItems = 0
@@ -231,7 +231,7 @@ func (c ScribeNodeController) Retrieve(nodeId string) (json string, err os.Error
 	err = nil
 	return
 }
-func (c ScribeNodeController) Restart() os.Error {
+func (c ScribeNodeController) RestartAll() os.Error {
 	log("Restart:")
 	return os.NewError("unable to restart")
 }
@@ -239,7 +239,7 @@ func (c ScribeNodeController) Resize(nodeId string, numberOfThreads int) os.Erro
 	log("Resize:%v,%i", nodeId, numberOfThreads)
 	return os.NewError("unable to resize")
 }
-func (c ScribeNodeController) Kill() os.Error {
+func (c ScribeNodeController) KillAll() os.Error {
 	log("Kill")
 	return os.NewError("unable to kill")
 }

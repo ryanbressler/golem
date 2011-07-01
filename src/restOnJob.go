@@ -36,21 +36,24 @@ type RestOnJob struct {
 	nodeController NodeController
 	hostname       string
 	password       string
+	hashedpw       string
 }
 
+type Retriever interface {
+	RetrieveAll() (json string, numberOfItems int, err os.Error)
+	Retrieve(itemId string) (json string, err os.Error)
+}
 type JobController interface {
-	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
-	Retrieve(jobId string) (json string, err os.Error)
+	Retriever
 	NewJob(r *http.Request) (jobId string, err os.Error)
 	Stop(jobId string) (err os.Error)
 	Kill(jobId string) (err os.Error)
 }
 
 type NodeController interface {
-	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
-	Retrieve(nodeId string) (json string, err os.Error)
-	Restart() os.Error
-	Kill() os.Error
+	Retriever
+	RestartAll() os.Error
+	KillAll() os.Error
 	Resize(nodeId string, numberOfThreads int) os.Error
 }
 
@@ -58,10 +61,7 @@ type NodeController interface {
 func (j *RestOnJob) MakeReady() {
 	log("running at %v", j.hostname)
 
-	if j.password != "" {
-		usepw = true
-		hashedpw = hashPw(j.password)
-	}
+	j.storePassword()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
 	http.Handle("/html/", http.FileServer("html", "/html"))
@@ -99,33 +99,18 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "":
-			json, err := j.jobController.Retrieve(jobId)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			fmt.Fprint(w, json)
+			j.retrieve(jobId, j.jobController, w)
 		case jobId == "" && verb == "":
-			json, _, err := j.jobController.RetrieveAll(r)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			fmt.Fprint(w, json)
+			j.retrieveAll(j.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 
 	case "POST":
 		log("Method = POST.")
-		if usepw {
-			pw := hashPw(r.Header.Get("Password"))
-			log("Verifying password.")
-			if hashedpw != pw {
-				fmt.Fprint(w, "Passwords do not match.")
-				return
-			}
-			log("Password verified")
+		if j.checkPassword(r) == false {
+			w.WriteHeader(http.StatusForbidden)
+			return
 		}
 
 		jobId, verb := parseJobUri(r.URL.Path)
@@ -143,7 +128,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			fmt.Fprint(w, "{ uri: '/jobs/%v' id:'%v' )", jobId)
+			fmt.Fprintf(w, "{ uri: '/jobs/%v' id:'%v' }", jobId, jobId)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -165,29 +150,14 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		nparts := len(pathParts)
 		switch {
 		case nparts == 2:
-			nodeId := pathParts[1]
-			json, err := j.nodeController.Retrieve(nodeId)
-			if err != nil {
-				w.WriteHeader(404)
-			} else {
-				fmt.Fprint(w, json)
-			}
-			return
+			j.retrieve(pathParts[1], j.nodeController, w)
 		default:
-			json, _, err := j.nodeController.RetrieveAll(r)
-			if err != nil {
-				w.WriteHeader(500)
-			} else {
-				fmt.Fprintf(w, "{ items:[%v] }", json)
-			}
-			return
+			j.retrieveAll(j.nodeController, w)
 		}
 	case "POST":
-		if usepw {
-			if hashPw(r.Header.Get("Password")) != hashedpw {
-				fmt.Fprintf(w, "Bad password.")
-				return
-			}
+		if j.checkPassword(r) == false {
+			w.WriteHeader(http.StatusForbidden)
+			return
 		}
 
 		err := j.postNodeHandler(r)
@@ -204,10 +174,10 @@ func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
 	nsplit := len(spliturl)
 	switch {
 	case nsplit == 2 && spliturl[1] == "restart":
-		return j.nodeController.Restart()
+		return j.nodeController.RestartAll()
 
 	case nsplit == 2 && spliturl[1] == "die":
-		return j.nodeController.Kill()
+		return j.nodeController.KillAll()
 
 	case nsplit == 4 && spliturl[2] == "resize":
 		nodeId := spliturl[1]
@@ -218,4 +188,38 @@ func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
 		return j.nodeController.Resize(nodeId, numberOfThreads)
 	}
 	return nil
+}
+
+func (j *RestOnJob) storePassword() {
+	if j.password != "" {
+		usepw = true
+		j.hashedpw = hashPw(j.password)
+	}
+}
+
+func (j *RestOnJob) checkPassword(r *http.Request) bool {
+	if usepw {
+		pw := hashPw(r.Header.Get("Password"))
+		log("Verifying password.")
+		return j.hashedpw == pw
+	}
+	return true
+}
+
+func (j *RestOnJob) retrieve(itemId string, r Retriever, w http.ResponseWriter) {
+	json, err := r.Retrieve(itemId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	fmt.Fprint(w, json)
+}
+
+func (j *RestOnJob) retrieveAll(r Retriever, w http.ResponseWriter) {
+	json, numberOfItems, err := r.RetrieveAll()
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
 }
