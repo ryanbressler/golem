@@ -165,16 +165,18 @@ func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg) {
 		nh.Master.subMap[msg.SubId].CerrFileChan <- msg.Body
 	case JOBFINISHED:
 
-		log("%v says job finished: %v running: %v", nh.Hostname, msg.Body, running)
+		vlog("JOBFINISHED getting running value.")
 		running := <-nh.Running
-		nh.Running<-running--
+		nh.Running<-running-1
+		log("%v says job finished: %v running: %v", nh.Hostname, msg.Body, running)
 		nh.Master.subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
 		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
 
 	case JOBERROR:
-		log("%v says job error: %v running: %v", nh.Hostname, msg.Body, running)
+		vlog("JOBERROR getting running value.")
 		running := <-nh.Running
-		nh.Running<-running--
+		nh.Running<-running-1
+		log("%v says job error: %v running: %v", nh.Hostname, msg.Body, running)
 		nh.Master.subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
 		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
 
