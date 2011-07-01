@@ -38,6 +38,7 @@ where command and args can be:
 run n job_executable exeutable args : run job_executable n times with the supplied args
 runlist listofjobs.txt              : run each line (n n job_executable exeutable args) of the file 
 list                                : list statuses of all submissions on cluster
+jobs                                : same as list
 status subid                        : get status of a single submission
 stop subid                          : stop a submission from submitting more jobs but let running jobs finish
 kill subid                          : stop a submission from submitting more jobs and kill running jobs
