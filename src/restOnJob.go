@@ -49,8 +49,8 @@ type JobController interface {
 type NodeController interface {
 	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
 	Retrieve(nodeId string) (json string, err os.Error)
-	Restart() os.Error
-	Kill() os.Error
+	RestartAll() os.Error
+	KillAll() os.Error
 	Resize(nodeId string, numberOfThreads int) os.Error
 }
 
@@ -204,10 +204,10 @@ func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
 	nsplit := len(spliturl)
 	switch {
 	case nsplit == 2 && spliturl[1] == "restart":
-		return j.nodeController.Restart()
+		return j.nodeController.RestartAll()
 
 	case nsplit == 2 && spliturl[1] == "die":
-		return j.nodeController.Kill()
+		return j.nodeController.KillAll()
 
 	case nsplit == 4 && spliturl[2] == "resize":
 		nodeId := spliturl[1]
