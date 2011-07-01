@@ -30,6 +30,7 @@ import (
 type MasterJobController struct {
 	master *Master
 }
+
 func (c MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
@@ -129,6 +130,7 @@ func (c MasterJobController) Kill(jobId string) os.Error {
 type MasterNodeController struct {
 	master *Master
 }
+
 func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
@@ -182,6 +184,7 @@ func (c MasterNodeController) Kill() os.Error {
 type ScribeJobController struct {
 	scribe Scribe
 }
+
 func (c ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
@@ -214,6 +217,7 @@ func (c ScribeJobController) Kill(jobId string) os.Error {
 type ScribeNodeController struct {
 	scribe Scribe
 }
+
 func (c ScribeNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
