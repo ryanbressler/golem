@@ -131,12 +131,12 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "" && verb == "stop":
-		    err := j.jobController.Stop(jobId)
-		     if err != nil {
-		        w.WriteHeader(http.StatusBadRequest)
-		        return
-		     }
-            w.WriteHeader(http.StatusOK)
+			err := j.jobController.Stop(jobId)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
 		case jobId == "" && verb == "":
 			jobId, err := j.jobController.NewJob(r)
 			if err != nil {
@@ -168,19 +168,19 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 			nodeId := pathParts[1]
 			json, err := j.nodeController.Retrieve(nodeId)
 			if err != nil {
-			    w.WriteHeader(404)
+				w.WriteHeader(404)
 			} else {
-			    fmt.Fprint(w, json)
+				fmt.Fprint(w, json)
 			}
 			return
 		default:
-		    json, _, err := j.nodeController.RetrieveAll(r)
-		    if err != nil {
-		        w.WriteHeader(500)
-		    } else {
-		        fmt.Fprintf(w, "{ items:[%v] }", json)
-		    }
-		    return
+			json, _, err := j.nodeController.RetrieveAll(r)
+			if err != nil {
+				w.WriteHeader(500)
+			} else {
+				fmt.Fprintf(w, "{ items:[%v] }", json)
+			}
+			return
 		}
 	case "POST":
 		if usepw {
@@ -191,31 +191,31 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err := j.postNodeHandler(r)
-        if err != nil {
-            w.WriteHeader(500)
-        } else {
-            w.WriteHeader(200)
-        }
+		if err != nil {
+			w.WriteHeader(500)
+		} else {
+			w.WriteHeader(200)
+		}
 	}
 }
 
 func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
-    spliturl := splitRestUrl(r.URL.Path)
-    nsplit := len(spliturl)
-    switch {
-    case nsplit == 2 && spliturl[1] == "restart":
-        return j.nodeController.Restart()
+	spliturl := splitRestUrl(r.URL.Path)
+	nsplit := len(spliturl)
+	switch {
+	case nsplit == 2 && spliturl[1] == "restart":
+		return j.nodeController.Restart()
 
-    case nsplit == 2 && spliturl[1] == "die":
-        return j.nodeController.Kill()
+	case nsplit == 2 && spliturl[1] == "die":
+		return j.nodeController.Kill()
 
-    case nsplit == 4 && spliturl[2] == "resize":
-        nodeId := spliturl[1]
-        numberOfThreads, err := strconv.Atoi(spliturl[3])
-        if err != nil {
-            return err
-        }
-        return j.nodeController.Resize(nodeId, numberOfThreads)
-    }
-    return nil
+	case nsplit == 4 && spliturl[2] == "resize":
+		nodeId := spliturl[1]
+		numberOfThreads, err := strconv.Atoi(spliturl[3])
+		if err != nil {
+			return err
+		}
+		return j.nodeController.Resize(nodeId, numberOfThreads)
+	}
+	return nil
 }
