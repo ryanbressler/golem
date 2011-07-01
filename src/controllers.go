@@ -31,7 +31,7 @@ type MasterJobController struct {
 	master *Master
 }
 
-func (c MasterJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c MasterJobController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
 	jsonArray := make([]string, 0)
@@ -131,7 +131,7 @@ type MasterNodeController struct {
 	master *Master
 }
 
-func (c MasterNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c MasterNodeController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 
 	numberOfItems = len(c.master.NodeHandles)
@@ -185,7 +185,7 @@ type ScribeJobController struct {
 	scribe Scribe
 }
 
-func (c ScribeJobController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c ScribeJobController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
 	numberOfItems = 0
@@ -218,7 +218,7 @@ type ScribeNodeController struct {
 	scribe Scribe
 }
 
-func (c ScribeNodeController) RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error) {
+func (c ScribeNodeController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
 	json = "{ items:[], numberOfItems: 0, uri:'/nodes' }"
 	numberOfItems = 0
