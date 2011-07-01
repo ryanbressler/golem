@@ -39,17 +39,19 @@ type RestOnJob struct {
 	hashedpw       string
 }
 
+type Retriever interface {
+	RetrieveAll() (json string, numberOfItems int, err os.Error)
+	Retrieve(itemId string) (json string, err os.Error)
+}
 type JobController interface {
-	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
-	Retrieve(jobId string) (json string, err os.Error)
+    Retriever
 	NewJob(r *http.Request) (jobId string, err os.Error)
 	Stop(jobId string) (err os.Error)
 	Kill(jobId string) (err os.Error)
 }
 
 type NodeController interface {
-	RetrieveAll(r *http.Request) (json string, numberOfItems int, err os.Error)
-	Retrieve(nodeId string) (json string, err os.Error)
+	Retriever
 	RestartAll() os.Error
 	KillAll() os.Error
 	Resize(nodeId string, numberOfThreads int) os.Error
@@ -97,19 +99,9 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "":
-			json, err := j.jobController.Retrieve(jobId)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			fmt.Fprint(w, json)
+			j.retrieve(jobId, j.jobController, w)
 		case jobId == "" && verb == "":
-			json, numberOfItems, err := j.jobController.RetrieveAll(r)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
+		    j.retrieveAll(j.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -158,22 +150,9 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		nparts := len(pathParts)
 		switch {
 		case nparts == 2:
-			nodeId := pathParts[1]
-			json, err := j.nodeController.Retrieve(nodeId)
-			if err != nil {
-				w.WriteHeader(404)
-			} else {
-				fmt.Fprint(w, json)
-			}
-			return
+			j.retrieve(pathParts[1], j.nodeController, w)
 		default:
-			json, numberOfItems, err := j.nodeController.RetrieveAll(r)
-			if err != nil {
-				w.WriteHeader(500)
-			} else {
-				fmt.Fprintf(w, "{ items:[%v], numberOfItems: %d }", json, numberOfItems)
-			}
-			return
+		    j.retrieveAll(j.nodeController, w)
 		}
 	case "POST":
 		if j.checkPassword(r) == false {
@@ -225,4 +204,22 @@ func (j *RestOnJob) checkPassword(r *http.Request) bool {
 		return j.hashedpw == pw
 	}
 	return true
+}
+
+func (j *RestOnJob) retrieve(itemId string, r Retriever, w http.ResponseWriter) {
+        json, err := r.Retrieve(itemId)
+        if err != nil {
+            w.WriteHeader(http.StatusNotFound)
+            return
+        }
+        fmt.Fprint(w, json)
+}
+
+func (j *RestOnJob) retrieveAll(r Retriever, w http.ResponseWriter) {
+    json, numberOfItems, err := r.RetrieveAll()
+    if err != nil {
+        w.WriteHeader(http.StatusNotFound)
+        return
+    }
+    fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
 }
