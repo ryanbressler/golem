@@ -167,7 +167,7 @@ func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg) {
 
 		vlog("JOBFINISHED getting running value.")
 		running := <-nh.Running
-		nh.Running<-running-1
+		nh.Running <- running - 1
 		log("%v says job finished: %v running: %v", nh.Hostname, msg.Body, running)
 		nh.Master.subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
 		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
@@ -175,7 +175,7 @@ func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg) {
 	case JOBERROR:
 		vlog("JOBERROR getting running value.")
 		running := <-nh.Running
-		nh.Running<-running-1
+		nh.Running <- running - 1
 		log("%v says job error: %v running: %v", nh.Hostname, msg.Body, running)
 		nh.Master.subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
 		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
