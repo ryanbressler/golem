@@ -130,8 +130,7 @@ func (nh *NodeHandle) Monitor() {
 				vlog("%v got job, %v running.", nh.Hostname, running)
 			case msg := <-nh.Con.InChan:
 				vlog("%v Got msg", nh.Hostname)
-				running := <-nh.Running
-				nh.Running <- nh.clientMsgSwitch(&msg, running)
+				nh.clientMsgSwitch(&msg)
 				vlog("%v msg handled", nh.Hostname)
 			}
 		default:
@@ -142,8 +141,7 @@ func (nh *NodeHandle) Monitor() {
 				nh.Con.OutChan <- *bcMsg
 			case msg := <-nh.Con.InChan:
 				//log("Got msg from %v", nh.Hostname)
-				running := <-nh.Running
-				nh.Running <- nh.clientMsgSwitch(&msg, running)
+				nh.clientMsgSwitch(&msg)
 			}
 		}
 
@@ -151,9 +149,9 @@ func (nh *NodeHandle) Monitor() {
 
 }
 
-//handle the diffrent messages a client can send and return the updated number of jobs
-//that client is running
-func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg, running int) int {
+//handle the diffrent messages a client can send and updates the value in nh.Running if appropriate
+func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg) {
+
 	switch msg.Type {
 	default:
 		//cout <- msg.Body
@@ -168,16 +166,18 @@ func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg, running int) int {
 	case JOBFINISHED:
 
 		log("%v says job finished: %v running: %v", nh.Hostname, msg.Body, running)
-		running--
+		running := <-nh.Running
+		nh.Running<-running--
 		nh.Master.subMap[msg.SubId].FinishedChan <- NewJob(msg.Body)
 		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
 
 	case JOBERROR:
 		log("%v says job error: %v running: %v", nh.Hostname, msg.Body, running)
-		running--
+		running := <-nh.Running
+		nh.Running<-running--
 		nh.Master.subMap[msg.SubId].ErrorChan <- NewJob(msg.Body)
 		vlog("%v finished sent to Sub: %v running: %v", nh.Hostname, msg.Body, running)
 
 	}
-	return running
+
 }
