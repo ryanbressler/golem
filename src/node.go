@@ -28,7 +28,7 @@ import (
 )
 
 const (
-    defaultBufSize = 134217728 // Set a more sane limit than 1024
+	defaultBufSize = 134217728 // Set a more sane limit than 1024
 )
 
 //////////////////////////////////////////////
@@ -38,8 +38,8 @@ const (
 func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
 	bp, err := bufio.NewReaderSize(p, defaultBufSize)
 	if err != nil {
-	    log(err.String())
-	    return
+		log(err.String())
+		return
 	}
 
 	for {
