@@ -79,16 +79,14 @@ func (j *RestOnJob) MakeReady() {
 // web handlers
 func (j *RestOnJob) rootHandler(w http.ResponseWriter, r *http.Request) {
 	log("%v /", r.Method)
-	w.Header().Set("Content-Type", "text/plain")
-	// w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, "{ jobs: '/jobs', nodes: '/nodes' }")
 }
 
 func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("%v /jobs", r.Method)
 
-	w.Header().Set("Content-Type", "text/plain")
-	// w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 
 	// TODO : Add logic to retrieve outputs from job
 	// TODO : Manage errors
@@ -142,8 +140,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 	log("nodeHandler")
 
-	w.Header().Set("Content-Type", "text/plain")
-	// w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
 	case "GET":

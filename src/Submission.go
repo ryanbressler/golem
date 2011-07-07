@@ -95,7 +95,7 @@ func (s *Submission) MarshalJSON() ([]byte, os.Error) {
 	s.runningChan <- running
 
 	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
-	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":%v, \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v \"Running\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running)
+	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":\"%v\", \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v, \"Running\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running)
 
 	vlog("Returning description")
 	return []byte(rv), nil
