@@ -81,7 +81,7 @@ func (nh *NodeHandle) MarshalJSON() ([]byte, os.Error) {
 	atOnce := <-nh.MaxJobs
 	nh.MaxJobs <- atOnce
 
-	rv := fmt.Sprintf("{\"uri\":\"%v\",\"NodeId\":%v,\"Hostname\":%v, \"MaxJobs\":%v,\"Running\":%v}", nh.Uri, nh.NodeId, nh.Hostname, atOnce, running)
+	rv := fmt.Sprintf("{\"uri\":\"%v\",\"NodeId\":\"%v\",\"Hostname\":\"%v\", \"MaxJobs\":%v,\"Running\":%v}", nh.Uri, nh.NodeId, nh.Hostname, atOnce, running)
 
 	return []byte(rv), nil
 }
