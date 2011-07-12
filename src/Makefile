@@ -21,6 +21,7 @@ GOFILES=\
 	rest.go\
 	node.go\
 	tls.go\
+	storage.go\
 	main.go\
 	
 
