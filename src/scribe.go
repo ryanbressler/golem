@@ -20,11 +20,11 @@
 package main
 
 type Scribe struct {
-    store JobStore
+	store JobStore
 }
 
 func NewScribe(store JobStore) *Scribe {
-    s := Scribe{store: store}
-    // TODO : Start thread to monitor master
-    return &s
+	s := Scribe{store: store}
+	// TODO : Start thread to monitor master
+	return &s
 }

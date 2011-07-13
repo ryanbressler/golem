@@ -48,7 +48,7 @@ type JobHandle struct {
 }
 
 func (h JobHandle) MarshalJSON() ([]byte, os.Error) {
-    s := h.Status
+	s := h.Status
 	rv := fmt.Sprintf("{ uri:\"/jobs/%v\", id:\"%v\", createdAt:\"%v\", modifiedAt:\"%v\", totalTasks:%v, finishedTasks:%v, erroredTasks:%v, isRunning:%v }", h.JobId, h.JobId, s.TotalTasks, s.FinishedTasks, s.ErroredTasks, s.Running)
 	return []byte(rv), nil
 }
@@ -72,52 +72,52 @@ type Task struct {
 }
 
 type DoNothingJobStore struct {
-    jobsById map[string]JobPackage
+	jobsById map[string]JobPackage
 }
 
 func (s DoNothingJobStore) Create(item JobPackage) (err os.Error) {
-    s.jobsById[item.Handle.JobId] = item
-    return
+	s.jobsById[item.Handle.JobId] = item
+	return
 }
 
 func (s DoNothingJobStore) All() (items []JobHandle, err os.Error) {
-//    items = make([]JobHandle, 100)
-    for _, item := range s.jobsById {
+	//    items = make([]JobHandle, 100)
+	for _, item := range s.jobsById {
 		items = append(items, item.Handle)
 	}
-    return
+	return
 }
 
 func (s DoNothingJobStore) Active() (items []JobHandle, err os.Error) {
-//    items = make([]JobHandle, 100)
-    for _, item := range s.jobsById {
-        if item.Handle.Status.Running {
-            items = append(items, item.Handle)
-        }
+	//    items = make([]JobHandle, 100)
+	for _, item := range s.jobsById {
+		if item.Handle.Status.Running {
+			items = append(items, item.Handle)
+		}
 	}
-    return
+	return
 }
 
 func (s DoNothingJobStore) Unscheduled() (items []JobHandle, err os.Error) {
-//    items = make([]JobHandle, 100)
-    for _, item := range s.jobsById {
-        if item.Handle.Status.Running == false {
-            items = append(items, item.Handle)
-        }
+	//    items = make([]JobHandle, 100)
+	for _, item := range s.jobsById {
+		if item.Handle.Status.Running == false {
+			items = append(items, item.Handle)
+		}
 	}
-    return
+	return
 }
 
 func (s DoNothingJobStore) Get(jobId string) (item JobPackage, err os.Error) {
-    item, isin := s.jobsById[jobId]
-    if isin == false {
-        err = os.NewError("item not found")
-    }
-    return
+	item, isin := s.jobsById[jobId]
+	if isin == false {
+		err = os.NewError("item not found")
+	}
+	return
 }
 
 func (s DoNothingJobStore) Update(jobId string, status JobStatus) (err os.Error) {
-    item, err := s.Get(jobId)
-    item.Handle.Status = status
-    return
+	item, err := s.Get(jobId)
+	item.Handle.Status = status
+	return
 }

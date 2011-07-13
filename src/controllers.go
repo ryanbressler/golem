@@ -189,7 +189,7 @@ func (c ScribeJobController) RetrieveAll() (json string, numberOfItems int, err 
 	log("RetrieveAll")
 	items, err := c.scribe.store.All()
 	if err != nil {
-	    return
+		return
 	}
 
 	jsonArray := make([]string, 0)
