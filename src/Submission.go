@@ -43,6 +43,7 @@ type Submission struct {
 	ErroredJobsChan  chan int
 	stopChan         chan int
 	runningChan      chan bool
+	SubLocalTime     string	
 }
 
 
@@ -51,6 +52,8 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 	//subId := <-subidChan
 	//subidChan <- subId + 1
 	subId := UniqueId()
+	localTime := time.SecondsToLocalTime(time.Seconds())
+        formattedTime := localTime.Format(time.ANSIC)
 	s := Submission{
 		Uri:              fmt.Sprintf("/jobs/%v", subId),
 		SubId:            subId,
@@ -63,7 +66,8 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 		ErroredJobsChan:  make(chan int, 1),
 		TotalJobsChan:    make(chan int, 1),
 		stopChan:         make(chan int, 0),
-		runningChan:      make(chan bool, 1)}
+		runningChan:      make(chan bool, 1),
+		SubLocalTime:	  formattedTime}
 	totalJobs := 0
 	for _, vals := range s.Jobs {
 		totalJobs += vals.Count
@@ -93,9 +97,9 @@ func (s *Submission) MarshalJSON() ([]byte, os.Error) {
 	vlog("sniffing running jobs")
 	running := <-s.runningChan
 	s.runningChan <- running
-
-	log("Describing SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
-	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":\"%v\", \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v, \"Running\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running)
+ 
+	log("Describing SubId: %v, %v finished, %v errored, %v total, %v localtime", s.SubId, FinishedJobs, ErroredJobs, TotalJobs, s.SubLocalTime)
+	rv := fmt.Sprintf("{\"uri\":\"%v\",\"SubId\":\"%v\", \"TotalJobs\":%v,\"FinishedJobs\":%v,\"ErroredJobs\":%v, \"Running\":%v, \"DateTimeSubmitted\":%v}", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running, s.SubLocalTime)
 
 	vlog("Returning description")
 	return []byte(rv), nil
