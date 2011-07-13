@@ -19,8 +19,12 @@
 */
 package main
 
-/////////////////////////////////////////////////
-//scribe
 type Scribe struct {
+    store JobStore
+}
 
+func NewScribe(store JobStore) *Scribe {
+    s := Scribe{store: store}
+    // TODO : Start thread to monitor master
+    return &s
 }

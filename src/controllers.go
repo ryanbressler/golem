@@ -182,13 +182,23 @@ func (c MasterNodeController) KillAll() os.Error {
 }
 
 type ScribeJobController struct {
-	scribe Scribe
+	scribe *Scribe
 }
 
 func (c ScribeJobController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
 	log("RetrieveAll")
-	json = "{ items:[], numberOfItems: 0, uri:'/jobs' }"
-	numberOfItems = 0
+	items, err := c.scribe.store.All()
+	if err != nil {
+	    return
+	}
+
+	jsonArray := make([]string, 0)
+	for _, s := range items {
+		val, _ := s.MarshalJSON()
+		jsonArray = append(jsonArray, string(val))
+	}
+	numberOfItems = len(jsonArray)
+	json = strings.Join(jsonArray, ",")
 	err = nil
 	return
 }
@@ -215,7 +225,7 @@ func (c ScribeJobController) Kill(jobId string) os.Error {
 }
 
 type ScribeNodeController struct {
-	scribe Scribe
+	scribe *Scribe
 }
 
 func (c ScribeNodeController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
