@@ -65,7 +65,7 @@ def main(start, end, inputMatrixFile, associations_dir, commandsOut, gosubmit, l
 		golemSubmit(pythonBin, golemPwd, commandwriter.name)
 
 if __name__=="__main__":
-	parser = optparse.OptionParser(description="Check rf_ace.config for appropriate tunings and rf-ace version\n\nusage: %prog [options] filetureStart[start at 0] featureEnd, inputMatrixFile, associationsDir, commandsOutfile",version="%prog 1.0")
+	parser = optparse.OptionParser(description="Check rf_ace.config for appropriate tunings and rf-ace version\n\nusage: %prog Start[0..n-1] featureEnd, inputMatrixFile, associationsDir, commandsOutfile",version="%prog 1.0")
 	parser.add_option('-l', '--local', help="local mode, will not check whether matrix file and output directory exists, important that you confirmed that the feature matrix and associations output path are valid before submitting jobs to grid", dest='local_mode', default=False, action='store_true')
 	parser.add_option('-s', '--submit', help="Inclusion of this flag will tell the program to submit job list to GOLEM - if you are running this from local, it is important to validate that your input matrix and output directory exists", dest='go_submit', default=False, action='store_true')
 	(opts, args) = parser.parse_args()
@@ -86,7 +86,7 @@ if __name__=="__main__":
                         sys.exit(-1)
 		main(int(args[0]), int(args[1]), matrix_file, associations_dir, commandsOutfile, opts.go_submit, opts.local_mode)
 	else:
-		print 'Try python(2.5+) rf_ace_list_gen.py --help'
+		print 'Try python(2.5+) rf_ace_list_gen.py --help\nRequires:start[0..n-1] featureEnd, inputMatrixFile, associationsDir, commandsOutfile'
 		sys.exit(1)
 	
 
