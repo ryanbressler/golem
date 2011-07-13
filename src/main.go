@@ -53,7 +53,8 @@ func main() {
 		x := RestOnJob{jobController: MasterJobController{master: m}, nodeController: MasterNodeController{master: m}, hostname: hostname, password: password}
 		x.MakeReady()
 	} else if isScribe {
-		s := Scribe{}
+	    j := DoNothingJobStore{}
+		s := NewScribe(j)
 		x := RestOnJob{jobController: ScribeJobController{scribe: s}, nodeController: ScribeNodeController{scribe: s}, hostname: hostname, password: password}
 		x.MakeReady()
 	} else {
