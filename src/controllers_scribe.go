@@ -23,6 +23,7 @@ import (
 	"http"
 	"fmt"
 	"strings"
+	"time"
 	"os"
 )
 
@@ -64,17 +65,22 @@ func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) 
 	return
 }
 func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-    jobPackage := JobPackage{}
-	reqjson := r.FormValue("data")
+	tasks := make([]Task, 0, 100)
+	if err = loadJson(r, tasks); err != nil { return }
+
 	jobId = UniqueId()
+	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
+    label := getHeader(r, "x-golem-job-label", jobId)
+	now := time.Time{}
+
+    jobPackage := JobPackage{
+        Handle: JobHandle{ JobId: jobId, Owner: owner, Label: label, FirstCreated: now, LastModified: now, Status: JobStatus{}},
+        Tasks: tasks }
 
     err = c.scribe.store.Create(jobPackage)
-    if err != nil {
-        return
-    }
-
 	return
 }
+
 func (c ScribeJobController) Stop(jobId string) os.Error {
 	log("Stop:%v", jobId)
 	return os.NewError("unable to stop")
