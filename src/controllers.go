@@ -23,7 +23,6 @@ import (
 	"http"
 	"strings"
 	"os"
-	"json"
 )
 
 type MasterJobController struct {
@@ -48,50 +47,21 @@ func (c MasterJobController) Retrieve(jobId string) (json string, err os.Error) 
 
 	job, isin := c.master.subMap[jobId]
 	if isin {
-		val, jsonerr := job.MarshalJSON()
-		if jsonerr != nil {
-			err = jsonerr
-		} else {
-			json = string(val)
-		}
-		return
+		val, err := job.MarshalJSON()
+		if err != nil { return }
+
+        json = string(val)
+	} else {
+        err = os.NewError("job not found")
 	}
 
-	err = os.NewError("job not found")
 	return
 }
 func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	log("NewJob")
 
-	mpreader, err := r.MultipartReader()
-	if err != nil {
-		log("NewJob: multipart reader: %v", err)
-		return
-	}
-
-	frm, err := mpreader.ReadForm(10000)
-	if err != nil {
-		log("NewJob: multipart form: %v", err)
-		return
-	}
-
-	cmd := frm.Value["command"][0]
-	log("NewJob: command: %s", cmd)
-
 	rJobs := make([]RequestedJob, 0, 100)
-	jsonfile, err := frm.File["jsonfile"][0].Open()
-	if err != nil {
-		log("NewJob: opening file: %v", err)
-		return
-	}
-
-	dec := json.NewDecoder(jsonfile)
-	if err := dec.Decode(&rJobs); err != nil {
-		log("NewJob: json decode: %v\n json: %v", err)
-		return
-	}
-
-	jsonfile.Close()
+	if err = loadJson(r, rJobs); err != nil { return }
 
 	s := NewSubmission(&rJobs, c.master.jobChan)
 	jobId = s.SubId
