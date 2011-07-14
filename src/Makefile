@@ -12,6 +12,7 @@ GOFILES=\
 	Submission.go\
 	restOnJob.go\
 	controllers.go\
+	controllers_scribe.go\
 	master.go\
 	scribe.go\
 	control.go\
