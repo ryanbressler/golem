@@ -42,6 +42,7 @@ type JobStore interface {
 type JobHandle struct {
 	JobId        string
 	Owner        string
+	Label        string
 	FirstCreated time.Time
 	LastModified time.Time
 	Status       JobStatus
