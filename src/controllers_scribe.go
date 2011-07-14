@@ -49,8 +49,18 @@ func (c ScribeJobController) RetrieveAll() (json string, numberOfItems int, err 
 }
 func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
 	log("Retrieve:%v", jobId)
-	json = fmt.Sprintf("{ items:[], numberOfItems: 0, uri:'/jobs/%v' }", jobId)
-	err = nil
+
+	item, err := c.scribe.store.Get(jobId)
+	if err != nil {
+	    return
+	}
+
+	val, err := item.MarshalJSON()
+	if err != nil {
+	    return
+	}
+
+	json = string(val)
 	return
 }
 func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {

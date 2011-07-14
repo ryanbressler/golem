@@ -54,7 +54,6 @@ func (h JobHandle) MarshalJSON() ([]byte, os.Error) {
 	return []byte(rv), nil
 }
 
-
 type JobStatus struct {
 	TotalTasks    int
 	FinishedTasks int
@@ -65,6 +64,11 @@ type JobStatus struct {
 type JobPackage struct {
 	Handle JobHandle
 	Tasks  []Task
+}
+
+func (j JobPackage) MarshalJSON() ([]byte, os.Error) {
+    h := j.Handle
+	return h.MarshalJSON()
 }
 
 type Task struct {
