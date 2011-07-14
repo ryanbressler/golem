@@ -64,10 +64,15 @@ func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) 
 	return
 }
 func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
+    jobPackage := JobPackage{}
 	reqjson := r.FormValue("data")
-	log("NewJob:%v", reqjson)
 	jobId = UniqueId()
-	err = nil
+
+    err = c.scribe.store.Create(jobPackage)
+    if err != nil {
+        return
+    }
+
 	return
 }
 func (c ScribeJobController) Stop(jobId string) os.Error {
