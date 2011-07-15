@@ -136,7 +136,7 @@ func (nh *NodeHandle) Monitor() {
 
 //handle worker messages and updates the value in nh.Running if appropriate
 func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
-    vlog("Got msg from %v", nh.Hostname)
+	vlog("Got msg from %v", nh.Hostname)
 	switch msg.Type {
 	default:
 		//cout <- msg.Body
@@ -167,5 +167,5 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 
 	}
 
-    vlog("%v msg handled", nh.Hostname)
+	vlog("%v msg handled", nh.Hostname)
 }
