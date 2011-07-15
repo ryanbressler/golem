@@ -6,7 +6,6 @@ GOFILES=\
 	log.go\
 	password.go\
 	clientMsg.go\
-	RequestedJob.go\
 	Job.go\
 	Connection.go\
 	Submission.go\

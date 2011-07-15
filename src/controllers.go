@@ -62,12 +62,12 @@ func (c MasterJobController) Retrieve(jobId string) (json string, err os.Error) 
 func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	log("NewJob")
 
-	rJobs := make([]RequestedJob, 0, 100)
-	if err = loadJson(r, rJobs); err != nil {
+	tasks := make([]Task, 0, 100)
+	if err = loadJson(r, tasks); err != nil {
 		return
 	}
 
-	s := NewSubmission(&rJobs, c.master.jobChan)
+	s := NewSubmission(&tasks, c.master.jobChan)
 	jobId = s.SubId
 	c.master.subMap[jobId] = s
 	log("NewJob: %v", jobId)
