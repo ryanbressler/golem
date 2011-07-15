@@ -51,8 +51,16 @@ type NodeController interface {
 }
 
 func NewRestOnJob(jc JobController, nc NodeController) {
-	hostname := configuration.GetString("default", "hostname")
-	hpw := hashPw(configuration.GetString("default", "password"))
+	hostname, err := ConfigFile.GetString("default", "hostname")
+	if err != nil { panic(err) }
+
+    hpw := ""
+    password, err := ConfigFile.GetString("default", "password")
+	if err != nil {
+	    log("no password specified")
+	} else {
+	    hpw = hashPw(password)
+	}
 
 	j := RestOnJob{jobController: jc, nodeController: nc, hashedpw: hpw}
 

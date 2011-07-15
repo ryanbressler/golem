@@ -23,7 +23,6 @@ GOFILES=\
 	node.go\
 	tls.go\
 	storage.go\
-	configuration.go\
 	main.go\
 	
 
