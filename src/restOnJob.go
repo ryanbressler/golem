@@ -34,8 +34,6 @@ import (
 type RestOnJob struct {
 	jobController  JobController
 	nodeController NodeController
-	hostname       string
-	password       string
 	hashedpw       string
 }
 
@@ -57,11 +55,11 @@ type NodeController interface {
 	Resize(nodeId string, numberOfThreads int) os.Error
 }
 
-// initializes the REST control node
-func (j *RestOnJob) MakeReady() {
-	log("running at %v", j.hostname)
+func NewRestOnJob(jc JobController, nc NodeController) {
+    hostname := configuration.GetString("default", "hostname")
+    hpw := hashPw(configuration.GetString("default", "password"))
 
-	j.storePassword()
+    j := RestOnJob{ jobController: jc, nodeController: nc, hashedpw: hpw }
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
 	http.Handle("/html/", http.FileServer("html", "/html"))
@@ -69,11 +67,10 @@ func (j *RestOnJob) MakeReady() {
 	http.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
 	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
 
-	//relys on global useTls being set
-	if err := ListenAndServeTLSorNot(j.hostname, nil); err != nil {
-		log("ListenAndServeTLSorNot Error : %v", err)
-		return
-	}
+    log("running at %v", hostname)
+
+	if err:= ListenAndServeTLSorNot(hostname, nil); err != nil { panic(err) }
+	return
 }
 
 // web handlers
@@ -188,15 +185,8 @@ func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
 	return nil
 }
 
-func (j *RestOnJob) storePassword() {
-	if j.password != "" {
-		usepw = true
-		j.hashedpw = hashPw(j.password)
-	}
-}
-
 func (j *RestOnJob) checkPassword(r *http.Request) bool {
-	if usepw {
+	if j.hashedpw != "" {
 		pw := hashPw(r.Header.Get("Password"))
 		log("Verifying password.")
 		return j.hashedpw == pw

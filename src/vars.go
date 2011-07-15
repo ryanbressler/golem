@@ -36,7 +36,6 @@ var configuration Configuration
 var useTls bool = true
 
 //password
-var usepw bool = false
 var hash = sha256.New() // use the same hasher
 var certpath string
 
