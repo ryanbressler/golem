@@ -23,6 +23,7 @@ import (
 	"http"
 	"io"
 	"json"
+	"strconv"
 	"strings"
 	"os"
 )
@@ -121,7 +122,7 @@ func (c ProxyNodeController) RestartAll() os.Error {
 	return err
 }
 func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	_, err := doProxy("POST", "/nodes/"+nodeId+"/resize/"+string(numberOfThreads), c.proxy, nil)
+	_, err := doProxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.proxy, nil)
 	return err
 }
 func (c ProxyNodeController) KillAll() os.Error {

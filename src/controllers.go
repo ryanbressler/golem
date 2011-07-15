@@ -22,6 +22,7 @@ package main
 import (
 	"http"
 	"strings"
+	"strconv"
 	"os"
 )
 
@@ -38,7 +39,7 @@ func (c MasterJobController) RetrieveAll() (json string, err os.Error) {
 		jsonArray = append(jsonArray, string(val))
 	}
 
-	json = " { numberOfItems: " + string(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
+	json = " { numberOfItems: " + strconv.Itoa(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
 func (c MasterJobController) Retrieve(jobId string) (json string, err os.Error) {
@@ -112,7 +113,7 @@ func (c MasterNodeController) RetrieveAll() (json string, err os.Error) {
 		val, _ := n.MarshalJSON()
 		jsonArray = append(jsonArray, string(val))
 	}
-	json = " { numberOfItems: " + string(numberOfItems) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
+	json = " { numberOfItems: " + strconv.Itoa(numberOfItems) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
 func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error) {
