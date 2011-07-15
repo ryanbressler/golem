@@ -12,6 +12,8 @@ GOFILES=\
 	Submission.go\
 	restOnJob.go\
 	controllers.go\
+	controllers_scribe.go\
+	controllers_proxy.go\
 	master.go\
 	scribe.go\
 	control.go\
@@ -22,6 +24,7 @@ GOFILES=\
 	node.go\
 	tls.go\
 	storage.go\
+	configuration.go\
 	main.go\
 	
 
