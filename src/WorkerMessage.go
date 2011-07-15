@@ -38,7 +38,7 @@ const (
 )
 
 // messages sent between master and workers over websockets
-type clientMsg struct {
+type WorkerMessage struct {
 	Type  int
 	SubId string
 	Body  string

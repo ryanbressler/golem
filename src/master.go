@@ -51,7 +51,7 @@ func (m *Master) Listen(ws *websocket.Conn) {
 }
 
 // sends a message to every connected worker
-func (m *Master) Broadcast(msg *clientMsg) {
+func (m *Master) Broadcast(msg *WorkerMessage) {
 	log("Broadcasting message %v to %v nodes.", *msg, len(m.NodeHandles))
 	for _, nh := range m.NodeHandles {
 		nh.BroadcastChan <- msg

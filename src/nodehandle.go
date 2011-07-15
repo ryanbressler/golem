@@ -34,7 +34,7 @@ type NodeHandle struct {
 	Con           Connection
 	MaxJobs       chan int
 	Running       chan int
-	BroadcastChan chan *clientMsg
+	BroadcastChan chan *WorkerMessage
 }
 
 func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
@@ -47,7 +47,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 		Con:           con,
 		MaxJobs:       make(chan int, 1),
 		Running:       make(chan int, 1),
-		BroadcastChan: make(chan *clientMsg, 0)}
+		BroadcastChan: make(chan *WorkerMessage, 0)}
 
 	//wait for worker handshake TODO: should this be in monitor???
 	nh.Running <- 0
@@ -56,7 +56,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	if msg.Type == HELLO {
 		val, err := strconv.Atoi(msg.Body)
 		if err != nil {
-			log("error parsing client hello: %v", err)
+			log("error parsing worker hello: %v", err)
 			return nil
 		}
 		nh.MaxJobs <- val
@@ -92,7 +92,7 @@ func (nh *NodeHandle) SendJob(j *Job) {
 	if err != nil {
 		log("error json.Marshaling job: %v", err)
 	}
-	msg := clientMsg{Type: START, Body: string(jobjson)}
+	msg := WorkerMessage{Type: START, Body: string(jobjson)}
 	nh.Con.OutChan <- msg
 }
 
@@ -117,9 +117,7 @@ func (nh *NodeHandle) Monitor() {
 				nh.Running <- running + 1
 				vlog("%v got job, %v running.", nh.Hostname, running)
 			case msg := <-nh.Con.InChan:
-				vlog("%v Got msg", nh.Hostname)
-				nh.clientMsgSwitch(&msg)
-				vlog("%v msg handled", nh.Hostname)
+				nh.HandleWorkerMessage(&msg)
 			}
 		default:
 			vlog("%v has %v running. Waiting for message.", nh.Hostname, running)
@@ -128,8 +126,7 @@ func (nh *NodeHandle) Monitor() {
 				log("%v sending broadcast message %v", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case msg := <-nh.Con.InChan:
-				vlog("Got msg from %v", nh.Hostname)
-				nh.clientMsgSwitch(&msg)
+				nh.HandleWorkerMessage(&msg)
 			}
 		}
 
@@ -137,9 +134,9 @@ func (nh *NodeHandle) Monitor() {
 
 }
 
-//handle the diffrent messages a client can send and updates the value in nh.Running if appropriate
-func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg) {
-
+//handle worker messages and updates the value in nh.Running if appropriate
+func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
+    vlog("Got msg from %v", nh.Hostname)
 	switch msg.Type {
 	default:
 		//cout <- msg.Body
@@ -170,4 +167,5 @@ func (nh *NodeHandle) clientMsgSwitch(msg *clientMsg) {
 
 	}
 
+    vlog("%v msg handled", nh.Hostname)
 }

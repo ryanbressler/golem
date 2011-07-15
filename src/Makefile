@@ -5,7 +5,7 @@ GOFILES=\
 	vars.go\
 	log.go\
 	password.go\
-	clientMsg.go\
+	WorkerMessage.go\
 	Job.go\
 	Connection.go\
 	Submission.go\
