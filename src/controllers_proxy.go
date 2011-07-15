@@ -38,10 +38,14 @@ type ProxyJobController struct {
 
 func NewProxyJobController() ProxyJobController {
 	target, err := ConfigFile.GetString("scribe", "target")
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	url, err := http.ParseRequestURL(target)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	return ProxyJobController{http.NewSingleHostReverseProxy(url)}
 }
@@ -92,10 +96,14 @@ type ProxyNodeController struct {
 
 func NewProxyNodeController() ProxyNodeController {
 	target, err := ConfigFile.GetString("scribe", "target")
-    if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	url, err := http.ParseRequestURL(target)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	return ProxyNodeController{http.NewSingleHostReverseProxy(url)}
 }
