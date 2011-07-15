@@ -71,10 +71,10 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 func (nh *NodeHandle) MarshalJSON() ([]byte, os.Error) {
 	running := <-nh.Running
 	nh.Running <- running
-	atOnce := <-nh.MaxJobs
-	nh.MaxJobs <- atOnce
+	processes := <-nh.MaxJobs
+	nh.MaxJobs <- processes
 
-	rv := fmt.Sprintf("{\"uri\":\"%v\",\"NodeId\":\"%v\",\"Hostname\":\"%v\", \"MaxJobs\":%v,\"Running\":%v}", nh.Uri, nh.NodeId, nh.Hostname, atOnce, running)
+	rv := fmt.Sprintf("{ uri:\"%v\", NodeId:\"%v\", Hostname:\"%v\", MaxJobs:%v, Running :%v}", nh.Uri, nh.NodeId, nh.Hostname, processes, running)
 
 	return []byte(rv), nil
 }
@@ -101,11 +101,11 @@ func (nh *NodeHandle) Monitor() {
 	for {
 		running := <-nh.Running
 		nh.Running <- running
-		atOnce := <-nh.MaxJobs
-		nh.MaxJobs <- atOnce
+		processes := <-nh.MaxJobs
+		nh.MaxJobs <- processes
 
 		switch {
-		case running < atOnce:
+		case running < processes:
 			vlog("%v has %v running. Waiting for job or message.", nh.Hostname, running)
 			select {
 			case bcMsg := <-nh.BroadcastChan:
