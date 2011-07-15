@@ -40,7 +40,7 @@ type RestOnJob struct {
 }
 
 type Retriever interface {
-	RetrieveAll() (json string, numberOfItems int, err os.Error)
+	RetrieveAll() (json string, err os.Error)
 	Retrieve(itemId string) (json string, err os.Error)
 }
 type JobController interface {
@@ -214,10 +214,10 @@ func (j *RestOnJob) retrieve(itemId string, r Retriever, w http.ResponseWriter) 
 }
 
 func (j *RestOnJob) retrieveAll(r Retriever, w http.ResponseWriter) {
-	json, numberOfItems, err := r.RetrieveAll()
+	json, err := r.RetrieveAll()
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	fmt.Fprintf(w, "{ items:[%v], numberOfItems:%d }", json, numberOfItems)
+	w.Write([]byte(json))
 }

@@ -55,7 +55,10 @@ func main() {
 	} else if isScribe {
 		j := DoNothingJobStore{}
 		s := NewScribe(j)
-		x := RestOnJob{jobController: ScribeJobController{scribe: s}, nodeController: ScribeNodeController{scribe: s}, hostname: hostname, password: password}
+		proxytarget := ""
+		jobpx := NewProxyJobController(proxytarget)
+		nodepx := NewProxyNodeController(proxytarget)
+		x := RestOnJob{jobController: ScribeJobController{scribe: s, proxy: jobpx}, nodeController: nodepx, hostname: hostname, password: password}
 		x.MakeReady()
 	} else {
 		RunNode(atOnce, hostname)
