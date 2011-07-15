@@ -91,7 +91,7 @@ func (c MasterJobController) Kill(jobId string) os.Error {
 
 	job, isin := c.master.subMap[jobId]
 	if isin {
-		c.master.Broadcast(&clientMsg{Type: KILL, SubId: jobId})
+		c.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
 		if job.Stop() {
 			return nil
 		}
@@ -126,7 +126,7 @@ func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error
 func (c MasterNodeController) RestartAll() os.Error {
 	log("Restart")
 
-	c.master.Broadcast(&clientMsg{Type: RESTART})
+	c.master.Broadcast(&WorkerMessage{Type: RESTART})
 	log("Restarting in 10 seconds.")
 	go RestartIn(3000000000)
 
@@ -146,7 +146,7 @@ func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Erro
 func (c MasterNodeController) KillAll() os.Error {
 	log("Kill")
 
-	c.master.Broadcast(&clientMsg{Type: DIE})
+	c.master.Broadcast(&WorkerMessage{Type: DIE})
 	log("dying in 10 seconds.")
 	go DieIn(3000000000)
 

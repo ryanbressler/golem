@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
+func pipeToChan(p *os.File, msgType int, Id string, ch chan WorkerMessage) {
 	bp := bufio.NewReader(p)
 
 	for {
@@ -35,14 +35,14 @@ func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
 		if err != nil {
 			return
 		} else {
-			ch <- clientMsg{Type: msgType, SubId: Id, Body: line} //string(buffer[0:n])
+			ch <- WorkerMessage{Type: msgType, SubId: Id, Body: line} //string(buffer[0:n])
 		}
 	}
 
 }
 
 
-func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string, jk *JobKiller) {
+func startJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *JobKiller) {
 	log("Starting job from json: %v", jsonjob)
 	con := *cn
 
@@ -51,9 +51,9 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string, jk *JobKil
 	//make sure the path to the exec is fully qualified
 	cmd, err := exec.LookPath(jobcmd)
 	if err != nil {
-		con.OutChan <- clientMsg{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
+		con.OutChan <- WorkerMessage{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
 		log("exec %s: %s\n", jobcmd, err)
-		replyc <- &clientMsg{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
+		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 		return
 	}
 
@@ -81,9 +81,9 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string, jk *JobKil
 	//send signal back to main
 	if w.Exited() && w.ExitStatus() == 0 {
 
-		replyc <- &clientMsg{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
+		replyc <- &WorkerMessage{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
 	} else {
-		replyc <- &clientMsg{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
+		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 	}
 	jk.Donechan <- kb
 
@@ -93,7 +93,7 @@ func CheckIn(c *Connection) {
 	con := *c
 	for {
 		time.Sleep(60000000000)
-		con.OutChan <- clientMsg{Type: CHECKIN}
+		con.OutChan <- WorkerMessage{Type: CHECKIN}
 
 	}
 }
@@ -111,9 +111,9 @@ func RunNode(atOnce int, master string) {
 	}
 
 	mcon := *NewConnection(ws)
-	mcon.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
+	mcon.OutChan <- WorkerMessage{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 	go CheckIn(&mcon)
-	replyc := make(chan *clientMsg)
+	replyc := make(chan *WorkerMessage)
 
 	for {
 		log("Waiting for done or msg.")
