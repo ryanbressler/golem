@@ -65,7 +65,8 @@ func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) 
 }
 func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	tasks := make([]Task, 0, 100)
-	if err = loadJson(r, tasks); err != nil {
+	if err = loadJson(r, &tasks); err != nil {
+		vlog("NewJob:%v", err)
 		return
 	}
 

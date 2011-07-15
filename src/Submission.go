@@ -43,8 +43,7 @@ type Submission struct {
 }
 
 
-func NewSubmission(js *[]Task, jobChan chan *Job) *Submission {
-	rTasks := *js
+func NewSubmission(js []Task, jobChan chan *Job) *Submission {
 	subId := UniqueId()
 	localTime := time.SecondsToLocalTime(time.Seconds())
 	formattedTime := localTime.Format(time.ANSIC)
@@ -53,7 +52,7 @@ func NewSubmission(js *[]Task, jobChan chan *Job) *Submission {
 		SubId:            subId,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
-		Tasks:            rTasks,
+		Tasks:            js,
 		ErrorChan:        make(chan *Job, 1),
 		FinishedChan:     make(chan *Job, 1),
 		FinishedJobsChan: make(chan int, 1),
@@ -117,8 +116,9 @@ func (s *Submission) Stop() bool {
 }
 
 func (s Submission) monitorJobs() {
-	for {
+	vlog("monitorJobs")
 
+	for {
 		select {
 		case <-s.ErrorChan:
 			ErroredJobs := <-s.ErroredJobsChan
@@ -129,16 +129,19 @@ func (s Submission) monitorJobs() {
 			FinishedJobs++
 			s.FinishedJobsChan <- FinishedJobs
 		}
+
 		TotalJobs := <-s.TotalJobsChan
 		s.TotalJobsChan <- TotalJobs
+
 		FinishedJobs := <-s.FinishedJobsChan
 		s.FinishedJobsChan <- FinishedJobs
+
 		ErroredJobs := <-s.ErroredJobsChan
 		s.ErroredJobsChan <- ErroredJobs
 
 		running := <-s.runningChan
 
-		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
+		vlog("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 		if TotalJobs == (FinishedJobs + ErroredJobs) {
 			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, FinishedJobs, ErroredJobs)
 			//TODO: clean up submission object here
@@ -146,35 +149,39 @@ func (s Submission) monitorJobs() {
 			return
 		}
 		s.runningChan <- running
-
 	}
-
 }
 
 func (s Submission) submitJobs(jobChan chan *Job) {
-	jobId := 0
+	vlog("submitJobs")
+
+	taskId := 0
 	for lineId, vals := range s.Tasks {
+		vlog("submitJobs:[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
-			case jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}:
-				jobId++
+			case jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: taskId, Args: vals.Args}:
+				taskId++
 			case <-s.stopChan:
 				return //TODO: add indication that we stopped
 			}
 		}
 	}
-	log("All jobs submitted for SubId: %v", s.SubId)
+	log("[%d] tasks submitted for [%v]", taskId, s.SubId)
 }
 
 func (s Submission) writeIo() {
+	vlog("writeIo")
+
 	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.SubId))
 	if err != nil {
-		log("Error creating output file: %v\n", err)
+		log("writeIo: %v", err)
 	}
 	defer outf.Close()
+
 	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.SubId))
 	if err != nil {
-		log("Error creating output file: %v\n", err)
+		log("writeIo: %v", err)
 	}
 	defer errf.Close()
 
@@ -184,8 +191,6 @@ func (s Submission) writeIo() {
 			fmt.Fprint(outf, msg)
 		case errmsg := <-s.CerrFileChan:
 			fmt.Fprint(errf, errmsg)
-
 		}
 	}
-
 }
