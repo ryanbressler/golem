@@ -25,11 +25,7 @@ import (
 	"time"
 )
 
-
-////////////////////////////////////////////////////
-/// Submission
-/// TODO: Kill submissions once they finish.
-
+// TODO: Kill submissions once they finish.
 type Submission struct {
 	Uri              string
 	SubId            string
@@ -49,8 +45,6 @@ type Submission struct {
 
 func NewSubmission(js *[]Task, jobChan chan *Job) *Submission {
 	rTasks := *js
-	//subId := <-subidChan
-	//subidChan <- subId + 1
 	subId := UniqueId()
 	localTime := time.SecondsToLocalTime(time.Seconds())
 	formattedTime := localTime.Format(time.ANSIC)
@@ -81,7 +75,6 @@ func NewSubmission(js *[]Task, jobChan chan *Job) *Submission {
 	go s.submitJobs(jobChan)
 
 	return &s
-
 }
 
 func (s *Submission) MarshalJSON() ([]byte, os.Error) {
@@ -148,7 +141,7 @@ func (s Submission) monitorJobs() {
 		log("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
 		if TotalJobs == (FinishedJobs + ErroredJobs) {
 			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, FinishedJobs, ErroredJobs)
-			//s.killChan <- 1 //TODO: clean up submission object here
+			//TODO: clean up submission object here
 			s.runningChan <- false
 			return
 		}

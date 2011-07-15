@@ -48,8 +48,7 @@ func NewConnection(Socket *websocket.Conn) *Connection {
 	return &n
 }
 
-//goroutine to monitor the OutChan and send any messages through the websocket
-//usually started in NewConnection
+//goroutine to monitor the OutChan and send any messages through the websocket usually started in NewConnection
 func (con Connection) SendMsgs() {
 
 	for {
@@ -61,17 +60,14 @@ func (con Connection) SendMsgs() {
 			return
 		}
 
-		//log("sending:%v\n", string(msgjson))
 		if _, err := con.Socket.Write(msgjson); err != nil {
 			log("Error sending msg: %v", err)
 		}
-		//log("msg sent\n")
 	}
 
 }
 
-//goroutine to monitor websocket and put the messages in the InChan
-//usually started in NewConnection
+//goroutine to monitor websocket and put the messages in the InChan usually started in NewConnection
 func (con Connection) GetMsgs() {
 
 	for {
@@ -91,7 +87,7 @@ func (con Connection) GetMsgs() {
 			log("buffer full, restarting json decoder: %v", err)
 			decoder = json.NewDecoder(con.Socket)
 		case err != nil:
-			log("error parseing client msg json: %v", err)
+			log("error parseing worker msg json: %v", err)
 			continue
 		}
 		con.InChan <- msg

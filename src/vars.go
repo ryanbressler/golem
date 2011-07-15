@@ -23,37 +23,11 @@ import (
 	"crypto/sha256"
 )
 
-
 var verbose = false
 var iobuffersize = 1000
-
-//
 var isMaster bool
 var isScribe bool
 var configuration Configuration
-
-//tls configurability
 var useTls bool = true
-
-//password
 var hash = sha256.New() // use the same hasher
 var certpath string
-
-
-const (
-	//Message type constants ... should maybe be in clientMsg.go 
-	HELLO   = iota //sent from client to master on connect, body is bumber of jobs at once
-	CHECKIN        //sent from client every minute to keep conection alive
-
-	START //sent from master to start job, body is json job
-	KILL  //sent from master to stop jobs, SubId indicates what jobs to stop.
-
-	COUT   //cout from clent, body is line of cout
-	CERROR //cout from clent, body is line of cerror
-
-	JOBFINISHED //sent from client on job finish, body is json job SubId set
-	JOBERROR    //sent from client on job error, body is json job, SubId set
-
-	RESTART //Sent by master to nodes telling them to resart and reconnec themselves.
-	DIE     //tell nodes to shutdown.
-)

@@ -25,11 +25,6 @@ import (
 	"strconv"
 )
 
-
-/////////////////////////////////////////////////
-// restOnJob
-
-
 // REST interface for Job and Node Controllers
 type RestOnJob struct {
 	jobController  JobController

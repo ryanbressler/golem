@@ -32,9 +32,7 @@ import (
 	"http"
 )
 
-//////////////////////
-//tls
-//connect a websocket to the master as a client
+//connect a websocket to the master as a worker
 func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Error) {
 
 	origin, err := os.Hostname()
@@ -162,8 +160,7 @@ func GenerateTlsCert() (cert tls.Certificate, err os.Error) {
 
 }
 
-//this is the main function to setup a server as used by the master, usage is identical to 
-//http.ListenAndServe but this relys on global useTls being set
+// setup master, usage is identical to http.ListenAndServe but this relies on global useTls being set
 func ListenAndServeTLSorNot(hostname string, handler http.Handler) os.Error {
 	if useTls {
 		if err := ConfigListenAndServeTLS(hostname, nil); err != nil {

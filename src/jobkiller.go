@@ -24,15 +24,14 @@ import (
 )
 
 
-//killable links a SubId and JobId which uniquelly describe a job with a pid that can be used to 
-//kill it
+//killable links a SubId and JobId which uniquelly describe a job with a pid that can be used to kill it
 type Killable struct {
 	Pid   int
 	SubId string
 	JobId int
 }
 
-//Killable.Kill() kills the killable via KillPid (linux kill).
+// kills the killable via KillPid (linux kill).
 func (k *Killable) Kill() {
 	log("killing %v", k)
 	KillPid(k.Pid)
@@ -54,8 +53,7 @@ func NewJobKiller() (jk *JobKiller) {
 	return
 }
 
-//killJobs should be run as a go routine, it monitors its job killers channel  upkeeps the 
-//internal map of killables and locates jobs that ned to be killed.
+// should be run as a go routine, monitors job killers channel.  maintains the internal map of killables and locates jobs that need to be killed.
 func (jk *JobKiller) killJobs() {
 	for {
 		select {

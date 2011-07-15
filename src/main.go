@@ -23,17 +23,14 @@ import (
 	"flag"
 )
 
-
-//////////////////////////////////////////////
-//main method
-//parse args and start as master, node or scribe
+//parse args and start as master, scribe or worker
 func main() {
 	var configFile string
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
 	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections.")
-	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
+	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from workers.")
 	flag.StringVar(&configFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 

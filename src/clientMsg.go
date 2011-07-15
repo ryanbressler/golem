@@ -19,10 +19,25 @@
 */
 package main
 
-import ()
+// Message type constants
+const (
+	HELLO   = iota //sent from worker to master on connect, body is number of processes available
+	CHECKIN        //sent from worker every minute to keep connection alive
 
-//messages sent between server and client
-// types are defined in vars.go
+	START //sent from master to start job, body is json job
+	KILL  //sent from master to stop jobs, SubId indicates what jobs to stop.
+
+	COUT   //cout from worker, body is line of cout
+	CERROR //cout from worker, body is line of cerror
+
+	JOBFINISHED //sent from worker on job finish, body is json job SubId set
+	JOBERROR    //sent from worker on job error, body is json job, SubId set
+
+	RESTART //Sent by master to nodes telling them to resart and reconnec themselves.
+	DIE     //tell nodes to shutdown.
+)
+
+// messages sent between master and workers over websockets
 type clientMsg struct {
 	Type  int
 	SubId string
