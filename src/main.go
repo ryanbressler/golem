@@ -29,18 +29,14 @@ import (
 //parse args and start as master, node or scribe
 func main() {
 	var atOnce int
-	var hostname string
 	var unsecure bool
-	var password string
 	var configFile string
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
 	flag.IntVar(&atOnce, "n", 3, "For client nodes, the number of procceses to allow at once.")
-	flag.StringVar(&hostname, "hostname", "localhost:8083", "The address and port of/at wich to start the master.")
 	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections.")
 	flag.BoolVar(&unsecure, "unsecure", false, "Don't use tls security.")
-	flag.StringVar(&password, "p", "", "The password to require with job submission.")
 	flag.BoolVar(&verbose, "v", false, "Use verbose logging.")
 	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
     flag.StringVar(&configFile, "config", "golem.config", "A configuration file for golem services")
@@ -54,17 +50,11 @@ func main() {
 
 	if isMaster {
 		m := NewMaster()
-		x := RestOnJob{jobController: MasterJobController{master: m}, nodeController: MasterNodeController{master: m}, hostname: hostname, password: password}
-		x.MakeReady()
+		NewRestOnJob(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
-		j := DoNothingJobStore{}
-		s := NewScribe(j)
-
-		jobpx := NewProxyJobController()
-		nodepx := NewProxyNodeController()
-		x := RestOnJob{jobController: ScribeJobController{scribe: s, proxy: jobpx}, nodeController: nodepx, hostname: hostname, password: password}
-		x.MakeReady()
+		s := NewScribe(DoNothingJobStore{})
+		NewRestOnJob(ScribeJobController{ s, NewProxyJobController() }, NewProxyNodeController())
 	} else {
-		RunNode(atOnce, hostname)
+		RunNode(atOnce, configuration.GetString("worker", "masterhost"))
 	}
 }
