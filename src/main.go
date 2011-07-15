@@ -56,7 +56,9 @@ func main() {
 func NewConfigFile(filepath string) *conf.ConfigFile {
 	if filepath != "" {
 		c, err := conf.ReadConfigFile(filepath)
-		if err != nil { panic(err) }
+		if err != nil {
+			panic(err)
+		}
 		return c
 	}
 	panic(fmt.Sprintf("configuration file not found [%v]", filepath))
@@ -86,7 +88,9 @@ func getWorkerProcesses() (int, string) {
 	}
 
 	masterhost, err := ConfigFile.GetString("worker", "masterhost")
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	return atOnce, masterhost
 }
