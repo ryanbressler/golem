@@ -75,10 +75,14 @@ func getMultipartForm(r *http.Request) (frm *multipart.Form, err os.Error) {
 
 func loadJson(r *http.Request, tasks []Task) (err os.Error) {
 	frm, err := getMultipartForm(r)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	jsonfile, err := frm.File["jsonfile"][0].Open()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	defer jsonfile.Close()
 
 	err = json.NewDecoder(jsonfile).Decode(&tasks)

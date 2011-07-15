@@ -72,8 +72,8 @@ func (j JobPackage) MarshalJSON() ([]byte, os.Error) {
 }
 
 type Task struct {
-	Count     int
-	Args []string
+	Count int
+	Args  []string
 }
 
 type DoNothingJobStore struct {
