@@ -35,7 +35,7 @@ type Submission struct {
 	SubId            string
 	CoutFileChan     chan string
 	CerrFileChan     chan string
-	Jobs             []RequestedJob
+	Tasks             []Task
 	ErrorChan        chan *Job
 	FinishedChan     chan *Job
 	TotalJobsChan    chan int
@@ -47,8 +47,8 @@ type Submission struct {
 }
 
 
-func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
-	rJobs := *js
+func NewSubmission(js *[]Task, jobChan chan *Job) *Submission {
+	rTasks := *js
 	//subId := <-subidChan
 	//subidChan <- subId + 1
 	subId := UniqueId()
@@ -59,7 +59,7 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 		SubId:            subId,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
-		Jobs:             rJobs,
+		Tasks:             rTasks,
 		ErrorChan:        make(chan *Job, 1),
 		FinishedChan:     make(chan *Job, 1),
 		FinishedJobsChan: make(chan int, 1),
@@ -69,7 +69,7 @@ func NewSubmission(js *[]RequestedJob, jobChan chan *Job) *Submission {
 		runningChan:      make(chan bool, 1),
 		SubLocalTime:     formattedTime}
 	totalJobs := 0
-	for _, vals := range s.Jobs {
+	for _, vals := range s.Tasks {
 		totalJobs += vals.Count
 	}
 	s.TotalJobsChan <- totalJobs
@@ -160,7 +160,7 @@ func (s Submission) monitorJobs() {
 
 func (s Submission) submitJobs(jobChan chan *Job) {
 	jobId := 0
-	for lineId, vals := range s.Jobs {
+	for lineId, vals := range s.Tasks {
 		for i := 0; i < vals.Count; i++ {
 			select {
 			case jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: jobId, Args: vals.Args}:
