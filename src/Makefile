@@ -13,6 +13,7 @@ GOFILES=\
 	restOnJob.go\
 	controllers.go\
 	controllers_scribe.go\
+	controllers_proxy.go\
 	master.go\
 	scribe.go\
 	control.go\

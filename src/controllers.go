@@ -29,7 +29,7 @@ type MasterJobController struct {
 	master *Master
 }
 
-func (c MasterJobController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
+func (c MasterJobController) RetrieveAll() (json string, err os.Error) {
 	log("RetrieveAll")
 
 	jsonArray := make([]string, 0)
@@ -37,9 +37,8 @@ func (c MasterJobController) RetrieveAll() (json string, numberOfItems int, err 
 		val, _ := s.MarshalJSON()
 		jsonArray = append(jsonArray, string(val))
 	}
-	numberOfItems = len(jsonArray)
-	json = strings.Join(jsonArray, ",")
-	err = nil
+
+	json = " { numberOfItems: " + string(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
 func (c MasterJobController) Retrieve(jobId string) (json string, err os.Error) {
@@ -100,17 +99,16 @@ type MasterNodeController struct {
 	master *Master
 }
 
-func (c MasterNodeController) RetrieveAll() (json string, numberOfItems int, err os.Error) {
+func (c MasterNodeController) RetrieveAll() (json string, err os.Error) {
 	log("RetrieveAll")
 
-	numberOfItems = len(c.master.NodeHandles)
+	numberOfItems := len(c.master.NodeHandles)
 	jsonArray := make([]string, 0, numberOfItems)
 	for _, n := range c.master.NodeHandles {
 		val, _ := n.MarshalJSON()
 		jsonArray = append(jsonArray, string(val))
 	}
-	json = strings.Join(jsonArray, ",")
-	err = nil
+	json = " { numberOfItems: " + string(numberOfItems) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
 func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error) {
