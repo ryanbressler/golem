@@ -112,7 +112,6 @@ func (s MongoJobStore) Active() (items []JobHandle, err os.Error) {
 }
 
 func (s MongoJobStore) Unscheduled() (items []JobHandle, err os.Error) {
-	//    items = make([]JobHandle, 100)
 	for _, item := range s.jobsById {
 		if item.Handle.Status.Running == false {
 			items = append(items, item.Handle)

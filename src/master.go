@@ -24,12 +24,6 @@ import (
 	"websocket"
 )
 
-
-/////////////////////////////////////////////////
-//master
-
-
-//THe master struct contains things that the master node needs but other nodes don't
 type Master struct {
 	subMap      map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
 	jobChan     chan *Job              //buffered channel for creating jobs
@@ -56,7 +50,7 @@ func (m *Master) Listen(ws *websocket.Conn) {
 	nh.Monitor()
 }
 
-//Broadcast sends a message to ever connected client
+// sends a message to every connected worker
 func (m *Master) Broadcast(msg *clientMsg) {
 	log("Broadcasting message %v to %v nodes.", *msg, len(m.NodeHandles))
 	for _, nh := range m.NodeHandles {

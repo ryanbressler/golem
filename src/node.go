@@ -27,10 +27,6 @@ import (
 	"time"
 )
 
-//////////////////////////////////////////////
-//node 
-
-
 func pipeToChan(p *os.File, msgType int, Id string, ch chan clientMsg) {
 	bp := bufio.NewReader(p)
 
@@ -66,8 +62,7 @@ func startJob(cn *Connection, replyc chan *clientMsg, jsonjob string, jk *JobKil
 	args = append(args, fmt.Sprintf("%v", job.LineId))
 	args = append(args, fmt.Sprintf("%v", job.JobId))
 
-	//start the job in test dir pass all stdio back to main.
-	//note that cmd has to be the first thing in the args array
+	//start the job in test dir pass all stdio back to main.  note that cmd has to be the first thing in the args array
 	c, err := exec.Run(cmd, args, nil, "./", exec.DevNull, exec.Pipe, exec.Pipe)
 	if err != nil {
 		log("%v", err)
@@ -114,14 +109,12 @@ func RunNode(atOnce int, master string) {
 		log("Error connectiong to master:%v", err)
 		return
 	}
-	//ws.Write([]byte("h"))
+
 	mcon := *NewConnection(ws)
-	//go sendCio(&mcon)
 	mcon.OutChan <- clientMsg{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
 	go CheckIn(&mcon)
 	replyc := make(chan *clientMsg)
 
-	//control loop
 	for {
 		log("Waiting for done or msg.")
 		select {
@@ -147,7 +140,6 @@ func RunNode(atOnce int, master string) {
 				DieIn(0)
 			}
 		}
-
 	}
 
 }

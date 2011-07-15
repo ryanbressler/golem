@@ -17,7 +17,6 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 
 */
-/*Node handle contains the struct used by the master to keep track of nodes*/
 package main
 
 import (
@@ -27,12 +26,6 @@ import (
 	"os"
 )
 
-
-/////////////////////////////////////////////////
-//master
-
-
-//THe master struct contains things that the master node needs but other nodes don't
 type NodeHandle struct {
 	NodeId        string
 	Uri           string
@@ -56,7 +49,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 		Running:       make(chan int, 1),
 		BroadcastChan: make(chan *clientMsg, 0)}
 
-	//wait for client handshake TODO: should this be in monitor???
+	//wait for worker handshake TODO: should this be in monitor???
 	nh.Running <- 0
 	msg := <-nh.Con.InChan
 
@@ -91,21 +84,16 @@ func (nh *NodeHandle) ReSize(NewMaxJobs int) {
 	nh.MaxJobs <- NewMaxJobs
 }
 
-//takes a  job, turns job into a json messags and send it into the connections out box.
-//This seems to sleep or deadlock if left alone to long so the client checks in every 
-//60 seconds.
+// turns job into JSON and send to connections outbox. Seems to sleep or deadlock if left alone to long so the worker checks-in every 60 seconds.
 func (nh *NodeHandle) SendJob(j *Job) {
-
 	job := *j
 	log("Sending job %v to %v", job, nh.Hostname)
 	jobjson, err := json.Marshal(job)
 	if err != nil {
 		log("error json.Marshaling job: %v", err)
-
 	}
 	msg := clientMsg{Type: START, Body: string(jobjson)}
 	nh.Con.OutChan <- msg
-
 }
 
 func (nh *NodeHandle) Monitor() {
@@ -140,7 +128,7 @@ func (nh *NodeHandle) Monitor() {
 				log("%v sending broadcast message %v", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case msg := <-nh.Con.InChan:
-				//log("Got msg from %v", nh.Hostname)
+				vlog("Got msg from %v", nh.Hostname)
 				nh.clientMsgSwitch(&msg)
 			}
 		}
