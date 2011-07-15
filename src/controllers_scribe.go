@@ -22,6 +22,7 @@ package main
 import (
 	"http"
 	"strings"
+	"strconv"
 	"time"
 	"os"
 )
@@ -43,7 +44,7 @@ func (c ScribeJobController) RetrieveAll() (json string, err os.Error) {
 		val, _ := s.MarshalJSON()
 		jsonArray = append(jsonArray, string(val))
 	}
-	json = " { numberOfItems: " + string(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
+	json = " { numberOfItems: " + strconv.Itoa(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
 func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
