@@ -21,13 +21,14 @@ package main
 
 import (
 	"crypto/sha256"
+	"goconf.googlecode.com/hg"
 )
 
 var verbose = false
 var iobuffersize = 1000
 var isMaster bool
 var isScribe bool
-var configuration Configuration
+var ConfigFile *conf.ConfigFile
 var useTls bool = true
 var hash = sha256.New() // use the same hasher
 var certpath string
