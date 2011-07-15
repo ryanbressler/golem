@@ -47,11 +47,13 @@ func (c MasterJobController) Retrieve(jobId string) (json string, err os.Error) 
 	job, isin := c.master.subMap[jobId]
 	if isin {
 		val, err := job.MarshalJSON()
-		if err != nil { return }
+		if err != nil {
+			return
+		}
 
-        json = string(val)
+		json = string(val)
 	} else {
-        err = os.NewError("job not found")
+		err = os.NewError("job not found")
 	}
 
 	return
@@ -60,7 +62,9 @@ func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error
 	log("NewJob")
 
 	rJobs := make([]RequestedJob, 0, 100)
-	if err = loadJson(r, rJobs); err != nil { return }
+	if err = loadJson(r, rJobs); err != nil {
+		return
+	}
 
 	s := NewSubmission(&rJobs, c.master.jobChan)
 	jobId = s.SubId

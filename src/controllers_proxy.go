@@ -28,51 +28,61 @@ import (
 )
 
 type ItemsHandle struct {
-    Items string
-    NumberOfItems int
+	Items         string
+	NumberOfItems int
 }
 type ProxyJobController struct {
 	proxy *http.ReverseProxy
 }
 
 func NewProxyJobController() ProxyJobController {
-    target := configuration.GetString("scribe", "target")
-    url, err :=http.ParseRequestURL(target)
-    if err != nil { panic(err) }
+	target := configuration.GetString("scribe", "target")
+	url, err := http.ParseRequestURL(target)
+	if err != nil {
+		panic(err)
+	}
 
-    return ProxyJobController{ http.NewSingleHostReverseProxy(url) }
+	return ProxyJobController{http.NewSingleHostReverseProxy(url)}
 }
 
 func (c ProxyJobController) RetrieveAll() (json string, err os.Error) {
-    val, err := doProxy("GET", "/jobs/", c.proxy, nil)
-    if err != nil { return }
-    json = string(val)
-    return
+	val, err := doProxy("GET", "/jobs/", c.proxy, nil)
+	if err != nil {
+		return
+	}
+	json = string(val)
+	return
 }
 func (c ProxyJobController) Retrieve(jobId string) (json string, err os.Error) {
-    val, err := doProxy("GET", "/jobs/" + jobId, c.proxy, nil)
-    if err != nil { return }
+	val, err := doProxy("GET", "/jobs/"+jobId, c.proxy, nil)
+	if err != nil {
+		return
+	}
 	json = string(val)
 	return
 }
 func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	val, err := doProxy("POST", "/jobs/" + jobId, c.proxy, r.Body)
-    if err != nil { return }
+	val, err := doProxy("POST", "/jobs/"+jobId, c.proxy, r.Body)
+	if err != nil {
+		return
+	}
 
-    jh := JobHandle{}
-    err = json.Unmarshal(val, jh)
-    if err != nil { return }
+	jh := JobHandle{}
+	err = json.Unmarshal(val, jh)
+	if err != nil {
+		return
+	}
 
-    jobId = jh.JobId
+	jobId = jh.JobId
 	return
 }
 func (c ProxyJobController) Stop(jobId string) os.Error {
-	_, err := doProxy("POST", "/jobs/" + jobId + "/stop", c.proxy, nil)
+	_, err := doProxy("POST", "/jobs/"+jobId+"/stop", c.proxy, nil)
 	return err
 }
 func (c ProxyJobController) Kill(jobId string) os.Error {
-    _, err := doProxy("POST", "/jobs/" + jobId + "/kill", c.proxy, nil)
-    return err
+	_, err := doProxy("POST", "/jobs/"+jobId+"/kill", c.proxy, nil)
+	return err
 }
 
 type ProxyNodeController struct {
@@ -80,23 +90,29 @@ type ProxyNodeController struct {
 }
 
 func NewProxyNodeController() ProxyNodeController {
-    target := configuration.GetString("scribe", "target")
+	target := configuration.GetString("scribe", "target")
 
-    url, err :=http.ParseRequestURL(target)
-    if err != nil { panic(err) }
+	url, err := http.ParseRequestURL(target)
+	if err != nil {
+		panic(err)
+	}
 
-    return ProxyNodeController{ http.NewSingleHostReverseProxy(url) }
+	return ProxyNodeController{http.NewSingleHostReverseProxy(url)}
 }
 
 func (c ProxyNodeController) RetrieveAll() (json string, err os.Error) {
-    val, err := doProxy("GET", "/nodes/", c.proxy, nil)
-    if err != nil { return }
+	val, err := doProxy("GET", "/nodes/", c.proxy, nil)
+	if err != nil {
+		return
+	}
 	json = string(val)
 	return
 }
 func (c ProxyNodeController) Retrieve(nodeId string) (json string, err os.Error) {
-    val, err := doProxy("GET", "/nodes/" + nodeId, c.proxy, nil)
-    if err != nil { return }
+	val, err := doProxy("GET", "/nodes/"+nodeId, c.proxy, nil)
+	if err != nil {
+		return
+	}
 	json = string(val)
 	return
 }
@@ -105,7 +121,7 @@ func (c ProxyNodeController) RestartAll() os.Error {
 	return err
 }
 func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	_, err := doProxy("POST", "/nodes/" + nodeId + "/resize/" + string(numberOfThreads), c.proxy, nil)
+	_, err := doProxy("POST", "/nodes/"+nodeId+"/resize/"+string(numberOfThreads), c.proxy, nil)
 	return err
 }
 func (c ProxyNodeController) KillAll() os.Error {
@@ -115,29 +131,32 @@ func (c ProxyNodeController) KillAll() os.Error {
 
 // proxy support
 type JsonResponseWriter struct {
-    Bytes []byte
+	Bytes []byte
 }
+
 func (w JsonResponseWriter) Header() http.Header {
-    return nil
+	return nil
 }
 func (w JsonResponseWriter) Write(b []byte) (int, os.Error) {
-    w.Bytes = b
-    return 0, os.EOF
+	w.Bytes = b
+	return 0, os.EOF
 }
 func (w JsonResponseWriter) WriteHeader(int) {
-    return
+	return
 }
 
 func doProxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
-    if reader == nil {
-        reader = strings.NewReader("")
-    }
+	if reader == nil {
+		reader = strings.NewReader("")
+	}
 
-    r, err := http.NewRequest(method, uri, reader)
-    if err != nil { return }
+	r, err := http.NewRequest(method, uri, reader)
+	if err != nil {
+		return
+	}
 
-    rw := JsonResponseWriter{}
-    proxy.ServeHTTP(rw, r)
-    val = rw.Bytes
+	rw := JsonResponseWriter{}
+	proxy.ServeHTTP(rw, r)
+	val = rw.Bytes
 	return
 }

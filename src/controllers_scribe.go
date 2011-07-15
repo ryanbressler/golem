@@ -28,13 +28,15 @@ import (
 
 type ScribeJobController struct {
 	scribe *Scribe
-	proxy JobController
+	proxy  JobController
 }
 
 func (c ScribeJobController) RetrieveAll() (json string, err os.Error) {
 	log("RetrieveAll")
 	items, err := c.scribe.store.All()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	jsonArray := make([]string, 0)
 	for _, s := range items {
@@ -48,28 +50,34 @@ func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) 
 	log("Retrieve:%v", jobId)
 
 	item, err := c.scribe.store.Get(jobId)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	val, err := item.MarshalJSON()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	json = string(val)
 	return
 }
 func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	tasks := make([]Task, 0, 100)
-	if err = loadJson(r, tasks); err != nil { return }
+	if err = loadJson(r, tasks); err != nil {
+		return
+	}
 
 	jobId = UniqueId()
 	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
-    label := getHeader(r, "x-golem-job-label", jobId)
+	label := getHeader(r, "x-golem-job-label", jobId)
 	now := time.Time{}
 
-    jobPackage := JobPackage{
-        Handle: JobHandle{ JobId: jobId, Owner: owner, Label: label, FirstCreated: now, LastModified: now, Status: JobStatus{}},
-        Tasks: tasks }
+	jobPackage := JobPackage{
+		Handle: JobHandle{JobId: jobId, Owner: owner, Label: label, FirstCreated: now, LastModified: now, Status: JobStatus{}},
+		Tasks:  tasks}
 
-    err = c.scribe.store.Create(jobPackage)
+	err = c.scribe.store.Create(jobPackage)
 	return
 }
 

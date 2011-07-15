@@ -56,10 +56,10 @@ type NodeController interface {
 }
 
 func NewRestOnJob(jc JobController, nc NodeController) {
-    hostname := configuration.GetString("default", "hostname")
-    hpw := hashPw(configuration.GetString("default", "password"))
+	hostname := configuration.GetString("default", "hostname")
+	hpw := hashPw(configuration.GetString("default", "password"))
 
-    j := RestOnJob{ jobController: jc, nodeController: nc, hashedpw: hpw }
+	j := RestOnJob{jobController: jc, nodeController: nc, hashedpw: hpw}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
 	http.Handle("/html/", http.FileServer("html", "/html"))
@@ -67,9 +67,11 @@ func NewRestOnJob(jc JobController, nc NodeController) {
 	http.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
 	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
 
-    log("running at %v", hostname)
+	log("running at %v", hostname)
 
-	if err:= ListenAndServeTLSorNot(hostname, nil); err != nil { panic(err) }
+	if err := ListenAndServeTLSorNot(hostname, nil); err != nil {
+		panic(err)
+	}
 	return
 }
 
