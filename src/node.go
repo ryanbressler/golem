@@ -99,10 +99,10 @@ func CheckIn(c *Connection) {
 }
 
 
-func RunNode(atOnce int, master string) {
+func RunNode(processes int, master string) {
 	running := 0
 	jk := NewJobKiller()
-	log("Running as %v process node owned by %v", atOnce, master)
+	log("Running as %v process node owned by %v", processes, master)
 
 	ws, err := wsDialToMaster(master, useTls)
 	if err != nil {
@@ -111,7 +111,7 @@ func RunNode(atOnce int, master string) {
 	}
 
 	mcon := *NewConnection(ws)
-	mcon.OutChan <- WorkerMessage{Type: HELLO, Body: fmt.Sprintf("%v", atOnce)}
+	mcon.OutChan <- WorkerMessage{Type: HELLO, Body: fmt.Sprintf("%v", processes)}
 	go CheckIn(&mcon)
 	replyc := make(chan *WorkerMessage)
 

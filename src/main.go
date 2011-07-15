@@ -48,8 +48,8 @@ func main() {
 		s := NewScribe(DoNothingJobStore{})
 		NewRestOnJob(ScribeJobController{s, NewProxyJobController()}, NewProxyNodeController())
 	} else {
-		atOnce, masterhost := getWorkerProcesses()
-		RunNode(atOnce, masterhost)
+		processes, masterhost := getWorkerProcesses()
+		RunNode(processes, masterhost)
 	}
 }
 
@@ -80,17 +80,17 @@ func setTls() {
 	log("secure mode enabled [%v]", useTls)
 }
 
-func getWorkerProcesses() (int, string) {
-	atOnce, err := ConfigFile.GetInt("worker", "processes")
+func getWorkerProcesses() (processes int, masterhost string) {
+	processes, err := ConfigFile.GetInt("worker", "processes")
 	if err != nil {
 		log("worker proceses error, setting to 3: %v", err)
-		atOnce = 3
+		processes = 3
 	}
 
-	masterhost, err := ConfigFile.GetString("worker", "masterhost")
+	masterhost, err = ConfigFile.GetString("worker", "masterhost")
 	if err != nil {
 		panic(err)
 	}
 
-	return atOnce, masterhost
+	return
 }
