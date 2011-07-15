@@ -30,6 +30,7 @@ var iobuffersize = 1000
 //
 var isMaster bool
 var isScribe bool
+var configuration Configuration
 
 //tls configurability
 var useTls bool = true

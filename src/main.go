@@ -32,6 +32,7 @@ func main() {
 	var hostname string
 	var unsecure bool
 	var password string
+	var configFile string
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
@@ -42,11 +43,14 @@ func main() {
 	flag.StringVar(&password, "p", "", "The password to require with job submission.")
 	flag.BoolVar(&verbose, "v", false, "Use verbose logging.")
 	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
-
+    flag.StringVar(&configFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
+
 	if unsecure {
 		useTls = false
 	}
+
+    configuration = NewConfiguration(configFile)
 
 	if isMaster {
 		m := NewMaster()
@@ -55,9 +59,9 @@ func main() {
 	} else if isScribe {
 		j := DoNothingJobStore{}
 		s := NewScribe(j)
-		proxytarget := ""
-		jobpx := NewProxyJobController(proxytarget)
-		nodepx := NewProxyNodeController(proxytarget)
+
+		jobpx := NewProxyJobController()
+		nodepx := NewProxyNodeController()
 		x := RestOnJob{jobController: ScribeJobController{scribe: s, proxy: jobpx}, nodeController: nodepx, hostname: hostname, password: password}
 		x.MakeReady()
 	} else {

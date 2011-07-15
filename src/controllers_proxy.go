@@ -35,7 +35,8 @@ type ProxyJobController struct {
 	proxy *http.ReverseProxy
 }
 
-func NewProxyJobController(target string) ProxyJobController {
+func NewProxyJobController() ProxyJobController {
+    target := configuration.GetString("scribe", "target")
     url, err :=http.ParseRequestURL(target)
     if err != nil { panic(err) }
 
@@ -78,7 +79,9 @@ type ProxyNodeController struct {
 	proxy *http.ReverseProxy
 }
 
-func NewProxyNodeController(target string) ProxyNodeController {
+func NewProxyNodeController() ProxyNodeController {
+    target := configuration.GetString("scribe", "target")
+
     url, err :=http.ParseRequestURL(target)
     if err != nil { panic(err) }
 
