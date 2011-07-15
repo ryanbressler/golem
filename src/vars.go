@@ -30,12 +30,12 @@ var iobuffersize = 1000
 //
 var isMaster bool
 var isScribe bool
+var configuration Configuration
 
 //tls configurability
 var useTls bool = true
 
 //password
-var usepw bool = false
 var hash = sha256.New() // use the same hasher
 var certpath string
 
