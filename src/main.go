@@ -65,7 +65,7 @@ func NewConfigFile(filepath string) *conf.ConfigFile {
 }
 
 func setVerbose() {
-	verbose, _ := ConfigFile.GetBool("default", "verbose")
+	verbose, _ = ConfigFile.GetBool("default", "verbose")
 	if verbose {
 		log("running in verbose mode")
 	}
