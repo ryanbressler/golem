@@ -35,7 +35,7 @@ type Submission struct {
 	SubId            string
 	CoutFileChan     chan string
 	CerrFileChan     chan string
-	Tasks             []Task
+	Tasks            []Task
 	ErrorChan        chan *Job
 	FinishedChan     chan *Job
 	TotalJobsChan    chan int
@@ -59,7 +59,7 @@ func NewSubmission(js *[]Task, jobChan chan *Job) *Submission {
 		SubId:            subId,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
-		Tasks:             rTasks,
+		Tasks:            rTasks,
 		ErrorChan:        make(chan *Job, 1),
 		FinishedChan:     make(chan *Job, 1),
 		FinishedJobsChan: make(chan int, 1),
