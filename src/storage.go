@@ -67,7 +67,7 @@ type JobPackage struct {
 }
 
 func (j JobPackage) MarshalJSON() ([]byte, os.Error) {
-    h := j.Handle
+	h := j.Handle
 	return h.MarshalJSON()
 }
 

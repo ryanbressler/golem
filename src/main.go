@@ -34,44 +34,46 @@ func main() {
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
 	flag.StringVar(&certpath, "certpath", "", "The path that contains certificate.pem and key.pem to use for tls connections.")
 	flag.IntVar(&iobuffersize, "iobuffer", 1000, "The size of the (per submission) buffers for standard out and standard error from client nodes.")
-    flag.StringVar(&configFile, "config", "golem.config", "A configuration file for golem services")
+	flag.StringVar(&configFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
-    configuration = NewConfiguration(configFile)
-    setVerbose()
-    setTls()
+	configuration = NewConfiguration(configFile)
+	setVerbose()
+	setTls()
 
 	if isMaster {
 		m := NewMaster()
 		NewRestOnJob(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
 		s := NewScribe(DoNothingJobStore{})
-		NewRestOnJob(ScribeJobController{ s, NewProxyJobController() }, NewProxyNodeController())
+		NewRestOnJob(ScribeJobController{s, NewProxyJobController()}, NewProxyNodeController())
 	} else {
-        atOnce := getWorkerProcesses()
+		atOnce := getWorkerProcesses()
 		RunNode(atOnce, configuration.GetString("worker", "masterhost"))
 	}
 }
 
 func setVerbose() {
-    verbose, _ := configuration.ConfigFile.GetBool("default", "verbose")
-    if verbose { log("running in verbose mode") }
+	verbose, _ := configuration.ConfigFile.GetBool("default", "verbose")
+	if verbose {
+		log("running in verbose mode")
+	}
 }
 
 func setTls() {
-    useTls, err := configuration.ConfigFile.GetBool("default", "tls")
-    if err != nil {
-        log("useTls error, setting to 'true': %v", err)
-        useTls = true
-    }
-    log("secure mode enabled [%v]", useTls)
+	useTls, err := configuration.ConfigFile.GetBool("default", "tls")
+	if err != nil {
+		log("useTls error, setting to 'true': %v", err)
+		useTls = true
+	}
+	log("secure mode enabled [%v]", useTls)
 }
 
 func getWorkerProcesses() int {
-    atOnce, err := configuration.ConfigFile.GetInt("worker", "processes")
-    if err != nil {
-        log("worker proceses error, setting to 3: %v", err)
-        atOnce = 3
-    }
-    return atOnce
+	atOnce, err := configuration.ConfigFile.GetInt("worker", "processes")
+	if err != nil {
+		log("worker proceses error, setting to 3: %v", err)
+		atOnce = 3
+	}
+	return atOnce
 }

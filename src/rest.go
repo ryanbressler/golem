@@ -58,29 +58,35 @@ func parseJobUri(path string) (jobid string, verb string) {
 func getHeader(r *http.Request, headerName string, defaultValue string) string {
 	val := r.Header.Get(headerName)
 	if val != "" {
-	    return val
+		return val
 	}
 	return defaultValue
 }
 
 func getMultipartForm(r *http.Request) (frm *multipart.Form, err os.Error) {
 	mpreader, err := r.MultipartReader()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	frm, err = mpreader.ReadForm(10000)
-    return
+	return
 }
 
 func loadJson(r *http.Request, items ...interface{}) (err os.Error) {
-    frm, err := getMultipartForm(r)
-    if err != nil { return }
+	frm, err := getMultipartForm(r)
+	if err != nil {
+		return
+	}
 
 	jsonfile, err := frm.File["jsonfile"][0].Open()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	defer jsonfile.Close()
 
 	dec := json.NewDecoder(jsonfile)
-	err = dec.Decode(&items);
+	err = dec.Decode(&items)
 	return
 }

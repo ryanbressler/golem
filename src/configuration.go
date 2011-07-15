@@ -25,24 +25,28 @@ import (
 )
 
 type Configuration struct {
-    ConfigFile *conf.ConfigFile
+	ConfigFile *conf.ConfigFile
 }
 
 func NewConfiguration(filepath string) Configuration {
 	if filepath != "" {
-        c, err := conf.ReadConfigFile(filepath)
-        if err != nil { panic(err) }
-        return Configuration{ ConfigFile: c }
+		c, err := conf.ReadConfigFile(filepath)
+		if err != nil {
+			panic(err)
+		}
+		return Configuration{ConfigFile: c}
 	}
 	panic(fmt.Sprintf("configuration file not found [%v]", filepath))
 }
 
 func (c *Configuration) GetString(section string, key string) string {
-    val, err := c.ConfigFile.GetString(section, key)
-    if err != nil { panic(err) }
-    if val != "" {
-        return val
-    }
+	val, err := c.ConfigFile.GetString(section, key)
+	if err != nil {
+		panic(err)
+	}
+	if val != "" {
+		return val
+	}
 
-    panic(fmt.Sprintf("configuration is missing required value [%v]", key))
+	panic(fmt.Sprintf("configuration is missing required value [%v]", key))
 }
