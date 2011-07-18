@@ -6,6 +6,7 @@ import "time"
 import "launchpad.net/gobson/bson"
 import "os"
 import "strconv"
+import "rand"
 
 const mongoServer = "remus.systemsbiology.net"
 const golemDb = "golemstore"
@@ -21,7 +22,6 @@ type JobStore interface {
 	Get(jobId string) (item JobPackage, err os.Error)
 	Update(jobId string, status JobStatus) (err os.Error)
 }
-
 type JobHandle struct {
 	JobId        string
 	Owner        string
@@ -30,24 +30,20 @@ type JobHandle struct {
 	LastModified int64
 	Status       JobStatus
 }
-
 type JobStatus struct {
 	TotalTasks    int
 	FinishedTasks int
 	ErroredTasks  int
 	Running       bool
 }
-
 type JobPackage struct {
 	Handle JobHandle
 	Tasks  []Task
 }
-
 type Task struct {
 	Count    int
 	Commands []string
 }
-
 type GolemJob struct {
 	Type         string
 	Id           string
@@ -59,23 +55,24 @@ type GolemJob struct {
 	TaskErrored  int
 	Running      bool
 }
-
 type GolemTask struct {
 	Name  string
 	JobId string
 	Id    string
 }
-
 type GolemType struct {
 	Name string
 }
-
 type MongoJobStore struct {
 	jobsById map[string]JobPackage
 	session  *mgo.Session
 }
+<<<<<<< local
+func NewMongoStore() *MongoJobStore{
+=======
 
 func NewMongoStore() *MongoJobStore {
+>>>>>>> other
 	ms := new(MongoJobStore)
 	initMongoSession()
 	//ms.session = session
@@ -85,9 +82,12 @@ func NewMongoStore() *MongoJobStore {
 func (s MongoJobStore) Create(item JobPackage) (err os.Error) {
 	s.jobsById[item.Handle.JobId] = item
 	fmt.Println("MongoJobStore Create() item", item)
+<<<<<<< local
+=======
 	/*
 		a package has a jobhandle with a list of tasks
 	*/
+>>>>>>> other
 	goljob_c := s.session.DB(golemDb).C(jobCollection)
 	handle := item.Handle
 	golemJob := GolemJob{handle.Type, handle.JobId, handle.Owner, handle.FirstCreated, handle.LastModified, handle.Status.TotalTasks, handle.Status.FinishedTasks, handle.Status.ErroredTasks, handle.Status.Running}
@@ -96,10 +96,33 @@ func (s MongoJobStore) Create(item JobPackage) (err os.Error) {
 }
 
 func (s MongoJobStore) All() (items []JobHandle, err os.Error) {
+<<<<<<< local
+        /*for _, item := range s.jobsById {
+                items = append(items, item.Handle)
+        }*/
+	goljob_c := s.session.DB(golemDb).C(jobCollection)
+	//results, error := findAllJobs(goljob_c)	
+	results, err := goljob_c.Find(bson.M{}).Iter()
+	fjobs := 0
+        for {
+                job := GolemJob{}
+                fjobs = fjobs + 1
+                err = results.Next(&job)
+		handle := JobHandle{job.Id, job.Owner, job.Type, job.TimeCreated, job.LastModified, 
+			JobStatus{job.TaskCount,job.TaskFinished,job.TaskErrored,job.Running} }
+		items = append(items, handle)
+                if err != nil {
+                        break
+                }
+        }
+	fmt.Println("Found X jobs:", strconv.Itoa(fjobs))
+        return
+=======
 	for _, item := range s.jobsById {
 		items = append(items, item.Handle)
 	}
 	return
+>>>>>>> other
 }
 
 func (s MongoJobStore) Active() (items []JobHandle, err os.Error) {
@@ -134,7 +157,16 @@ func (s MongoJobStore) Update(jobId string, status JobStatus) (err os.Error) {
 	return
 }
 
+<<<<<<< local
+/*func findAllJobs(gjob_col mgo.Collection) (results *Iter, err os.Error) {
+	results, err = gjob_col.Find(bson.M{""}).Iter()
+	return results, err
+}
+*/
+func insertGolemJob(gjob GolemJob, gjob_col mgo.Collection){
+=======
 func insertGolemJob(gjob GolemJob, gjob_col mgo.Collection) {
+>>>>>>> other
 	gjob_col.Insert(gjob)
 	fmt.Println("Inserted job:", gjob)
 }
@@ -150,6 +182,20 @@ func initMongoSession() (*mgo.Session, os.Error) {
 }
 
 func main() {
+<<<<<<< local
+        fmt.Println("Begin", time.LocalTime(), "Seconds", time.Seconds())
+        session, err := initMongoSession() //mgo.Mongo(mongoServer)
+        if err != nil {
+                panic(err)
+        }
+        defer session.Close()
+        //fmt.Println("Got session", session)
+        // Optional. Switch the session to a monotonic behavior, place this inside init
+        session.SetMode(mgo.Strong, true)
+        goljob_c := session.DB(golemDb).C(jobCollection)
+        //goljob_c.RemoveAll(&GolemType{"rf_ace"})
+        var NotFound = os.NewError("Document not found")
+=======
 	fmt.Println("Begin", time.LocalTime(), "Seconds", time.Seconds())
 	session, err := initMongoSession() //mgo.Mongo(mongoServer)
 	if err != nil {
@@ -176,33 +222,52 @@ func main() {
 	mystore := MongoJobStore{mymap, session}
 	fmt.Println("Testing mystore.Create")
 	mystore.Create(myjobSubmission)
+>>>>>>> other
 
-	for i := 0; i < NSamples; i++ {
-		golemJob := GolemJob{"rf_ace", "id_" + strconv.Itoa(i) + "_" + strconv.Itoa64(time.Nanoseconds()), "jlin", 999, 999, 100, 0, 0, true}
-		insertGolemJob(golemJob, goljob_c)
-	}
-	fmt.Println("Begin Querying, done with ", strconv.Itoa(NSamples)+" inserts ", time.LocalTime(), "Seconds", time.Seconds())
-	result := GolemJob{}
-	err = goljob_c.Find(bson.M{"name": "rf_ace"}).One(&result)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Begin Testing Find/Select", time.LocalTime())
-	results, err := goljob_c.Find(bson.M{"name": "rf_ace"}).Iter()
-	fjobs := 0
-	for {
-		job := GolemJob{}
-		fjobs = fjobs + 1
-		err = results.Next(&job)
-		if err != nil {
-			break
-		}
-		//fmt.Println("Found rf_ace typed jobs:", job.Id, job.Name)
-	}
-	fmt.Println("Found X jobs:", strconv.Itoa(fjobs))
-	if err != mgo.NotFound {
-		panic(err)
-	}
+<<<<<<< local
+        jobStatus := JobStatus{rand.Int(),0,0,true}
+        jobHandle := JobHandle{"myjobid_jlin", "jlin", "rf_ace", time.Seconds(), time.Seconds(), jobStatus}
+        commands := []string{"ls","ls","ls"}
+        task := Task{1, commands}
+        mytasks := []Task{task}
+        myjobSubmission := JobPackage{jobHandle,mytasks}
+        var mymap = map[string] JobPackage {
+                "pkgstring_id": myjobSubmission}
+        mystore := MongoJobStore{mymap, session}
+        fmt.Println("Testing mystore.Create")
+        for i := 0; i< NSamples; i++{
+                //golemJob := GolemJob{"rf_ace", "id_" + strconv.Itoa(i) + "_" + strconv.Itoa64(time.Nanoseconds()), "jlin", 999, 999, 100, 0, 0, true}
+                //insertGolemJob(golemJob, goljob_c)
+                jobHandle := JobHandle{"myjobid_jlin_" + strconv.Itoa(rand.Int()), "jlin", "rf_ace", time.Seconds(), time.Seconds(), jobStatus}
+                myjobSubmission := JobPackage{jobHandle,mytasks}
+                mystore.Create(myjobSubmission)
+        }
+        fmt.Println("Call All")
+        mystore.All()
 
-	fmt.Println("End", time.LocalTime(), "Seconds", time.Seconds())
+        fmt.Println("\nBegin Querying, done with ", strconv.Itoa(NSamples) + " inserts ", time.LocalTime(), "Seconds", time.Seconds())
+        result := GolemJob{}
+        err = goljob_c.Find(bson.M{"type": "rf_ace"}).One(&result)
+        if err != nil && err != NotFound {
+                fmt.Println("Error at find rf_ace type")
+                panic(err)
+        }
+
+        fmt.Println("Begin Testing Find/Select", time.LocalTime())
+        results, err := goljob_c.Find(bson.M{"name": "rf_ace"}).Iter()
+        fjobs := 0
+        for {
+                job := GolemJob{}
+                fjobs = fjobs + 1
+                err = results.Next(&job)
+                if err != nil {
+                        break
+                }
+                //fmt.Println("Found rf_ace typed jobs:", job.Id, job)
+        }
+        fmt.Println("Found X jobs:", strconv.Itoa(fjobs))
+        if err != mgo.NotFound {
+           panic(err)
+        }
+        fmt.Println("End of main", time.LocalTime(), "Seconds", time.Seconds())
 }
