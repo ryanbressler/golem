@@ -10,7 +10,7 @@ GOFILES=\
 	Connection.go\
 	Submission.go\
 	restOnJob.go\
-	controllers.go\
+	controllers_master.go\
 	controllers_scribe.go\
 	controllers_proxy.go\
 	master.go\
