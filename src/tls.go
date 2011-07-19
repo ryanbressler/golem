@@ -66,25 +66,25 @@ func getCertFilePaths() (string, string) {
 func getTlsConfig() (tlsConfig *tls.Config, err os.Error) {
 	certs := []tls.Certificate{}
 
-    switch {
-    case certpath != "":
-        certf, keyf := getCertFilePaths()
-        cert, err := tls.LoadX509KeyPair(certf, keyf)
-        if err != nil {
-            vlog("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
-            return nil, err
-        }
-        certs = append(certs, cert)
-    default:
-        cert, err := GenerateTlsCert()
-        if err != nil {
-            log("Error generating tls cert: %v", err)
-        }
-        certs = append(certs, cert)
-    }
+	switch {
+	case certpath != "":
+		certf, keyf := getCertFilePaths()
+		cert, err := tls.LoadX509KeyPair(certf, keyf)
+		if err != nil {
+			vlog("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
+			return nil, err
+		}
+		certs = append(certs, cert)
+	default:
+		cert, err := GenerateTlsCert()
+		if err != nil {
+			log("Error generating tls cert: %v", err)
+		}
+		certs = append(certs, cert)
+	}
 
 	tlsConfig = &tls.Config{Certificates: certs, AuthenticateClient: true}
-    return
+	return
 }
 
 //a replacment for ListenAndServeTLS that loads our custom confiuration usage is identical to http.ListenAndServe

@@ -35,7 +35,7 @@ type Connection struct {
 	OutChan  chan WorkerMessage // the out box. send messages with c.OutChan<-msg
 	InChan   chan WorkerMessage // the in box. getmsg:=<-c.InChan
 	DiedChan chan int           // send died message out on this
-	isWorker bool           // indicates if this connection is for a worker node
+	isWorker bool               // indicates if this connection is for a worker node
 }
 
 //Wraps a websocket in a connection starts the goroutines that recieve and send messages
@@ -44,7 +44,7 @@ func NewConnection(Socket *websocket.Conn, isWorker bool) *Connection {
 		OutChan:  make(chan WorkerMessage, 10),
 		InChan:   make(chan WorkerMessage, 10),
 		DiedChan: make(chan int, 1),
-		isWorker: isWorker }
+		isWorker: isWorker}
 	go n.GetMsgs()
 	go n.SendMsgs()
 	return &n

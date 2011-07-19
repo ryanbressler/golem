@@ -79,24 +79,24 @@ func (this *Scribe) GetJobs() []JobHandle {
 }
 
 func (this *Scribe) PostJob(jobHandle JobHandle) (err os.Error) {
-    log("PostJob(%v)", jobHandle)
+	log("PostJob(%v)", jobHandle)
 
-    jobPkg, err := this.store.Get(jobHandle.JobId)
-    if err != nil {
-        return
-    }
+	jobPkg, err := this.store.Get(jobHandle.JobId)
+	if err != nil {
+		return
+	}
 
-    taskJson, err := json.Marshal(jobPkg.Tasks)
-    if err != nil {
-        return
-    }
+	taskJson, err := json.Marshal(jobPkg.Tasks)
+	if err != nil {
+		return
+	}
 
-    data := make(map[string]string)
-    data["jsonfile"] = string(taskJson)
+	data := make(map[string]string)
+	data["jsonfile"] = string(taskJson)
 
-    header := http.Header{}
-    header.Set("x-golem-job-preassigned-id", jobHandle.JobId)
-    http.PostForm(this.masterJobsUrl, data)
+	header := http.Header{}
+	header.Set("x-golem-job-preassigned-id", jobHandle.JobId)
+	http.PostForm(this.masterJobsUrl, data)
 
 	return
 }
