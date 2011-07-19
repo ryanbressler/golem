@@ -26,6 +26,7 @@ import (
 
 const (
 	second = 1e9 // one second is 1e9 nanoseconds
+	year = 60*60*24*365
 )
 
 var verbose = false
@@ -33,4 +34,3 @@ var iobuffersize = 1000
 var ConfigFile *conf.ConfigFile
 var useTls bool = true
 var hash = sha256.New() // use the same hasher
-var certpath string
