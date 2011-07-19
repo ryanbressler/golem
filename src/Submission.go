@@ -44,11 +44,11 @@ type Submission struct {
 
 
 func NewSubmission(js []Task, jobChan chan *Job) *Submission {
-    iobuffersize, err := ConfigFile.GetInt("master", "buffersize")
-     if err != nil {
-        vlog("defaulting buffer to 1000:%v", err)
-        iobuffersize = 1000
-     }
+	iobuffersize, err := ConfigFile.GetInt("master", "buffersize")
+	if err != nil {
+		vlog("defaulting buffer to 1000:%v", err)
+		iobuffersize = 1000
+	}
 
 	subId := UniqueId()
 	localTime := time.SecondsToLocalTime(time.Seconds())
