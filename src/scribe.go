@@ -19,12 +19,76 @@
 */
 package main
 
+import (
+	"http"
+	"json"
+	"os"
+	"time"
+)
+
 type Scribe struct {
 	store JobStore
+	masterJobsUrl string
 }
 
 func NewScribe(store JobStore) *Scribe {
-	s := Scribe{store: store}
-	// TODO : Start thread to monitor master
+    target, err := ConfigFile.GetString("scribe", "target")
+    if err != nil { panic(err) }
+
+	s := Scribe{store: store, masterJobsUrl: target + "/jobs/" }
+
+	ticker := time.NewTicker(3 * second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				s.PollJobs()
+			}
+		}
+	}()
+
 	return &s
+}
+
+func (this *Scribe) PollJobs() {
+    for _, jobHandle := range this.GetJobs() {
+        this.store.Update(jobHandle.JobId, jobHandle.Status)
+    }
+
+    unscheduled, _ := this.store.Unscheduled()
+    for _, jobHandle := range unscheduled {
+        this.PostJob(jobHandle)
+    }
+}
+
+func (this *Scribe) GetJobs() []JobHandle {
+	resp, _, err := http.Get(this.masterJobsUrl)
+	if err != nil {
+		log("Error [%v]: %v", this.masterJobsUrl, err)
+		return nil
+	}
+
+	b := make([]byte, 100)
+	resp.Body.Read(b)
+
+    jobHandles := make([]JobHandle, 100)
+	json.Unmarshal(b, &jobHandles)
+	return jobHandles
+}
+
+func (this *Scribe) PostJob(jobHandle JobHandle) os.Error {
+    jobPkg, err := this.store.Get(jobHandle.JobId)
+    if err != nil { return err }
+
+    taskJson, err := json.Marshal(jobPkg.Tasks)
+    if err != nil { return err }
+
+    data := make(map[string]string)
+    data["jsonfile"] = string(taskJson)
+
+    header := http.Header{}
+    header.Set("x-golem-job-preassigned-id", jobHandle.JobId)
+    http.PostForm(this.masterJobsUrl, data)
+
+    return nil
 }
