@@ -44,6 +44,12 @@ type Submission struct {
 
 
 func NewSubmission(js []Task, jobChan chan *Job) *Submission {
+    iobuffersize, err := ConfigFile.GetInt("master", "buffersize")
+     if err != nil {
+        vlog("defaulting buffer to 1000:%v", err)
+        iobuffersize = 1000
+     }
+
 	subId := UniqueId()
 	localTime := time.SecondsToLocalTime(time.Seconds())
 	formattedTime := localTime.Format(time.ANSIC)
@@ -77,7 +83,7 @@ func NewSubmission(js []Task, jobChan chan *Job) *Submission {
 }
 
 func (s *Submission) MarshalJSON() ([]byte, os.Error) {
-	vlog("sniffing toataljobs")
+	vlog("sniffing total jobs")
 	TotalJobs := <-s.TotalJobsChan
 	s.TotalJobsChan <- TotalJobs
 	vlog("sniffing finished jobs")
