@@ -28,6 +28,8 @@ import (
 //parse args and start as master, scribe or worker
 func main() {
 	var configurationFile string
+	var isMaster bool
+	var isScribe bool
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
@@ -45,7 +47,7 @@ func main() {
 		m := NewMaster()
 		NewRestOnJob(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
-		s := NewScribe(DoNothingJobStore{})
+		s := NewScribe(DoNothingJobStore{ jobsById: make(map[string]JobPackage) })
 		NewRestOnJob(ScribeJobController{s, NewProxyJobController()}, NewProxyNodeController())
 	} else {
 		processes, masterhost := getWorkerProcesses()
