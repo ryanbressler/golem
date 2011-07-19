@@ -44,7 +44,7 @@ func NewMaster() *Master {
 func (m *Master) Listen(ws *websocket.Conn) {
 	log("Node connecting from %v.", ws.LocalAddr().String())
 
-	nh := NewNodeHandle(NewConnection(ws), m)
+	nh := NewNodeHandle(NewConnection(ws, false), m)
 	m.NodeHandles[nh.NodeId] = nh
 	go m.RemoveNodeOnDeath(nh)
 	nh.Monitor()

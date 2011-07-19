@@ -110,7 +110,7 @@ func RunNode(processes int, master string) {
 		return
 	}
 
-	mcon := *NewConnection(ws)
+	mcon := *NewConnection(ws, true)
 	mcon.OutChan <- WorkerMessage{Type: HELLO, Body: fmt.Sprintf("%v", processes)}
 	go CheckIn(&mcon)
 	replyc := make(chan *WorkerMessage)
