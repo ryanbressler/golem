@@ -59,12 +59,12 @@ func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Erro
 func getTlsConfig() *tls.Config {
 	certs := []tls.Certificate{}
 
-    certpath, _ := ConfigFile.GetString("default", "certpath")
-    if certpath != "" {
+	certpath, _ := ConfigFile.GetString("default", "certpath")
+	if certpath != "" {
 		certs = append(certs, GenerateX509KeyPair(certpath))
-    } else {
+	} else {
 		certs = append(certs, GenerateTlsCert())
-    }
+	}
 
 	return &tls.Config{Certificates: certs, AuthenticateClient: true}
 }
@@ -87,12 +87,12 @@ func GenerateX509KeyPair(certpath string) tls.Certificate {
 	certf := os.ShellExpand(certpath + "/certificate.pem")
 	keyf := os.ShellExpand(certpath + "/key.pem")
 
-    cert, err := tls.LoadX509KeyPair(certf, keyf)
-    if err != nil {
-        vlog("Err loading tls keys from %v and %v: %v", certf, keyf, err)
-        panic(err)
-    }
-    return cert
+	cert, err := tls.LoadX509KeyPair(certf, keyf)
+	if err != nil {
+		vlog("Err loading tls keys from %v and %v: %v", certf, keyf, err)
+		panic(err)
+	}
+	return cert
 }
 
 func GenerateTlsCert() tls.Certificate {
@@ -109,18 +109,18 @@ func GenerateTlsCert() tls.Certificate {
 	now := time.Seconds()
 	organization, err := ConfigFile.GetString("default", "organization")
 	if err != nil {
-	    organization = "Golem"
+		organization = "Golem"
 	}
 
 	template := x509.Certificate{
-		SerialNumber: []byte{0},
+		SerialNumber:       []byte{0},
 		PublicKeyAlgorithm: x509.RSA,
 		Subject: x509.Name{
 			CommonName:   hostname,
 			Organization: []string{organization},
 		},
-		NotBefore: time.SecondsToUTC(now - 300),
-		NotAfter:  time.SecondsToUTC(now + year),
+		NotBefore:    time.SecondsToUTC(now - 300),
+		NotAfter:     time.SecondsToUTC(now + year),
 		SubjectKeyId: []byte{1, 2, 3, 4},
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
