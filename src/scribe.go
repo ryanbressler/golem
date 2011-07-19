@@ -27,15 +27,17 @@ import (
 )
 
 type Scribe struct {
-	store JobStore
+	store         JobStore
 	masterJobsUrl string
 }
 
 func NewScribe(store JobStore) *Scribe {
-    target, err := ConfigFile.GetString("scribe", "target")
-    if err != nil { panic(err) }
+	target, err := ConfigFile.GetString("scribe", "target")
+	if err != nil {
+		panic(err)
+	}
 
-	s := Scribe{store: store, masterJobsUrl: target + "/jobs/" }
+	s := Scribe{store: store, masterJobsUrl: target + "/jobs/"}
 
 	ticker := time.NewTicker(3 * second)
 	go func() {
@@ -51,14 +53,14 @@ func NewScribe(store JobStore) *Scribe {
 }
 
 func (this *Scribe) PollJobs() {
-    for _, jobHandle := range this.GetJobs() {
-        this.store.Update(jobHandle.JobId, jobHandle.Status)
-    }
+	for _, jobHandle := range this.GetJobs() {
+		this.store.Update(jobHandle.JobId, jobHandle.Status)
+	}
 
-    unscheduled, _ := this.store.Unscheduled()
-    for _, jobHandle := range unscheduled {
-        this.PostJob(jobHandle)
-    }
+	unscheduled, _ := this.store.Unscheduled()
+	for _, jobHandle := range unscheduled {
+		this.PostJob(jobHandle)
+	}
 }
 
 func (this *Scribe) GetJobs() []JobHandle {
@@ -71,24 +73,28 @@ func (this *Scribe) GetJobs() []JobHandle {
 	b := make([]byte, 100)
 	resp.Body.Read(b)
 
-    jobHandles := make([]JobHandle, 100)
+	jobHandles := make([]JobHandle, 100)
 	json.Unmarshal(b, &jobHandles)
 	return jobHandles
 }
 
 func (this *Scribe) PostJob(jobHandle JobHandle) os.Error {
-    jobPkg, err := this.store.Get(jobHandle.JobId)
-    if err != nil { return err }
+	jobPkg, err := this.store.Get(jobHandle.JobId)
+	if err != nil {
+		return err
+	}
 
-    taskJson, err := json.Marshal(jobPkg.Tasks)
-    if err != nil { return err }
+	taskJson, err := json.Marshal(jobPkg.Tasks)
+	if err != nil {
+		return err
+	}
 
-    data := make(map[string]string)
-    data["jsonfile"] = string(taskJson)
+	data := make(map[string]string)
+	data["jsonfile"] = string(taskJson)
 
-    header := http.Header{}
-    header.Set("x-golem-job-preassigned-id", jobHandle.JobId)
-    http.PostForm(this.masterJobsUrl, data)
+	header := http.Header{}
+	header.Set("x-golem-job-preassigned-id", jobHandle.JobId)
+	http.PostForm(this.masterJobsUrl, data)
 
-    return nil
+	return nil
 }
