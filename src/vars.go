@@ -25,7 +25,7 @@ import (
 )
 
 const (
-    second         = 1e9         // one second is 1e9 nanoseconds
+	second = 1e9 // one second is 1e9 nanoseconds
 )
 
 var verbose = false
