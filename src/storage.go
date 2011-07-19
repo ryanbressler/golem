@@ -81,6 +81,7 @@ type DoNothingJobStore struct {
 }
 
 func (s DoNothingJobStore) Create(item JobPackage) (err os.Error) {
+    log("Create(%v)", item)
 	s.jobsById[item.Handle.JobId] = item
 	return
 }
@@ -111,6 +112,11 @@ func (s DoNothingJobStore) Unscheduled() (items []JobHandle, err os.Error) {
 }
 
 func (s DoNothingJobStore) Get(jobId string) (item JobPackage, err os.Error) {
+    if jobId == "" {
+        err = os.NewError("No job id specified")
+        return
+    }
+
 	item, isin := s.jobsById[jobId]
 	if isin == false {
 		err = os.NewError("item not found")
@@ -120,6 +126,8 @@ func (s DoNothingJobStore) Get(jobId string) (item JobPackage, err os.Error) {
 
 func (s DoNothingJobStore) Update(jobId string, status JobStatus) (err os.Error) {
 	item, err := s.Get(jobId)
+	if err != nil { return }
+
 	item.Handle.Status = status
 	return
 }
