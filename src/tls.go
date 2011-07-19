@@ -55,103 +55,86 @@ func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Erro
 
 }
 
-//get the cert file paths for running as the master
-func getCertFilePaths() (string, string) {
-	certf := os.ShellExpand("$HOME/.golem/certificate.pem")
-	keyf := os.ShellExpand("$HOME/.golem/key.pem")
-	return certf, keyf
-}
-
 //returns our custom tls configuration
-func getTlsConfig() (tlsConfig *tls.Config, err os.Error) {
+func getTlsConfig() *tls.Config {
 	certs := []tls.Certificate{}
 
-	switch {
-	case certpath != "":
-		certf, keyf := getCertFilePaths()
-		cert, err := tls.LoadX509KeyPair(certf, keyf)
-		if err != nil {
-			vlog("Err loading tls keys from %v and %v: %v\n", certf, keyf, err)
-			return nil, err
-		}
-		certs = append(certs, cert)
-	default:
-		cert, err := GenerateTlsCert()
-		if err != nil {
-			log("Error generating tls cert: %v", err)
-		}
-		certs = append(certs, cert)
-	}
+    certpath, _ := ConfigFile.GetString("default", "certpath")
+    if certpath != "" {
+		certs = append(certs, GenerateX509KeyPair(certpath))
+    } else {
+		certs = append(certs, GenerateTlsCert())
+    }
 
-	tlsConfig = &tls.Config{Certificates: certs, AuthenticateClient: true}
-	return
+	return &tls.Config{Certificates: certs, AuthenticateClient: true}
 }
 
 //a replacment for ListenAndServeTLS that loads our custom confiuration usage is identical to http.ListenAndServe
-func ConfigListenAndServeTLS(hostname string, handler http.Handler) os.Error {
-	cfg, err := getTlsConfig()
-	if err != nil {
-		return err
-	}
-	listener, err := tls.Listen("tcp", hostname, cfg)
+func ConfigListenAndServeTLS(hostname string, handler http.Handler) (err os.Error) {
+	listener, err := tls.Listen("tcp", hostname, getTlsConfig())
 	if err != nil {
 		vlog("Tls Listen Error : %v", err)
-		return err
+		return
 	}
 
 	if err := http.Serve(listener, handler); err != nil {
 		vlog("Tls Serve Error : %v", err)
-		return err
 	}
-	return nil
+	return
 }
 
+func GenerateX509KeyPair(certpath string) tls.Certificate {
+	certf := os.ShellExpand(certpath + "/certificate.pem")
+	keyf := os.ShellExpand(certpath + "/key.pem")
 
-//Create tls certificate
-func GenerateTlsCert() (cert tls.Certificate, err os.Error) {
+    cert, err := tls.LoadX509KeyPair(certf, keyf)
+    if err != nil {
+        vlog("Err loading tls keys from %v and %v: %v", certf, keyf, err)
+        panic(err)
+    }
+    return cert
+}
+
+func GenerateTlsCert() tls.Certificate {
 	hostname, err := os.Hostname()
 	if err != nil {
-		log("Error getting hostname")
-		return
+		panic(err)
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
-		log("failed to generate private key: %s", err)
-		return
+		panic(err)
 	}
 
 	now := time.Seconds()
+	organization, err := ConfigFile.GetString("default", "organization")
+	if err != nil {
+	    organization = "Golem"
+	}
 
 	template := x509.Certificate{
 		SerialNumber: []byte{0},
-
-		//SignatureAlgorithm: x509.MD5WithRSA,
 		PublicKeyAlgorithm: x509.RSA,
 		Subject: x509.Name{
 			CommonName:   hostname,
-			Organization: []string{"Golem"},
+			Organization: []string{organization},
 		},
 		NotBefore: time.SecondsToUTC(now - 300),
-		NotAfter:  time.SecondsToUTC(now + 60*60*24*365), // valid for 1 year.
-
+		NotAfter:  time.SecondsToUTC(now + year),
 		SubjectKeyId: []byte{1, 2, 3, 4},
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
 
 	certbyte, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
-		log("Failed to create certificate: %s", err)
-		return
+		panic(err)
 	}
 
-	cert, err = tls.X509KeyPair(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certbyte}), pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}))
+	cert, err := tls.X509KeyPair(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certbyte}), pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}))
 	if err != nil {
-		log("Failed to X509KeyPair certificate: %s", err)
-		return
+		panic(err)
 	}
-	return
-
+	return cert
 }
 
 // setup master, usage is identical to http.ListenAndServe but this relies on global useTls being set
