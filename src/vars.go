@@ -24,6 +24,10 @@ import (
 	"goconf.googlecode.com/hg"
 )
 
+const (
+	second = 1e9 // one second is 1e9 nanoseconds
+)
+
 var verbose = false
 var iobuffersize = 1000
 var isMaster bool
