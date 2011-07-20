@@ -29,12 +29,13 @@ import (
 
 type ScribeJobController struct {
 	scribe *Scribe
+	store  JobStore
 	proxy  JobController
 }
 
-func (c ScribeJobController) RetrieveAll() (json string, err os.Error) {
+func (this ScribeJobController) RetrieveAll() (json string, err os.Error) {
 	log("RetrieveAll")
-	items, err := c.scribe.store.All()
+	items, err := this.store.All()
 	if err != nil {
 		return
 	}
@@ -47,10 +48,10 @@ func (c ScribeJobController) RetrieveAll() (json string, err os.Error) {
 	json = " { numberOfItems: " + strconv.Itoa(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
-func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
+func (this ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
 	log("Retrieve:%v", jobId)
 
-	item, err := c.scribe.store.Get(jobId)
+	item, err := this.store.Get(jobId)
 	if err != nil {
 		return
 	}
@@ -63,7 +64,7 @@ func (c ScribeJobController) Retrieve(jobId string) (json string, err os.Error) 
 	json = string(val)
 	return
 }
-func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
+func (this ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	tasks := make([]Task, 0, 100)
 	if err = loadJson(r, &tasks); err != nil {
 		vlog("NewJob:%v", err)
@@ -79,7 +80,7 @@ func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error
 		Handle: JobHandle{JobId: jobId, Owner: owner, Label: label, FirstCreated: &now, LastModified: &now, Status: JobStatus{}},
 		Tasks:  tasks}
 
-	err = c.scribe.store.Create(jobPackage)
+	err = this.store.Create(jobPackage)
 	return
 }
 
