@@ -115,9 +115,62 @@ func (s MongoJobStore) All() (items []JobHandle, err os.Error) {
                         break
                 }
         }
-	fmt.Println("Found X jobs in All():", strconv.Itoa(fjobs))
+	fmt.Println("Found %v total jobs in golem collection:", strconv.Itoa(fjobs))
         return
 }
+
+func (s MongoJobStore) Unscheduled() (items []JobHandle, err os.Error) {
+        /*for _, item := range s.jobsById {
+                items = append(items, item.Handle)
+        }*/
+        goljob_c := s.session.DB(golemDb).C(jobCollection)
+        results, err := goljob_c.Find(bson.M{"status":STATUS_UNSCHEDULED}).Iter()
+        fjobs := 0
+        for {
+                job := GolemJobC{}
+                fjobs = fjobs + 1
+                err = results.Next(&job)
+                handle := JobHandle{job.Id, job.Owner, job.Type, job.TimeCreated, job.LastModified,
+                        JobStatus{job.TaskCount,job.TasksFinished,job.TaskErroredCount, job.TasksErrored, job.Running, STATUS_UNSCHEDULED} }
+                items = append(items, handle)
+                if err != nil {
+                        break
+                }
+        }
+        fmt.Println("Found %v unscheduled jobs:", strconv.Itoa(fjobs))
+        return
+}
+
+func (s MongoJobStore) Active() (items []JobHandle, err os.Error) {
+        /*for _, item := range s.jobsById {
+                items = append(items, item.Handle)
+        }*/
+	return FindJobsByStatus(s, STATUS_RUNNING)
+}
+
+func FindJobsByStatus(store MongoJobStore, mystatus string) (items []JobHandle, err os.Error) {
+        /*for _, item := range s.jobsById {
+                items = append(items, item.Handle)
+        }*/
+        goljob_c := store.session.DB(golemDb).C(jobCollection)
+        results, err := goljob_c.Find(bson.M{"status":mystatus}).Iter()
+        fjobs := 0
+        for {
+                job := GolemJobC{}
+                fjobs = fjobs + 1
+                err = results.Next(&job)
+                handle := JobHandle{job.Id, job.Owner, job.Type, job.TimeCreated, job.LastModified,
+                        JobStatus{job.TaskCount,job.TasksFinished,job.TaskErroredCount, job.TasksErrored, job.Running, STATUS_UNSCHEDULED} }
+                items = append(items, handle)
+                if err != nil {
+                        break
+                }
+        }
+        fmt.Println("Found %v unscheduled jobs:", strconv.Itoa(fjobs))
+        return
+}
+
+
 
 func (s MongoJobStore) Get(jobId string) (item JobHandle, err os.Error) {
 	goljob_c := s.session.DB(golemDb).C(jobCollection)
@@ -134,6 +187,7 @@ func (s MongoJobStore) Get(jobId string) (item JobHandle, err os.Error) {
 	//return item, err		
 }
 
+/*
 func (s MongoJobStore) Active() (items []JobHandle, err os.Error) {
         for _, item := range s.jobsById {
                 if item.Handle.Status.Running {
@@ -142,8 +196,8 @@ func (s MongoJobStore) Active() (items []JobHandle, err os.Error) {
         }
         return
 }
-
-func (s MongoJobStore) Unscheduled() (items []JobHandle, err os.Error) {
+*/
+/*func (s MongoJobStore) Unscheduled() (items []JobHandle, err os.Error) {
         //    items = make([]JobHandle, 100)
         for _, item := range s.jobsById {
                 if item.Handle.Status.Running == false {
@@ -152,7 +206,7 @@ func (s MongoJobStore) Unscheduled() (items []JobHandle, err os.Error) {
         }
         return
 }
-
+*/
 /*
 func (s MongoJobStore) Get(jobId string) (item JobPackage, err os.Error) {
         item, isin := s.jobsById[jobId]
