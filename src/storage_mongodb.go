@@ -64,7 +64,7 @@ type MongoJobStore struct {
 	jobCollection string
 }
 
-func NewMongoStore(configpath string) *MongoJobStore {
+func NewMongoJobStore() *MongoJobStore {
 	golemstore, err := ConfigFile.GetString("mgodb", "store")
 	if err != nil {
 		panic(err)
@@ -121,7 +121,7 @@ func (this *MongoJobStore) Active() (items []JobHandle, err os.Error) {
 	return
 }
 
-func (this *MongoJobStore) Get(jobId string) (item JobHandle, err os.Error) {
+func (this *MongoJobStore) Get(jobId string) (item JobPackage, err os.Error) {
 	job := GolemJobC{}
 
 	err = this.JobsCollection().Find(bson.M{"id": jobId}).One(&job)
@@ -131,7 +131,7 @@ func (this *MongoJobStore) Get(jobId string) (item JobHandle, err os.Error) {
 
 	log("Get(%v):%v", jobId, job)
 
-	item = job.ToJobHandle()
+	item = JobPackage{Handle: job.ToJobHandle()}
 	return
 }
 
