@@ -45,8 +45,9 @@ func main() {
 		m := NewMaster()
 		NewRestOnJob(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
-		s := NewScribe(DoNothingJobStore{jobsById: make(map[string]JobPackage)})
-		NewRestOnJob(ScribeJobController{s, NewProxyJobController()}, NewProxyNodeController())
+		mdb := NewMongoJobStore()
+		s := NewScribe(mdb)
+		NewRestOnJob(ScribeJobController{s, mdb, NewProxyJobController()}, NewProxyNodeController())
 	} else {
 		processes, masterhost := getWorkerProcesses()
 		RunNode(processes, masterhost)
