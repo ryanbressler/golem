@@ -228,7 +228,7 @@ func main() {
         myjobSubmission := JobPackage{jobHandle,mytasks}
         var packageMap = map[string] JobPackage {"pkgstring_id": myjobSubmission}        
         
-	mystore := NewMongoStore(packageMap, "./mongodb.config")
+	mystore := NewMongoStore(packageMap, "./templates/golem.config")
 	defer mystore.session.Close()
 
 	fmt.Println("Begin testing store.Create", time.LocalTime(), "Seconds", time.Seconds())
