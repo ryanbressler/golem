@@ -80,10 +80,24 @@ type MongoJobStore struct {
         jobsById map[string]JobPackage
 	session *mgo.Session
 }
-func NewMongoStore() *MongoJobStore{
+
+func initMongoSession() (*mgo.Session, os.Error){
+        session, err := mgo.Mongo(mongoServer)
+        //defer session.Close()
+        // Modes are Safe, Monotonic, and Strong, Strong tells the system to sync on inserts/updates
+        session.SetMode(mgo.Strong, true)
+        return session, err
+}
+
+func NewMongoStore(mapid map[string]JobPackage) *MongoJobStore{
 	ms := new(MongoJobStore)
-	initMongoSession()
+	session, err := initMongoSession()
 	//ms.session = session
+	if (err != nil){
+		return nil
+	}
+	ms.jobsById = mapid
+	ms.session = session
 	return ms
 }
 
@@ -240,23 +254,27 @@ func insertGolemTask(gtask GolemTask, tjob_col mgo.Collection){
 	fmt.Println("Inserting Task:", gtask)
 	tjob_col.Insert(gtask)
 }
-
+/*
 func initMongoSession() (*mgo.Session, os.Error){
 	session, err := mgo.Mongo(mongoServer)
+	defer session.Close()
+        // Modes are Safe, Monotonic, and Strong, Strong tells the system to sync on inserts/updates
+        session.SetMode(mgo.Strong, true)
 	return session, err
 }
-
+*/
 func main() {
         fmt.Println("Begin", time.LocalTime(), "Seconds", time.Seconds())
-        session, err := initMongoSession() //mgo.Mongo(mongoServer)
-        if err != nil {
-                panic(err)
-        }
-        defer session.Close()
-        //fmt.Println("Got session", session)
-        // Optional. Switch the session to a monotonic behavior, place this inside init
-        session.SetMode(mgo.Strong, true)
-        //goljob_c := session.DB(golemDb).C(jobCollection)
+        
+	//session, err := initMongoSession() //mgo.Mongo(mongoServer)
+        //if err != nil {
+        //        panic(err)
+        //}
+        //defer session.Close()
+        // Optional. Modes are Switch the session to a monotonic behavior, place this inside init
+        //session.SetMode(mgo.Strong, true)
+        
+	//goljob_c := session.DB(golemDb).C(jobCollection)
         //goljob_c.RemoveAll(&GolemType{"rf_ace"})
         var NotFound = os.NewError("Document not found")
 
@@ -266,14 +284,15 @@ func main() {
         task := Task{1, commands}
         mytasks := []Task{task}
         myjobSubmission := JobPackage{jobHandle,mytasks}
-        var mymap = map[string] JobPackage {
-                "pkgstring_id": myjobSubmission}
-        mystore := MongoJobStore{mymap, session}
-        //fmt.Println("Testing mystore.Create")
+        var mymap = map[string] JobPackage {"pkgstring_id": myjobSubmission}        
+	
+	//mystore := MongoJobStore{mymap, session}
+
+	mystore := NewMongoStore(mymap)
+	defer mystore.session.Close()
+
 	fmt.Println("Begin testing store.Create", time.LocalTime(), "Seconds", time.Seconds())
         for i := 0; i< NSamples; i++{
-                //golemJob := GolemJob{"rf_ace", "id_" + strconv.Itoa(i) + "_" + strconv.Itoa64(time.Nanoseconds()), "jlin", 999, 999, 100, 0, 0, true}
-                //insertGolemJob(golemJob, goljob_c)
                 jobHandle := JobHandle{"myjobid_" + strconv.Itoa(i), "jlin", "rf_ace", strconv.Itoa64(time.Seconds()), strconv.Itoa64(time.Seconds()), jobStatus}
                 myjobSubmission := JobPackage{jobHandle,mytasks}
                 mystore.Create(myjobSubmission)
@@ -281,17 +300,9 @@ func main() {
         fmt.Println("Done testing store.Create", time.LocalTime(), "Seconds", time.Seconds())
 	fmt.Println("Begin store.All()")
         mystore.All()
-	
         fmt.Println("\nBegin Querying, done with ", strconv.Itoa(NSamples) + " inserts ", time.LocalTime(), "Seconds", time.Seconds())
         
-	/*result := GolemJob{}
-        err = goljob_c.Find(bson.M{"type": "rf_ace"}).One(&result)
-        if err != nil && err != NotFound {
-                fmt.Println("Error at find rf_ace type")
-                panic(err)
-        }*/
-
-        /*fmt.Println("Begin Testing Find/Select", time.LocalTime())
+	/*fmt.Println("Begin Testing Find/Select", time.LocalTime())
         results, err := goljob_c.Find(bson.M{"name": "rf_ace"}).Iter()
         fjobs := 0
         for {
@@ -301,7 +312,6 @@ func main() {
                 if err != nil {
                         break
                 }
-                //fmt.Println("Found rf_ace typed jobs:", job.Id, job)
         }
         fmt.Println("Found X jobs in All(...):", strconv.Itoa(fjobs))
         if err != mgo.NotFound {
@@ -319,11 +329,14 @@ func main() {
 	fmt.Println("Begin testing of store.Update")
 	//modifierMap := map[string]interface{}{"$set": map[string]string{"running":STATUS_RUNNING, "taskerrored":"99", "taskfinished":"1000", "lastmodified":strconv.Itoa64(time.Seconds())}} 	
 	//err = goljob_c.Update(bson.M{"id":jid},modifierMap)
-	mystore.Update(jid, JobStatus{1000, "0", "0", "", true, STATUS_RUNNING})
-	
+	mystore.Update(jid, JobStatus{1000, "0", "0", "", true, STATUS_RUNNING})	
 	//err = goljob_c.Update(bson.M{"id":jid}, bson.M{"$set":{"running":false,"a":"a_value"}})
 	if (err != nil && err != NotFound){
                 panic(err)
         }
+	fmt.Println("Begin testing of store.Unscheduled()")
+	mystore.Unscheduled()
+	fmt.Println("Begin testing of store.Active()")
+	mystore.Active()
         fmt.Println("End of main", time.LocalTime(), "Seconds", time.Seconds())
 }
