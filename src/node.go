@@ -106,8 +106,8 @@ func RunNode(processes int, master string) {
 
 	ws, err := wsDialToMaster(master, useTls)
 	if err != nil {
-		log("Error connectiong to master:%v", err)
-		return
+		log("Error connecting to master:%v", err)
+		panic(err)
 	}
 
 	mcon := *NewConnection(ws, true)
