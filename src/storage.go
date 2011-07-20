@@ -43,8 +43,9 @@ type JobHandle struct {
 	JobId        string
 	Owner        string
 	Label        string
-	FirstCreated time.Time
-	LastModified time.Time
+	Type         string
+	FirstCreated *time.Time
+	LastModified *time.Time
 	Status       JobStatus
 }
 

@@ -76,7 +76,7 @@ func (c ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error
 	now := time.Time{}
 
 	jobPackage := JobPackage{
-		Handle: JobHandle{JobId: jobId, Owner: owner, Label: label, FirstCreated: now, LastModified: now, Status: JobStatus{}},
+		Handle: JobHandle{JobId: jobId, Owner: owner, Label: label, FirstCreated: &now, LastModified: &now, Status: JobStatus{}},
 		Tasks:  tasks}
 
 	err = c.scribe.store.Create(jobPackage)
