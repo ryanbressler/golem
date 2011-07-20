@@ -233,7 +233,7 @@ func main() {
 
 	fmt.Println("Begin testing store.Create", time.LocalTime(), "Seconds", time.Seconds())
         for i := 0; i< TestNSamples; i++{
-                jobHandle := JobHandle{"myjobid_" + strconv.Itoa(i), "jlin", "rf_ace", strconv.Itoa64(time.Seconds()), strconv.Itoa64(time.Seconds()), jobStatus}
+                jobHandle := JobHandle{"myjobid_" + strconv.Itoa(i) + "_" + strconv.Itoa64(time.Seconds()), "jlin", "rf_ace", strconv.Itoa64(time.Seconds()), strconv.Itoa64(time.Seconds()), jobStatus}
                 myjobSubmission := JobPackage{jobHandle,mytasks}
                 mystore.Create(myjobSubmission)
         }
@@ -270,6 +270,7 @@ func main() {
 	//modifierMap := map[string]interface{}{"$set": map[string]string{"running":STATUS_RUNNING, "taskerrored":"99", "taskfinished":"1000", "lastmodified":strconv.Itoa64(time.Seconds())}} 	
 	//err = goljob_c.Update(bson.M{"id":jid},modifierMap)
 	mystore.Update(jid, JobStatus{1000, "0", "0", "", true, STATUS_RUNNING})	
+	mystore.Update("myjobid_999", JobStatus{-1, "900", "10", "1,2,3,4,5,6,7,8,9,19", true, STATUS_RUNNING})
 	//err = goljob_c.Update(bson.M{"id":jid}, bson.M{"$set":{"running":false,"a":"a_value"}})
 	if (err != nil && err != NotFound){
                 panic(err)
