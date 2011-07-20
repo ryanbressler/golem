@@ -180,7 +180,7 @@ func FindJobsByStatus(store MongoJobStore, mystatus string) (items []JobHandle, 
                         break
                 }
         }
-        fmt.Println("Found %v unscheduled jobs:", strconv.Itoa(fjobs))
+        fmt.Println("Found %v %v jobs:", strconv.Itoa(fjobs), mystatus)
         return
 }
 
