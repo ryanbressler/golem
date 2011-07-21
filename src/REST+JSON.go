@@ -228,7 +228,7 @@ func (j *RestOnJob) retrieveAll(baseUri string, r Retriever, w http.ResponseWrit
 
 	vlog("RestOnJob.retrieveAll(%v):%v", baseUri, items)
 
-    itemsHandle := NewItemsHandle(items)
+	itemsHandle := NewItemsHandle(items)
 
 	val, err := json.Marshal(itemsHandle)
 	if err != nil {

@@ -34,13 +34,13 @@ type ScribeJobController struct {
 func (this ScribeJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	log("RetrieveAll")
 
-    retrieved, err := this.store.All()
-    if err != nil {
-        return
-    }
+	retrieved, err := this.store.All()
+	if err != nil {
+		return
+	}
 
 	for _, item := range retrieved {
-		items= append(items, item)
+		items = append(items, item)
 	}
 
 	return

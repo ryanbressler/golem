@@ -84,7 +84,7 @@ func (nh *NodeHandle) Stats() (processes int, running int) {
 	nh.Running <- running
 	processes = <-nh.MaxJobs
 	nh.MaxJobs <- processes
-    return
+	return
 }
 
 func (nh *NodeHandle) ReSize(NewMaxJobs int) {

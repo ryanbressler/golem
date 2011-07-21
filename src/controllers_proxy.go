@@ -53,12 +53,12 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	}
 
 	js := []JobSubmission{}
-	if err = json.Unmarshal(val, js) ; err != nil {
+	if err = json.Unmarshal(val, js); err != nil {
 		return
 	}
 
 	for _, s := range js {
-		items= append(items, s)
+		items = append(items, s)
 	}
 
 	return

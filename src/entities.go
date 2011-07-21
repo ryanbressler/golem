@@ -25,36 +25,36 @@ type ItemsHandle struct {
 }
 
 func NewItemsHandle(items []interface{}) ItemsHandle {
-    return ItemsHandle{ Items: items, NumberOfItems: len(items) }
+	return ItemsHandle{Items: items, NumberOfItems: len(items)}
 }
 
 type JobSubmission struct {
-	Uri                string
-	SubId            string
-	CreatedAt     string
-    TotalJobs      int
-    FinishedJobs  int
-    ErroredJobs  int
-    Running        bool
+	Uri          string
+	SubId        string
+	CreatedAt    string
+	TotalJobs    int
+	FinishedJobs int
+	ErroredJobs  int
+	Running      bool
 }
 
 func NewJobSubmission(s *Submission) JobSubmission {
 	total, finished, errored, running := s.Stats()
 
-    return JobSubmission{ Uri: s.Uri, SubId: s.SubId, CreatedAt: s.SubLocalTime,
-        TotalJobs: total, FinishedJobs: finished, ErroredJobs: errored, Running: running }
+	return JobSubmission{Uri: s.Uri, SubId: s.SubId, CreatedAt: s.SubLocalTime,
+		TotalJobs: total, FinishedJobs: finished, ErroredJobs: errored, Running: running}
 }
 
 type WorkerNode struct {
-	NodeId        string
-	Uri           string
-	Hostname      string
-	MaxJobs int
-	Running int
+	NodeId   string
+	Uri      string
+	Hostname string
+	MaxJobs  int
+	Running  int
 }
 
 func NewWorkerNode(nh *NodeHandle) WorkerNode {
-    maxJobs, running := nh.Stats()
-    return WorkerNode{ NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
-        MaxJobs: maxJobs, Running: running }
+	maxJobs, running := nh.Stats()
+	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
+		MaxJobs: maxJobs, Running: running}
 }
