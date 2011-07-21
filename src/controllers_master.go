@@ -42,7 +42,7 @@ func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Er
 
 	job, isin := c.master.subMap[jobId]
 	if isin == false {
-	    err = os.NewError("job " + jobId + " not found")
+		err = os.NewError("job " + jobId + " not found")
 	}
 	item = NewJobSubmission(job)
 	return
@@ -106,8 +106,8 @@ func (c MasterNodeController) Retrieve(nodeId string) (item interface{}, err os.
 	log("Retrieve:%v", nodeId)
 	nh, isin := c.master.NodeHandles[nodeId]
 	if isin == false {
-	    err = os.NewError("node " + nodeId + " not found")
-	    return
+		err = os.NewError("node " + nodeId + " not found")
+		return
 	}
 	item = NewWorkerNode(nh)
 	return
