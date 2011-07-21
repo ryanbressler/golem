@@ -70,6 +70,7 @@ func HandleRestJson(jc JobController, nc NodeController) {
 }
 
 type RootHandler struct {
+
 }
 
 func (this *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,8 +80,8 @@ func (this *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type JobsRestJson struct {
-	jobController  JobController
-	hashedpw       string
+	jobController JobController
+	hashedpw      string
 }
 
 func (this *JobsRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +127,7 @@ func (this *JobsRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-            WriteItemAsJson("/jobs", jobId, this.jobController, w)
+			WriteItemAsJson("/jobs", jobId, this.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -162,35 +163,34 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-        spliturl := splitRestUrl(r.URL.Path)
-        nsplit := len(spliturl)
-        switch {
-        case nsplit == 2 && spliturl[1] == "restart":
-            if err := this.nodeController.RestartAll(); err != nil {
-                w.WriteHeader(http.StatusInternalServerError)
-                return
-            }
+		spliturl := splitRestUrl(r.URL.Path)
+		nsplit := len(spliturl)
+		switch {
+		case nsplit == 2 && spliturl[1] == "restart":
+			if err := this.nodeController.RestartAll(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
+		case nsplit == 2 && spliturl[1] == "die":
+			if err := this.nodeController.KillAll(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
-        case nsplit == 2 && spliturl[1] == "die":
-            if err := this.nodeController.KillAll(); err != nil {
-                w.WriteHeader(http.StatusInternalServerError)
-                return
-            }
+		case nsplit == 4 && spliturl[2] == "resize":
+			numberOfThreads, err := strconv.Atoi(spliturl[3])
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 
-        case nsplit == 4 && spliturl[2] == "resize":
-            numberOfThreads, err := strconv.Atoi(spliturl[3])
-            if err != nil {
-                w.WriteHeader(http.StatusBadRequest)
-                return
-            }
-
-            nodeId := spliturl[1]
-            if err = this.nodeController.Resize(nodeId, numberOfThreads); err != nil {
-                w.WriteHeader(http.StatusInternalServerError)
-                return
-            }
-        }
+			nodeId := spliturl[1]
+			if err = this.nodeController.Resize(nodeId, numberOfThreads); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 }
 
