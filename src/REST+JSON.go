@@ -27,7 +27,7 @@ import (
 )
 
 // REST interface for Job and Node Controllers
-type RestOnJob struct {
+type RestJsonAPI struct {
 	jobController  JobController
 	nodeController NodeController
 	hashedpw       string
@@ -51,7 +51,7 @@ type NodeController interface {
 	Resize(nodeId string, numberOfThreads int) os.Error
 }
 
-func NewRestOnJob(jc JobController, nc NodeController) {
+func HandleRestJson(jc JobController, nc NodeController) {
 	hostname, err := ConfigFile.GetString("default", "hostname")
 	if err != nil {
 		panic(err)
@@ -65,12 +65,12 @@ func NewRestOnJob(jc JobController, nc NodeController) {
 		hpw = hashPw(password)
 	}
 
-	j := RestOnJob{jobController: jc, nodeController: nc, hashedpw: hpw}
+	api := RestJsonAPI{jobController: jc, nodeController: nc, hashedpw: hpw}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { api.rootHandler(w, r) })
 	http.Handle("/html/", http.FileServer("html", "/html"))
-	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { j.jobHandler(w, r) })
-	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
+	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { api.jobHandler(w, r) })
+	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { api.nodeHandler(w, r) })
 
 	log("running at %v", hostname)
 
@@ -81,13 +81,13 @@ func NewRestOnJob(jc JobController, nc NodeController) {
 }
 
 // web handlers
-func (j *RestOnJob) rootHandler(w http.ResponseWriter, r *http.Request) {
+func (this *RestJsonAPI) rootHandler(w http.ResponseWriter, r *http.Request) {
 	log("%v /", r.Method)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, "{ jobs: '/jobs', nodes: '/nodes' }")
 }
 
-func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
+func (this *RestJsonAPI) jobHandler(w http.ResponseWriter, r *http.Request) {
 	log("%v /jobs", r.Method)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -101,16 +101,16 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "":
-			j.retrieve("/jobs", jobId, j.jobController, w)
+			this.retrieve("/jobs", jobId, this.jobController, w)
 		case jobId == "" && verb == "":
-			j.retrieveAll("/jobs", j.jobController, w)
+			this.retrieveAll("/jobs", this.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 
 	case "POST":
 		log("Method = POST.")
-		if j.checkPassword(r) == false {
+		if this.checkPassword(r) == false {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -118,14 +118,14 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "" && verb == "stop":
-			err := j.jobController.Stop(jobId)
+			err := this.jobController.Stop(jobId)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 			w.WriteHeader(http.StatusOK)
 		case jobId == "" && verb == "":
-			jobId, err := j.jobController.NewJob(r)
+			jobId, err := this.jobController.NewJob(r)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
@@ -141,7 +141,7 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
+func (this *RestJsonAPI) nodeHandler(w http.ResponseWriter, r *http.Request) {
 	log("nodeHandler")
 
 	w.Header().Set("Content-Type", "application/json")
@@ -152,17 +152,17 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		nparts := len(pathParts)
 		switch {
 		case nparts == 2:
-			j.retrieve("/nodes", pathParts[1], j.nodeController, w)
+			this.retrieve("/nodes", pathParts[1], this.nodeController, w)
 		default:
-			j.retrieveAll("/nodes", j.nodeController, w)
+			this.retrieveAll("/nodes", this.nodeController, w)
 		}
 	case "POST":
-		if j.checkPassword(r) == false {
+		if this.checkPassword(r) == false {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
-		err := j.postNodeHandler(r)
+		err := this.postNodeHandler(r)
 		if err != nil {
 			w.WriteHeader(500)
 		} else {
@@ -171,15 +171,15 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
+func (this *RestJsonAPI) postNodeHandler(r *http.Request) os.Error {
 	spliturl := splitRestUrl(r.URL.Path)
 	nsplit := len(spliturl)
 	switch {
 	case nsplit == 2 && spliturl[1] == "restart":
-		return j.nodeController.RestartAll()
+		return this.nodeController.RestartAll()
 
 	case nsplit == 2 && spliturl[1] == "die":
-		return j.nodeController.KillAll()
+		return this.nodeController.KillAll()
 
 	case nsplit == 4 && spliturl[2] == "resize":
 		nodeId := spliturl[1]
@@ -187,22 +187,22 @@ func (j *RestOnJob) postNodeHandler(r *http.Request) os.Error {
 		if err != nil {
 			return err
 		}
-		return j.nodeController.Resize(nodeId, numberOfThreads)
+		return this.nodeController.Resize(nodeId, numberOfThreads)
 	}
 	return nil
 }
 
-func (j *RestOnJob) checkPassword(r *http.Request) bool {
-	if j.hashedpw != "" {
+func (this *RestJsonAPI) checkPassword(r *http.Request) bool {
+	if this.hashedpw != "" {
 		pw := hashPw(r.Header.Get("Password"))
 		log("Verifying password.")
-		return j.hashedpw == pw
+		return this.hashedpw == pw
 	}
 	return true
 }
 
 // TODO : Deal with URI
-func (j *RestOnJob) retrieve(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
+func (this *RestJsonAPI) retrieve(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
 	item, err := r.Retrieve(itemId)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -219,14 +219,14 @@ func (j *RestOnJob) retrieve(baseUri string, itemId string, r Retriever, w http.
 }
 
 // TODO : Deal with URI
-func (j *RestOnJob) retrieveAll(baseUri string, r Retriever, w http.ResponseWriter) {
+func (this *RestJsonAPI) retrieveAll(baseUri string, r Retriever, w http.ResponseWriter) {
 	items, err := r.RetrieveAll()
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	vlog("RestOnJob.retrieveAll(%v):%v", baseUri, items)
+	vlog("RestJsonAPI.retrieveAll(%v):%v", baseUri, items)
 
 	itemsHandle := NewItemsHandle(items)
 

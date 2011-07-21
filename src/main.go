@@ -43,11 +43,11 @@ func main() {
 
 	if isMaster {
 		m := NewMaster()
-		NewRestOnJob(MasterJobController{master: m}, MasterNodeController{master: m})
+		HandleRestJson(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
 		mdb := NewMongoJobStore()
 		s := NewScribe(mdb)
-		NewRestOnJob(ScribeJobController{s, mdb, NewProxyJobController()}, NewProxyNodeController())
+		HandleRestJson(ScribeJobController{s, mdb, NewProxyJobController()}, NewProxyNodeController())
 	} else {
 		processes, masterhost := getWorkerProcesses()
 		RunNode(processes, masterhost)
