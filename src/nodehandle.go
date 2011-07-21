@@ -79,6 +79,14 @@ func (nh *NodeHandle) MarshalJSON() ([]byte, os.Error) {
 	return []byte(rv), nil
 }
 
+func (nh *NodeHandle) Stats() (processes int, running int) {
+	running = <-nh.Running
+	nh.Running <- running
+	processes = <-nh.MaxJobs
+	nh.MaxJobs <- processes
+    return
+}
+
 func (nh *NodeHandle) ReSize(NewMaxJobs int) {
 	<-nh.MaxJobs
 	nh.MaxJobs <- NewMaxJobs

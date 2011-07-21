@@ -20,6 +20,7 @@ package main
 
 import (
 	"http"
+	"json"
 	"fmt"
 	"os"
 	"strconv"
@@ -33,8 +34,8 @@ type RestOnJob struct {
 }
 
 type Retriever interface {
-	RetrieveAll() (json string, err os.Error)
-	Retrieve(itemId string) (json string, err os.Error)
+	RetrieveAll() (items []interface{}, err os.Error)
+	Retrieve(itemId string) (item interface{}, err os.Error)
 }
 type JobController interface {
 	Retriever
@@ -101,9 +102,9 @@ func (j *RestOnJob) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "":
-			j.retrieve(jobId, j.jobController, w)
+			j.retrieve("/jobs", jobId, j.jobController, w)
 		case jobId == "" && verb == "":
-			j.retrieveAll(j.jobController, w)
+			j.retrieveAll("/jobs", j.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -152,9 +153,9 @@ func (j *RestOnJob) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		nparts := len(pathParts)
 		switch {
 		case nparts == 2:
-			j.retrieve(pathParts[1], j.nodeController, w)
+			j.retrieve("/nodes", pathParts[1], j.nodeController, w)
 		default:
-			j.retrieveAll(j.nodeController, w)
+			j.retrieveAll("/nodes", j.nodeController, w)
 		}
 	case "POST":
 		if j.checkPassword(r) == false {
@@ -201,20 +202,40 @@ func (j *RestOnJob) checkPassword(r *http.Request) bool {
 	return true
 }
 
-func (j *RestOnJob) retrieve(itemId string, r Retriever, w http.ResponseWriter) {
-	json, err := r.Retrieve(itemId)
+// TODO : Deal with URI
+func (j *RestOnJob) retrieve(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
+	item, err := r.Retrieve(itemId)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	fmt.Fprint(w, json)
+
+	val, err := json.Marshal(item)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Write(val)
 }
 
-func (j *RestOnJob) retrieveAll(r Retriever, w http.ResponseWriter) {
-	json, err := r.RetrieveAll()
+// TODO : Deal with URI
+func (j *RestOnJob) retrieveAll(baseUri string, r Retriever, w http.ResponseWriter) {
+	items, err := r.RetrieveAll()
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	w.Write([]byte(json))
+
+	vlog("RestOnJob.retrieveAll(%v):%v", baseUri, items)
+
+    itemsHandle := NewItemsHandle(items)
+
+	val, err := json.Marshal(itemsHandle)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Write(val)
 }

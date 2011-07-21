@@ -24,6 +24,7 @@ GOFILES=\
 	tls.go\
 	storage.go\
 	storage_mongodb.go\
+	entities.go\
 	main.go\
 	
 

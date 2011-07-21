@@ -21,8 +21,6 @@ package main
 
 import (
 	"http"
-	"strings"
-	"strconv"
 	"os"
 )
 
@@ -30,33 +28,23 @@ type MasterJobController struct {
 	master *Master
 }
 
-func (c MasterJobController) RetrieveAll() (json string, err os.Error) {
+func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	log("RetrieveAll")
 
-	jsonArray := make([]string, 0)
 	for _, s := range c.master.subMap {
-		val, _ := s.MarshalJSON()
-		jsonArray = append(jsonArray, string(val))
+		items = append(items, NewJobSubmission(s))
 	}
 
-	json = " { numberOfItems: " + strconv.Itoa(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
-func (c MasterJobController) Retrieve(jobId string) (json string, err os.Error) {
+func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
 	log("Retrieve:%v", jobId)
 
 	job, isin := c.master.subMap[jobId]
-	if isin {
-		val, err := job.MarshalJSON()
-		if err != nil {
-			return
-		}
-
-		json = string(val)
-	} else {
-		err = os.NewError("job not found")
+	if isin == false {
+	    err = os.NewError("job " + jobId + " not found")
 	}
-
+	item = NewJobSubmission(job)
 	return
 }
 func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
@@ -106,23 +94,22 @@ type MasterNodeController struct {
 	master *Master
 }
 
-func (c MasterNodeController) RetrieveAll() (json string, err os.Error) {
+func (c MasterNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	log("RetrieveAll")
 
-	numberOfItems := len(c.master.NodeHandles)
-	jsonArray := make([]string, 0, numberOfItems)
 	for _, n := range c.master.NodeHandles {
-		val, _ := n.MarshalJSON()
-		jsonArray = append(jsonArray, string(val))
+		items = append(items, NewWorkerNode(n))
 	}
-	json = " { numberOfItems: " + strconv.Itoa(numberOfItems) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
-func (c MasterNodeController) Retrieve(nodeId string) (json string, err os.Error) {
+func (c MasterNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
 	log("Retrieve:%v", nodeId)
-	node := c.master.NodeHandles[nodeId]
-	val, err := node.MarshalJSON()
-	json = string(val)
+	nh, isin := c.master.NodeHandles[nodeId]
+	if isin == false {
+	    err = os.NewError("node " + nodeId + " not found")
+	    return
+	}
+	item = NewWorkerNode(nh)
 	return
 }
 func (c MasterNodeController) RestartAll() os.Error {

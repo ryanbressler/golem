@@ -103,6 +103,22 @@ func (s *Submission) MarshalJSON() ([]byte, os.Error) {
 	return []byte(rv), nil
 }
 
+func (s *Submission) Stats() (total int, finished int, errored int, running bool) {
+	total = <-s.TotalJobsChan
+	s.TotalJobsChan <- total
+
+	finished = <-s.FinishedJobsChan
+	s.FinishedJobsChan <- finished
+
+	errored = <-s.ErroredJobsChan
+	s.ErroredJobsChan <- errored
+
+	running = <-s.runningChan
+	s.runningChan <- running
+
+	return
+}
+
 func (s *Submission) Stop() bool {
 	rv := false
 	running := <-s.runningChan
