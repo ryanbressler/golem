@@ -21,8 +21,6 @@ package main
 
 import (
 	"http"
-	"strings"
-	"strconv"
 	"time"
 	"os"
 )
@@ -33,36 +31,23 @@ type ScribeJobController struct {
 	proxy  JobController
 }
 
-func (this ScribeJobController) RetrieveAll() (json string, err os.Error) {
+func (this ScribeJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	log("RetrieveAll")
-	items, err := this.store.All()
-	if err != nil {
-		return
+
+    retrieved, err := this.store.All()
+    if err != nil {
+        return
+    }
+
+	for _, item := range retrieved {
+		items= append(items, item)
 	}
 
-	jsonArray := make([]string, 0)
-	for _, s := range items {
-		val, _ := s.MarshalJSON()
-		jsonArray = append(jsonArray, string(val))
-	}
-	json = " { numberOfItems: " + strconv.Itoa(len(jsonArray)) + ", items:[" + strings.Join(jsonArray, ",") + "] }"
 	return
 }
-func (this ScribeJobController) Retrieve(jobId string) (json string, err os.Error) {
+func (this ScribeJobController) Retrieve(jobId string) (interface{}, os.Error) {
 	log("Retrieve:%v", jobId)
-
-	item, err := this.store.Get(jobId)
-	if err != nil {
-		return
-	}
-
-	val, err := item.MarshalJSON()
-	if err != nil {
-		return
-	}
-
-	json = string(val)
-	return
+	return this.store.Get(jobId)
 }
 func (this ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	tasks := make([]Task, 0, 100)

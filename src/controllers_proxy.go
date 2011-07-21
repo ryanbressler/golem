@@ -28,10 +28,6 @@ import (
 	"os"
 )
 
-type ItemsHandle struct {
-	Items         string
-	NumberOfItems int
-}
 type ProxyJobController struct {
 	proxy *http.ReverseProxy
 }
@@ -50,20 +46,30 @@ func NewProxyJobController() ProxyJobController {
 	return ProxyJobController{http.NewSingleHostReverseProxy(url)}
 }
 
-func (c ProxyJobController) RetrieveAll() (json string, err os.Error) {
+func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	val, err := doProxy("GET", "/jobs/", c.proxy, nil)
 	if err != nil {
 		return
 	}
-	json = string(val)
+
+	js := []JobSubmission{}
+	if err = json.Unmarshal(val, js) ; err != nil {
+		return
+	}
+
+	for _, s := range js {
+		items= append(items, s)
+	}
+
 	return
 }
-func (c ProxyJobController) Retrieve(jobId string) (json string, err os.Error) {
+func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
 	val, err := doProxy("GET", "/jobs/"+jobId, c.proxy, nil)
 	if err != nil {
 		return
 	}
-	json = string(val)
+	item = Submission{}
+	err = json.Unmarshal(val, item)
 	return
 }
 func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
@@ -108,20 +114,28 @@ func NewProxyNodeController() ProxyNodeController {
 	return ProxyNodeController{http.NewSingleHostReverseProxy(url)}
 }
 
-func (c ProxyNodeController) RetrieveAll() (json string, err os.Error) {
+func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	val, err := doProxy("GET", "/nodes/", c.proxy, nil)
 	if err != nil {
 		return
 	}
-	json = string(val)
+	workerNodes := []WorkerNode{}
+	if err = json.Unmarshal(val, workerNodes); err != nil {
+		return
+	}
+
+	for _, item := range workerNodes {
+		items = append(items, item)
+	}
 	return
 }
-func (c ProxyNodeController) Retrieve(nodeId string) (json string, err os.Error) {
+func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
 	val, err := doProxy("GET", "/nodes/"+nodeId, c.proxy, nil)
 	if err != nil {
 		return
 	}
-	json = string(val)
+	item = WorkerNode{}
+	err = json.Unmarshal(val, item)
 	return
 }
 func (c ProxyNodeController) RestartAll() os.Error {
