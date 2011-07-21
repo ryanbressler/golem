@@ -9,7 +9,7 @@ GOFILES=\
 	Job.go\
 	Connection.go\
 	Submission.go\
-	restOnJob.go\
+	REST+JSON.go\
 	controllers_master.go\
 	controllers_scribe.go\
 	controllers_proxy.go\
