@@ -231,19 +231,19 @@ def main():
 		doGet(url+jobid)
 		
 	if cmd == "nodes":
-		doGet(master+"/admin/")
+		doGet(master+"/nodes/")
 	if cmd == "resize":
-		doPost(master+"/admin/"+sys.argv[cmdi+1]+"/resize/"+sys.argv[cmdi+2],{},"",pwd)
+		doPost(master+"/nodes/"+sys.argv[cmdi+1]+"/resize/"+sys.argv[cmdi+2],{},"",pwd)
 	if cmd == "restart":
 		input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
 		if input == "Y":
-			doPost(master+"/admin/restart",{},"",pwd)
+			doPost(master+"/nodes/restart",{},"",pwd)
 		else:
 			print "Canceled"
 	if cmd == "die":
 		input = raw_input("This kill the entire cluster down and is almost never used. Enter \"Y\" to continue.>")
 		if input == "Y":
-			doPost(master+"/admin/die",{},"",pwd)
+			doPost(master+"/nodes/die",{},"",pwd)
 		else:
 			print "Canceled"
 	
