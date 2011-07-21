@@ -131,4 +131,3 @@ func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
 
 	w.Write(val)
 }
-
