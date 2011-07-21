@@ -20,6 +20,7 @@ package main
 
 import (
 	"http"
+	"io"
 	"os"
 	"strconv"
 )
@@ -52,7 +53,7 @@ func HandleRestJson(jc JobController, nc NodeController) {
 	if err != nil {
 		log("no password specified")
 	} else {
-		hpw = hashPw(password)
+		hpw = GetHashKey(password)
 	}
 
 	http.Handle("/", &RootHandler{})
@@ -104,7 +105,7 @@ func (this *JobsRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 		log("Method = POST.")
-		if CheckPassword(this.hashedpw, r) == false {
+		if CheckApiKey(this.hashedpw, r) == false {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -156,7 +157,7 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			WriteItemsAsJson("/nodes", this.nodeController, w)
 		}
 	case "POST":
-		if CheckPassword(this.hashedpw, r) == false {
+		if CheckApiKey(this.hashedpw, r) == false {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -191,4 +192,18 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
             }
         }
 	}
+}
+
+func CheckApiKey(hashedpw string, r *http.Request) bool {
+	if hashedpw != "" {
+		pw := GetHashKey(r.Header.Get("x-golem-apikey"))
+		return hashedpw == pw
+	}
+	return true
+}
+
+func GetHashKey(apikey string) string {
+	hash.Reset()
+	io.WriteString(hash, apikey) //TODO: plus salt, or whatever
+	return string(hash.Sum())
 }

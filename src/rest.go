@@ -96,15 +96,6 @@ func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
 	return
 }
 
-func CheckPassword(hashedpw string, r *http.Request) bool {
-	if hashedpw != "" {
-		pw := hashPw(r.Header.Get("Password"))
-		log("Verifying password.")
-		return hashedpw == pw
-	}
-	return true
-}
-
 // TODO : Deal with URI
 func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
 	item, err := r.Retrieve(itemId)

@@ -134,7 +134,7 @@ def doPost(url, paramMap, jsondata,password):
 	headers = { "Content-type": content_type,
 		'content-length':str(len(body)),
 		"Accept": "text/plain",
-		"Password":password }
+		"x-golem-apikey":password }
 
 
 	print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
