@@ -95,3 +95,49 @@ func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
 	return
 }
+
+func CheckPassword(hashedpw string, r *http.Request) bool {
+	if hashedpw != "" {
+		pw := hashPw(r.Header.Get("Password"))
+		log("Verifying password.")
+		return hashedpw == pw
+	}
+	return true
+}
+
+// TODO : Deal with URI
+func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
+	item, err := r.Retrieve(itemId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	val, err := json.Marshal(item)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Write(val)
+}
+
+// TODO : Deal with URI
+func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
+	items, err := r.RetrieveAll()
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	itemsHandle := NewItemsHandle(items)
+
+	val, err := json.Marshal(itemsHandle)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Write(val)
+}
+

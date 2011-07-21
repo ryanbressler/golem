@@ -20,18 +20,9 @@ package main
 
 import (
 	"http"
-	"json"
-	"fmt"
 	"os"
 	"strconv"
 )
-
-// REST interface for Job and Node Controllers
-type RestJsonAPI struct {
-	jobController  JobController
-	nodeController NodeController
-	hashedpw       string
-}
 
 type Retriever interface {
 	RetrieveAll() (items []interface{}, err os.Error)
@@ -43,7 +34,6 @@ type JobController interface {
 	Stop(jobId string) (err os.Error)
 	Kill(jobId string) (err os.Error)
 }
-
 type NodeController interface {
 	Retriever
 	RestartAll() os.Error
@@ -65,12 +55,10 @@ func HandleRestJson(jc JobController, nc NodeController) {
 		hpw = hashPw(password)
 	}
 
-	api := RestJsonAPI{jobController: jc, nodeController: nc, hashedpw: hpw}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { api.rootHandler(w, r) })
+	http.Handle("/", &RootHandler{})
 	http.Handle("/html/", http.FileServer("html", "/html"))
-	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { api.jobHandler(w, r) })
-	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { api.nodeHandler(w, r) })
+	http.Handle("/jobs/", &JobsRestJson{jc, hpw})
+	http.Handle("/nodes/", &NodesRestJson{nc, hpw})
 
 	log("running at %v", hostname)
 
@@ -80,20 +68,26 @@ func HandleRestJson(jc JobController, nc NodeController) {
 	return
 }
 
-// web handlers
-func (this *RestJsonAPI) rootHandler(w http.ResponseWriter, r *http.Request) {
-	log("%v /", r.Method)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, "{ jobs: '/jobs', nodes: '/nodes' }")
+type RootHandler struct {
 }
 
-func (this *RestJsonAPI) jobHandler(w http.ResponseWriter, r *http.Request) {
+func (this *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log("%v /", r.Method)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("{ jobs: '/jobs', nodes: '/nodes' }"))
+}
+
+type JobsRestJson struct {
+	jobController  JobController
+	hashedpw       string
+}
+
+func (this *JobsRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log("%v /jobs", r.Method)
 
 	w.Header().Set("Content-Type", "application/json")
 
 	// TODO : Add logic to retrieve outputs from job
-	// TODO : Manage errors
 
 	switch r.Method {
 	case "GET":
@@ -101,16 +95,16 @@ func (this *RestJsonAPI) jobHandler(w http.ResponseWriter, r *http.Request) {
 		jobId, verb := parseJobUri(r.URL.Path)
 		switch {
 		case jobId != "":
-			this.retrieve("/jobs", jobId, this.jobController, w)
+			WriteItemAsJson("/jobs", jobId, this.jobController, w)
 		case jobId == "" && verb == "":
-			this.retrieveAll("/jobs", this.jobController, w)
+			WriteItemsAsJson("/jobs", this.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 
 	case "POST":
 		log("Method = POST.")
-		if this.checkPassword(r) == false {
+		if CheckPassword(this.hashedpw, r) == false {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -131,7 +125,7 @@ func (this *RestJsonAPI) jobHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			fmt.Fprintf(w, "{ uri: '/jobs/%v' id:'%v' }", jobId, jobId)
+            WriteItemAsJson("/jobs", jobId, this.jobController, w)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -141,8 +135,13 @@ func (this *RestJsonAPI) jobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (this *RestJsonAPI) nodeHandler(w http.ResponseWriter, r *http.Request) {
-	log("nodeHandler")
+type NodesRestJson struct {
+	nodeController NodeController
+	hashedpw       string
+}
+
+func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log("%v /nodes", r.Method)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -152,89 +151,44 @@ func (this *RestJsonAPI) nodeHandler(w http.ResponseWriter, r *http.Request) {
 		nparts := len(pathParts)
 		switch {
 		case nparts == 2:
-			this.retrieve("/nodes", pathParts[1], this.nodeController, w)
+			WriteItemAsJson("/nodes", pathParts[1], this.nodeController, w)
 		default:
-			this.retrieveAll("/nodes", this.nodeController, w)
+			WriteItemsAsJson("/nodes", this.nodeController, w)
 		}
 	case "POST":
-		if this.checkPassword(r) == false {
+		if CheckPassword(this.hashedpw, r) == false {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
-		err := this.postNodeHandler(r)
-		if err != nil {
-			w.WriteHeader(500)
-		} else {
-			w.WriteHeader(200)
-		}
+        spliturl := splitRestUrl(r.URL.Path)
+        nsplit := len(spliturl)
+        switch {
+        case nsplit == 2 && spliturl[1] == "restart":
+            if err := this.nodeController.RestartAll(); err != nil {
+                w.WriteHeader(http.StatusInternalServerError)
+                return
+            }
+
+
+        case nsplit == 2 && spliturl[1] == "die":
+            if err := this.nodeController.KillAll(); err != nil {
+                w.WriteHeader(http.StatusInternalServerError)
+                return
+            }
+
+        case nsplit == 4 && spliturl[2] == "resize":
+            numberOfThreads, err := strconv.Atoi(spliturl[3])
+            if err != nil {
+                w.WriteHeader(http.StatusBadRequest)
+                return
+            }
+
+            nodeId := spliturl[1]
+            if err = this.nodeController.Resize(nodeId, numberOfThreads); err != nil {
+                w.WriteHeader(http.StatusInternalServerError)
+                return
+            }
+        }
 	}
-}
-
-func (this *RestJsonAPI) postNodeHandler(r *http.Request) os.Error {
-	spliturl := splitRestUrl(r.URL.Path)
-	nsplit := len(spliturl)
-	switch {
-	case nsplit == 2 && spliturl[1] == "restart":
-		return this.nodeController.RestartAll()
-
-	case nsplit == 2 && spliturl[1] == "die":
-		return this.nodeController.KillAll()
-
-	case nsplit == 4 && spliturl[2] == "resize":
-		nodeId := spliturl[1]
-		numberOfThreads, err := strconv.Atoi(spliturl[3])
-		if err != nil {
-			return err
-		}
-		return this.nodeController.Resize(nodeId, numberOfThreads)
-	}
-	return nil
-}
-
-func (this *RestJsonAPI) checkPassword(r *http.Request) bool {
-	if this.hashedpw != "" {
-		pw := hashPw(r.Header.Get("Password"))
-		log("Verifying password.")
-		return this.hashedpw == pw
-	}
-	return true
-}
-
-// TODO : Deal with URI
-func (this *RestJsonAPI) retrieve(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
-	item, err := r.Retrieve(itemId)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	val, err := json.Marshal(item)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Write(val)
-}
-
-// TODO : Deal with URI
-func (this *RestJsonAPI) retrieveAll(baseUri string, r Retriever, w http.ResponseWriter) {
-	items, err := r.RetrieveAll()
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	vlog("RestJsonAPI.retrieveAll(%v):%v", baseUri, items)
-
-	itemsHandle := NewItemsHandle(items)
-
-	val, err := json.Marshal(itemsHandle)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Write(val)
 }
