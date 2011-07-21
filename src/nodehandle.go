@@ -41,7 +41,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	con := *n
 	id := UniqueId()
 	nh := NodeHandle{NodeId: id,
-		Uri:           "/admin/" + id,
+		Uri:           "/nodes/" + id,
 		Hostname:      con.Socket.LocalAddr().String(),
 		Master:        m,
 		Con:           con,

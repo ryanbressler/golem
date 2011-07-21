@@ -70,7 +70,6 @@ func NewRestOnJob(jc JobController, nc NodeController) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { j.rootHandler(w, r) })
 	http.Handle("/html/", http.FileServer("html", "/html"))
 	http.HandleFunc("/jobs/", func(w http.ResponseWriter, r *http.Request) { j.jobHandler(w, r) })
-	http.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
 	http.HandleFunc("/nodes/", func(w http.ResponseWriter, r *http.Request) { j.nodeHandler(w, r) })
 
 	log("running at %v", hostname)
