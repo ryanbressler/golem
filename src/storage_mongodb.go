@@ -122,6 +122,8 @@ func (this *MongoJobStore) Active() (items []JobHandle, err os.Error) {
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobPackage, err os.Error) {
+	log("Get(%v)", jobId)
+
 	job := GolemJobC{}
 
 	err = this.JobsCollection().Find(bson.M{"id": jobId}).One(&job)
@@ -136,6 +138,11 @@ func (this *MongoJobStore) Get(jobId string) (item JobPackage, err os.Error) {
 }
 
 func (this *MongoJobStore) Update(jobId string, status JobStatus) (err os.Error) {
+	if jobId == "" {
+		err = os.NewError("No Job Id Found")
+		return
+	}
+
 	now := time.Time{}
 
 	modifierMap := make(map[string]interface{})
@@ -150,11 +157,17 @@ func (this *MongoJobStore) Update(jobId string, status JobStatus) (err os.Error)
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobHandle, err os.Error) {
+	log("FindJobs(%v)", m)
+
+	iter, err := this.JobsCollection().Find(m).Iter()
+	if err != nil {
+		return
+	}
+
 	job := GolemJobC{}
-	err = this.JobsCollection().Find(m).For(&job, func() os.Error {
+	for err = iter.Next(&job); err != nil; {
 		items = append(items, job.ToJobHandle())
-		return nil
-	})
+	}
 
 	log("Found %v %v jobs:", len(items), m)
 	return
@@ -183,6 +196,11 @@ func NewMongoSession() *mgo.Session {
 }
 
 func ParseTime(stringTime string) (tm *time.Time) {
+	if stringTime == "" {
+		tm = &time.Time{}
+		return
+	}
+
 	tm, err := time.Parse("UnixDate", stringTime)
 	if err != nil {
 		log("ParseTime(%v):%v", stringTime, err)
