@@ -120,11 +120,13 @@ func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
 
 	now := time.Time{}
 
+	progress := item.Progress
+
 	modifierMap := make(map[string]interface{})
 	modifierMap["scheduled"] = item.Scheduled
 	modifierMap["running"] = item.Running
-	modifierMap["taskerrored"] = item.Errored
-	modifierMap["taskfinished"] = item.Finished
+	modifierMap["taskerrored"] = progress.Errored
+	modifierMap["taskfinished"] = progress.Finished
 	modifierMap["lastmodified"] = now.String()
 
     // TODO: Proper update

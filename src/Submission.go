@@ -27,7 +27,7 @@ import (
 
 // TODO: Kill submissions once they finish.
 type Submission struct {
-    Details           JobDetails
+    Details           chan JobDetails
 	Tasks            []Task
 
 	CoutFileChan     chan string
@@ -39,7 +39,7 @@ type Submission struct {
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
 	s := Submission{
-	    Details: jd,
+	    Details: make(chan JobDetails, 1),
 		Tasks:      tasks,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
@@ -47,7 +47,9 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
 		FinishedChan:     make(chan *Job, 1),
 		stopChan:         make(chan int, 0) }
 
-	go s.monitorJobs()
+    s.Details <- jd
+
+	go s.MonitorWorkTasks()
 	go s.writeIo()
 	go s.submitJobs(jobChan)
 
@@ -55,66 +57,90 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
 }
 
 func (s *Submission) Stop() bool {
-	if s.Details.Running {
+    dtls := s.SniffDetails()
+
+	if dtls.Running {
 		select {
 		case s.stopChan <- 1:
-			log("stopped: %v", s.Details.JobId)
-			s.Details.Running = false
+		    dtls := <- s.Details
+		    dtls.Running = false
+		    s.Details <- dtls
+
+			log("Submission.Stop(): %v", dtls.JobId)
 		case <-time.After(250000000):
-			log("timeout stopping: %v", s.Details.JobId)
+			log("timeout stopping: %v", dtls.JobId)
 		}
 	}
-	return s.Details.Running
+
+	return s.SniffDetails().Running
 }
 
-func (s Submission) monitorJobs() {
-	vlog("monitorJobs")
+func (this *Submission) SniffDetails() JobDetails {
+    dtls := <- this.Details
+    this.Details <- dtls
+	return dtls
+}
 
-	for {
-		select {
-		case <-s.ErrorChan:
-			s.Details.Errored = 1 + s.Details.Errored
-		case <-s.FinishedChan:
-            s.Details.Finished = 1 + s.Details.Finished
-		}
+func (s Submission) MonitorWorkTasks() {
+    for {
+            select {
+            case <-s.ErrorChan:
+                    Det := <-s.Details
+                    Det.Progress.Errored++
+                    s.Details<-Det
 
-		vlog("updating job: %v, %v", s.Details.JobId, s.Details.isComplete())
-		if s.Details.isComplete() {
-			s.Details.Running = false
-			log("job completed: %v", s.Details.JobId)
-			return
-		}
-	}
+                    vlog("MonitorWorkTasks [ERROR]", Det.JobId)
+
+            case <-s.FinishedChan:
+                    Det := <-s.Details
+                    Det.Progress.Finished++
+                    s.Details<-Det
+
+                    vlog("MonitorWorkTasks [FINISHED]", Det.JobId)
+            }
+
+            dtls := s.SniffDetails()
+            if dtls.Progress.isComplete() {
+                    vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
+                    dtls = <- s.Details
+                    dtls.Running = false
+                    s.Details <- dtls
+                    return
+            }
+
+    }
 }
 
 func (s Submission) submitJobs(jobChan chan *Job) {
 	vlog("submitJobs")
 
+    dtls := s.SniffDetails()
 	taskId := 0
 	for lineId, vals := range s.Tasks {
 		vlog("submitJobs:[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
-			case jobChan <- &Job{SubId: s.Details.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
+			case jobChan <- &Job{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
 				taskId++
 			case <-s.stopChan:
 				return //TODO: add indication that we stopped
 			}
 		}
 	}
-	log("[%d] tasks submitted for [%v]", taskId, s.Details.JobId)
+	log("[%d] tasks submitted for [%v]", taskId, dtls.JobId)
 }
 
 func (s Submission) writeIo() {
-	vlog("Submission.writeIo(%v)", s.Details.JobId)
+    dtls := s.SniffDetails()
+	vlog("Submission.writeIo(%v)", dtls.JobId)
 
-	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.Details.JobId))
+	outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
 	if err != nil {
 		log("writeIo: %v", err)
 	}
 	defer outf.Close()
 
-	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.Details.JobId))
+	errf, err := os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
 	if err != nil {
 		log("writeIo: %v", err)
 	}
