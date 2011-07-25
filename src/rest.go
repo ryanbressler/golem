@@ -96,16 +96,20 @@ func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
 	return
 }
 
-// TODO : Deal with URI
+// TODO : Deal with URI, proper not found
 func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
 	item, err := r.Retrieve(itemId)
 	if err != nil {
+        vlog("WriteItemsAsJson(%v/%v):%v", baseUri, itemId, err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
+	vlog("WriteItemsAsJson(%v/%v):item=%v", baseUri, itemId, item)
+
 	val, err := json.Marshal(item)
 	if err != nil {
+	    vlog("WriteItemsAsJson(%v/%v):%v", baseUri, itemId, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -113,18 +117,21 @@ func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.Response
 	w.Write(val)
 }
 
-// TODO : Deal with URI
+// TODO : Deal with URI, proper not found
 func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
 	items, err := r.RetrieveAll()
 	if err != nil {
+	    vlog("WriteItemsAsJson(%v):%v", baseUri, err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	itemsHandle := NewItemsHandle(items)
+	itemsHandle := ItemsHandle{Items: items, NumberOfItems: len(items)}
+	log("WriteItemsAsJson(%v):%v", baseUri, itemsHandle)
 
 	val, err := json.Marshal(itemsHandle)
 	if err != nil {
+	    vlog("WriteItemsAsJson(%v):%v", baseUri, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

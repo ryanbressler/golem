@@ -20,59 +20,21 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"time"
 )
 
 type JobStore interface {
-	Create(item JobPackage) (err os.Error)
+	Create(item JobDetails) (err os.Error)
 
-	All() (items []JobHandle, err os.Error)
+	All() (items []JobDetails, err os.Error)
 
-	Active() (items []JobHandle, err os.Error)
+	Active() (items []JobDetails, err os.Error)
 
-	Unscheduled() (items []JobHandle, err os.Error)
+	Unscheduled() (items []JobDetails, err os.Error)
 
-	Get(jobId string) (item JobPackage, err os.Error)
+	Get(jobId string) (item JobDetails, err os.Error)
 
-	Update(jobId string, status JobStatus) (err os.Error)
-}
+	Tasks(identity Identity) (tasks []Task, err os.Error)
 
-type JobHandle struct {
-	JobId        string
-	Owner        string
-	Label        string
-	Type         string
-	FirstCreated *time.Time
-	LastModified *time.Time
-	Status       JobStatus
-}
-
-func (h JobHandle) MarshalJSON() ([]byte, os.Error) {
-	s := h.Status
-	rv := fmt.Sprintf("{ uri:\"/jobs/%v\", id:\"%v\", createdAt:\"%v\", modifiedAt:\"%v\", totalTasks:%v, finishedTasks:%v, erroredTasks:%v, isRunning:%v }", h.JobId, h.JobId, s.TotalTasks, s.FinishedTasks, s.ErroredTasks, s.Running)
-	return []byte(rv), nil
-}
-
-type JobStatus struct {
-	TotalTasks    int
-	FinishedTasks int
-	ErroredTasks  int
-	Running       bool
-}
-
-type JobPackage struct {
-	Handle JobHandle
-	Tasks  []Task
-}
-
-func (j JobPackage) MarshalJSON() ([]byte, os.Error) {
-	h := j.Handle
-	return h.MarshalJSON()
-}
-
-type Task struct {
-	Count int
-	Args  []string
+	Update(jobId string, status Status, progress Progress) (err os.Error)
 }

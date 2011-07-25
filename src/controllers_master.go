@@ -29,10 +29,11 @@ type MasterJobController struct {
 }
 
 func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("RetrieveAll")
+	log("MasterJobController.RetrieveAll")
 
 	for _, s := range c.master.subMap {
-		items = append(items, NewJobSubmission(s))
+	    js := JobDetails{Identity: s.Identity, Description: s.Description, Status: s.Status, Progress: s.Progress}
+		items = append(items, js)
 	}
 
 	return
@@ -40,27 +41,35 @@ func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
 func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
 	log("Retrieve:%v", jobId)
 
-	job, isin := c.master.subMap[jobId]
+	s, isin := c.master.subMap[jobId]
 	if isin == false {
 		err = os.NewError("job " + jobId + " not found")
 	}
-	item = NewJobSubmission(job)
+	item = JobDetails{Identity: s.Identity, Description: s.Description, Status: s.Status, Progress: s.Progress}
 	return
 }
 func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	log("NewJob")
-
 	tasks := make([]Task, 0, 100)
 	if err = loadJson(r, &tasks); err != nil {
-		vlog("NewJob: %v", err)
+		vlog("MasterJobController.NewJob: %v", err)
 		return
 	}
 
-	vlog("NewJob: tasks [%d]", len(tasks))
-	s := NewSubmission(tasks, c.master.jobChan)
-	jobId = s.SubId
-	c.master.subMap[jobId] = s
-	log("NewJob: %v", jobId)
+    jobId = getHeader(r, "x-golem-job-preassigned-id", "")
+    if jobId == "" { jobId = UniqueId() }
+
+	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
+	label := getHeader(r, "x-golem-job-label", jobId)
+	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
+
+    jd := JobDetails{
+        Identity: Identity{ JobId: jobId, Uri: "/jobs/" + jobId },
+        Description: Description{Owner: owner, Label: label, Type: jobtype},
+        Status: InitialStatus(), Progress: InitialProgress(tasks),
+        Tasks: tasks }
+
+	c.master.subMap[jobId] = NewSubmission(jd, c.master.jobChan)
+	log("NewJob: %v", jd.Identity)
 
 	return
 }
@@ -95,7 +104,7 @@ type MasterNodeController struct {
 }
 
 func (c MasterNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("RetrieveAll")
+	log("MasterJobController.RetrieveAll")
 
 	for _, n := range c.master.NodeHandles {
 		items = append(items, NewWorkerNode(n))
