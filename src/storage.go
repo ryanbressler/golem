@@ -34,7 +34,7 @@ type JobStore interface {
 
 	Get(jobId string) (item JobDetails, err os.Error)
 
-	Tasks(identity Identity) (tasks []Task, err os.Error)
+	Tasks(jobId string) (tasks []Task, err os.Error)
 
-	Update(jobId string, status Status, progress Progress) (err os.Error)
+	Update(item JobDetails) (err os.Error)
 }

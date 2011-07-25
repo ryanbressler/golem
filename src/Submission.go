@@ -27,10 +27,7 @@ import (
 
 // TODO: Kill submissions once they finish.
 type Submission struct {
-	Identity          Identity
-	Description    Description
-	Status            Status
-	Progress        Progress
+    Details           JobDetails
 	Tasks            []Task
 
 	CoutFileChan     chan string
@@ -42,10 +39,7 @@ type Submission struct {
 
 func NewSubmission(jd JobDetails, jobChan chan *Job) *Submission {
 	s := Submission{
-	    Identity: jd.Identity,
-	    Description: jd.Description,
-	    Status: jd.Status,
-	    Progress: jd.Progress,
+	    Details: jd,
 		Tasks:      jd.Tasks,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
@@ -61,16 +55,16 @@ func NewSubmission(jd JobDetails, jobChan chan *Job) *Submission {
 }
 
 func (s *Submission) Stop() bool {
-	if s.Status.Running {
+	if s.Details.Running {
 		select {
 		case s.stopChan <- 1:
-			log("stopped: %v", s.Identity)
-			s.Status.Running = false
+			log("stopped: %v", s.Details.JobId)
+			s.Details.Running = false
 		case <-time.After(250000000):
-			log("timeout stopping: %v", s.Identity)
+			log("timeout stopping: %v", s.Details.JobId)
 		}
 	}
-	return s.Status.Running
+	return s.Details.Running
 }
 
 func (s Submission) monitorJobs() {
@@ -79,15 +73,15 @@ func (s Submission) monitorJobs() {
 	for {
 		select {
 		case <-s.ErrorChan:
-			s.Progress.Errored = 1 + s.Progress.Errored
+			s.Details.Errored = 1 + s.Details.Errored
 		case <-s.FinishedChan:
-            s.Progress.Finished = 1 + s.Progress.Finished
+            s.Details.Finished = 1 + s.Details.Finished
 		}
 
-		vlog("updating job: %v, %v, %v", s.Identity, s.Progress, s.Status)
-		if s.Progress.isComplete() {
-			s.Status.Running = false
-			log("job completed: %v, %v, %v", s.Identity, s.Progress, s.Status)
+		vlog("updating job: %v, %v", s.Details.JobId, s.Details.isComplete())
+		if s.Details.isComplete() {
+			s.Details.Running = false
+			log("job completed: %v", s.Details.JobId)
 			return
 		}
 	}
@@ -101,26 +95,26 @@ func (s Submission) submitJobs(jobChan chan *Job) {
 		vlog("submitJobs:[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
-			case jobChan <- &Job{SubId: s.Identity.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
+			case jobChan <- &Job{SubId: s.Details.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
 				taskId++
 			case <-s.stopChan:
 				return //TODO: add indication that we stopped
 			}
 		}
 	}
-	log("[%d] tasks submitted for [%v]", taskId, s.Identity)
+	log("[%d] tasks submitted for [%v]", taskId, s.Details.JobId)
 }
 
 func (s Submission) writeIo() {
-	vlog("Submission.writeIo(%v)", s.Identity)
+	vlog("Submission.writeIo(%v)", s.Details.JobId)
 
-	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.Identity.JobId))
+	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.Details.JobId))
 	if err != nil {
 		log("writeIo: %v", err)
 	}
 	defer outf.Close()
 
-	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.Identity.JobId))
+	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.Details.JobId))
 	if err != nil {
 		log("writeIo: %v", err)
 	}

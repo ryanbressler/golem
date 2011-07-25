@@ -53,7 +53,7 @@ func LaunchScribe(store JobStore) {
 func (this *Scribe) PollJobs() {
     vlog("Scribe.PollJobs")
 	for _, js := range this.GetJobs() {
-		this.store.Update(js.Identity.JobId, js.Status, js.Progress)
+		this.store.Update(js)
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
@@ -80,17 +80,17 @@ func (this *Scribe) GetJobs() []JobDetails {
 }
 
 func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
-	log("Scribe.PostJob(%v)", jd.Identity)
+	log("Scribe.PostJob(%v)", jd.JobId)
 
-	tasks, err := this.store.Tasks(jd.Identity)
+	tasks, err := this.store.Tasks(jd.JobId)
 	if err != nil {
-	    vlog("Scribe.PostJob(%v):%v", jd.Identity, err)
+	    vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
 		return
 	}
 
 	taskJson, err := json.Marshal(tasks)
 	if err != nil {
-	    vlog("Scribe.PostJob(%v):%v", jd.Identity, err)
+	    vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
 		return
 	}
 
@@ -98,7 +98,7 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	data["jsonfile"] = string(taskJson)
 
 	header := http.Header{}
-	header.Set("x-golem-job-preassigned-id", jd.Identity.JobId)
+	header.Set("x-golem-job-preassigned-id", jd.JobId)
 	http.PostForm(this.masterJobsUrl, data)
 
 	return

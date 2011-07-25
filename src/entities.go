@@ -33,6 +33,11 @@ type JobDetailsList struct {
     NumberOfItems int
 }
 
+type WorkerNodeList struct {
+    Items []WorkerNode
+    NumberOfItems int
+}
+
 type WorkerNode struct {
 	NodeId   string
 	Uri      string
@@ -48,63 +53,49 @@ func NewWorkerNode(nh *NodeHandle) WorkerNode {
 }
 
 // reformed entities
-type Identity struct {
-    JobId string
-    Uri string
-}
-
-type Description struct {
-    Owner string
-    Label string
-    Type string
-}
-
-type Timing struct {
-	FirstCreated *time.Time
-	LastModified *time.Time
-}
-
-type Progress struct {
-	Total  int
-	Finished  int
-	Errored  int
-}
-
-type Status struct {
-    // TODO : State
-    Running       bool
-    Scheduled   bool
-}
-
 type Task struct {
 	Count int
 	Args  []string
 }
 
 type JobDetails struct {
-    Identity Identity
-    Description Description
-    Timing Timing
-    Progress Progress
-    Status Status
+    JobId string
+    Uri string
+
+    Owner string
+    Label string
+    Type string
+
+	FirstCreated *time.Time
+	LastModified *time.Time
+
+	Total  int
+	Finished  int
+	Errored  int
+
+    Running       bool
+    Scheduled   bool
+
     Tasks []Task
 }
 
-func InitialStatus() Status {
-    return Status{false, false}
+func (this JobDetails) isComplete() bool {
+    return this.Total == (this.Finished + this.Errored)
 }
-func InitialProgress(tasks []Task) Progress {
+
+func NewJobDetails(jobId string, owner string, label string, jobtype string, tasks []Task) JobDetails {
+    now := time.Time{}
+
 	totalTasks := 0
 	for _, task := range tasks {
 		totalTasks += task.Count
 	}
-    return Progress{Total:totalTasks,Finished:0,Errored:0}
-}
-func InitialTiming() Timing {
-    now := time.Time{}
-    return Timing{&now, &now}
-}
 
-func (this Progress) isComplete() bool {
-    return this.Total == (this.Finished + this.Errored)
+    return JobDetails{
+        JobId: jobId, Uri: "/jobs/" + jobId,
+        Owner: owner, Label: label, Type: jobtype,
+        Total:totalTasks,Finished:0,Errored:0,
+        Running: false, Scheduled: false,
+        FirstCreated: &now, LastModified: &now,
+        Tasks: tasks }
 }
