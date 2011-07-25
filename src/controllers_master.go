@@ -63,9 +63,9 @@ func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
-    jd := NewJobDetails(jobId, owner, label, jobtype, tasks)
+    jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 
-	c.master.subMap[jobId] = NewSubmission(jd, c.master.jobChan)
+	c.master.subMap[jobId] = NewSubmission(jd, tasks, c.master.jobChan)
 	log("NewJob: %v", jd.JobId)
 
 	return

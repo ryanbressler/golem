@@ -26,9 +26,6 @@ import (
 	"launchpad.net/gobson/bson"
 )
 
-//		FirstCreated: ParseTime(this.TimeCreated),
-//		LastModified: ParseTime(this.LastModified),
-
 type MongoJobStore struct {
 	session       *mgo.Session
 	storename     string
@@ -55,8 +52,9 @@ func NewMongoJobStore() *MongoJobStore {
 		jobCollection: jobCollection}
 }
 
-func (this *MongoJobStore) Create(item JobDetails) (err os.Error) {
+func (this *MongoJobStore) Create(item JobDetails, tasks []Task) (err os.Error) {
 	vlog("MongoJobStore.Create(%v)", item)
+	// TODO : Persist tasks
 	this.JobsCollection().Insert(item)
 	return
 }

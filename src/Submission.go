@@ -37,10 +37,10 @@ type Submission struct {
 	stopChan         chan int
 }
 
-func NewSubmission(jd JobDetails, jobChan chan *Job) *Submission {
+func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
 	s := Submission{
 	    Details: jd,
-		Tasks:      jd.Tasks,
+		Tasks:      tasks,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
 		ErrorChan:        make(chan *Job, 1),

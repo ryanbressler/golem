@@ -75,27 +75,26 @@ type JobDetails struct {
 
     Running       bool
     Scheduled   bool
-
-    Tasks []Task
 }
 
 func (this JobDetails) isComplete() bool {
     return this.Total == (this.Finished + this.Errored)
 }
 
-func NewJobDetails(jobId string, owner string, label string, jobtype string, tasks []Task) JobDetails {
+func NewJobDetails(jobId string, owner string, label string, jobtype string, totalTasks int) JobDetails {
     now := time.Time{}
-
-	totalTasks := 0
-	for _, task := range tasks {
-		totalTasks += task.Count
-	}
 
     return JobDetails{
         JobId: jobId, Uri: "/jobs/" + jobId,
         Owner: owner, Label: label, Type: jobtype,
         Total:totalTasks,Finished:0,Errored:0,
         Running: false, Scheduled: false,
-        FirstCreated: &now, LastModified: &now,
-        Tasks: tasks }
+        FirstCreated: &now, LastModified: &now}
+}
+
+func TotalTasks(tasks []Task) (totalTasks int)  {
+ 	for _, task := range tasks {
+ 		totalTasks += task.Count
+ 	}
+    return
 }
