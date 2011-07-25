@@ -51,7 +51,7 @@ func LaunchScribe(store JobStore) {
 }
 
 func (this *Scribe) PollJobs() {
-    vlog("Scribe.PollJobs")
+	vlog("Scribe.PollJobs")
 	for _, js := range this.GetJobs() {
 		this.store.Update(js)
 	}
@@ -64,10 +64,10 @@ func (this *Scribe) PollJobs() {
 }
 
 func (this *Scribe) GetJobs() []JobDetails {
-    vlog("Scribe.GetJobs()")
+	vlog("Scribe.GetJobs()")
 	resp, _, err := http.Get(this.masterJobsUrl)
 	if err != nil {
-	    vlog("Scribe.GetJobs:%v", err)
+		vlog("Scribe.GetJobs:%v", err)
 		return nil
 	}
 
@@ -84,13 +84,13 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	tasks, err := this.store.Tasks(jd.JobId)
 	if err != nil {
-	    vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
+		vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
 		return
 	}
 
 	taskJson, err := json.Marshal(tasks)
 	if err != nil {
-	    vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
+		vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
 		return
 	}
 

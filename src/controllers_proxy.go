@@ -145,7 +145,7 @@ func (c ProxyNodeController) RestartAll() os.Error {
 	return err
 }
 func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) (err os.Error) {
-    log("ProxyNodeController.Resize:%v,%d", nodeId, numberOfThreads)
+	log("ProxyNodeController.Resize:%v,%d", nodeId, numberOfThreads)
 	_, err = Proxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.proxy, nil)
 	return
 }
@@ -156,7 +156,7 @@ func (c ProxyNodeController) KillAll() os.Error {
 
 // proxy support
 type JsonResponseWriter struct {
-	Content chan []byte
+	Content    chan []byte
 	StatusCode chan int
 }
 
@@ -164,16 +164,16 @@ func (w JsonResponseWriter) Header() http.Header {
 	return http.Header{}
 }
 func (w JsonResponseWriter) Write(b []byte) (int, os.Error) {
-    w.Content <- b
+	w.Content <- b
 	return 0, os.EOF
 }
 func (w JsonResponseWriter) WriteHeader(i int) {
-    w.StatusCode <- i
+	w.StatusCode <- i
 	return
 }
 
 func Proxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
-    vlog("Proxy(%v %v)", method, uri)
+	vlog("Proxy(%v %v)", method, uri)
 	if reader == nil {
 		reader = strings.NewReader("")
 	}
@@ -185,18 +185,18 @@ func Proxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader
 
 	r.Header.Set("x-golem-apikey", "test")
 
-    content := make(chan []byte, 1)
-    statuscode := make(chan int, 1)
+	content := make(chan []byte, 1)
+	statuscode := make(chan int, 1)
 	proxy.ServeHTTP(JsonResponseWriter{Content: content, StatusCode: statuscode}, r)
 
-	code := <- statuscode
+	code := <-statuscode
 	if http.StatusOK != code {
-	    // TODO : Figure out why this hangs...
-        vlog("Proxy(%v %v) [%d]", method, uri, code)
-        err = os.NewError(fmt.Sprintf("Inappropriate response [%v]", code))
-        return
+		// TODO : Figure out why this hangs...
+		vlog("Proxy(%v %v) [%d]", method, uri, code)
+		err = os.NewError(fmt.Sprintf("Inappropriate response [%v]", code))
+		return
 	}
 
-    val = <- content
-    return
+	val = <-content
+	return
 }
