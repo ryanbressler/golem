@@ -32,8 +32,7 @@ func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	log("MasterJobController.RetrieveAll")
 
 	for _, s := range c.master.subMap {
-	    js := JobDetails{Identity: s.Identity, Description: s.Description, Status: s.Status, Progress: s.Progress}
-		items = append(items, js)
+		items = append(items, s.Details)
 	}
 
 	return
@@ -44,8 +43,10 @@ func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Er
 	s, isin := c.master.subMap[jobId]
 	if isin == false {
 		err = os.NewError("job " + jobId + " not found")
+		return
 	}
-	item = JobDetails{Identity: s.Identity, Description: s.Description, Status: s.Status, Progress: s.Progress}
+
+	item = s.Details
 	return
 }
 func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
@@ -62,14 +63,10 @@ func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
-    jd := JobDetails{
-        Identity: Identity{ JobId: jobId, Uri: "/jobs/" + jobId },
-        Description: Description{Owner: owner, Label: label, Type: jobtype},
-        Status: InitialStatus(), Progress: InitialProgress(tasks),
-        Tasks: tasks }
+    jd := NewJobDetails(jobId, owner, label, jobtype, tasks)
 
 	c.master.subMap[jobId] = NewSubmission(jd, c.master.jobChan)
-	log("NewJob: %v", jd.Identity)
+	log("NewJob: %v", jd.JobId)
 
 	return
 }

@@ -127,7 +127,7 @@ func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
 	}
 
 	itemsHandle := ItemsHandle{Items: items, NumberOfItems: len(items)}
-	log("WriteItemsAsJson(%v):%v", baseUri, itemsHandle)
+	vlog("WriteItemsAsJson(%v):%v", baseUri, itemsHandle)
 
 	val, err := json.Marshal(itemsHandle)
 	if err != nil {

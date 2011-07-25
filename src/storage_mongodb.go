@@ -95,27 +95,27 @@ func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 	return
 }
 
-func (this *MongoJobStore) Tasks(identity Identity) (tasks []Task, err os.Error) {
-	vlog("MongoJobStore.Tasks(%v)", identity)
+func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
+	vlog("MongoJobStore.Tasks(%v)", jobId)
 
     m := make(map[string]interface{})
 
- 	err = this.JobsCollection().Find(bson.M{"jobid": identity.JobId}).One(m)
+ 	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
 	if err != nil {
-	    vlog("MongoJobStore.Tasks(%v):err=%v", identity, err)
+	    vlog("MongoJobStore.Tasks(%v):err=%v", jobId, err)
 		return
 	}
 
-	vlog("MongoJobStore.Tasks(%v):item=%v", identity, m)
-	vlog("MongoJobStore.Tasks(%v):item=%v", identity, m["tasks"])
+	vlog("MongoJobStore.Tasks(%v):item=%v", jobId, m)
+	vlog("MongoJobStore.Tasks(%v):item=%v", jobId, m["tasks"])
 
 	// TODO : Populate job details
 
 	return
 }
 
-func (this *MongoJobStore) Update(jobId string, status Status, progress Progress) (err os.Error) {
-	if jobId == "" {
+func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
+	if item.JobId == "" {
 		err = os.NewError("No Job Id Found")
 		return
 	}
@@ -123,14 +123,14 @@ func (this *MongoJobStore) Update(jobId string, status Status, progress Progress
 	now := time.Time{}
 
 	modifierMap := make(map[string]interface{})
-	modifierMap["scheduled"] = status.Scheduled
-	modifierMap["running"] = status.Running
-	modifierMap["taskerrored"] = progress.Errored
-	modifierMap["taskfinished"] = progress.Finished
-	modifierMap["tasktotal"] = progress.Total
+	modifierMap["scheduled"] = item.Scheduled
+	modifierMap["running"] = item.Running
+	modifierMap["taskerrored"] = item.Errored
+	modifierMap["taskfinished"] = item.Finished
 	modifierMap["lastmodified"] = now.String()
 
-	err = this.JobsCollection().Update(bson.M{"jobid": jobId}, modifierMap)
+    // TODO: Proper update
+	err = this.JobsCollection().Update(bson.M{"jobid": item.JobId}, modifierMap)
 	return
 }
 

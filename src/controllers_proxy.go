@@ -78,13 +78,13 @@ func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error)
 		return
 	}
 
-	js := JobDetails{}
-	err = json.Unmarshal(val, js)
+	jd := JobDetails{}
+	err = json.Unmarshal(val, jd)
 	if err != nil {
 		return
 	}
 
-	jobId = js.Identity.JobId
+	jobId = jd.JobId
 	return
 }
 func (c ProxyJobController) Stop(jobId string) os.Error {
@@ -119,12 +119,13 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	if err != nil {
 		return
 	}
-	workerNodes := []WorkerNode{}
-	if err = json.Unmarshal(val, workerNodes); err != nil {
+
+	lst := WorkerNodeList{}
+	if err = json.Unmarshal(val, lst); err != nil {
 		return
 	}
 
-	for _, item := range workerNodes {
+	for _, item := range lst.Items {
 		items = append(items, item)
 	}
 	return

@@ -53,11 +53,7 @@ func (this ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Er
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
-    job := JobDetails{
-        Identity: Identity{ JobId: jobId, Uri: "/jobs/" + jobId },
-        Description: Description{Owner: owner, Label: label, Type: jobtype},
-        Status: InitialStatus(), Progress: InitialProgress(tasks), Timing: InitialTiming(),
-        Tasks: tasks }
+    job := NewJobDetails(jobId, owner, label, jobtype, tasks)
 	err = this.store.Create(job)
 	return
 }
