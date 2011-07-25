@@ -30,6 +30,7 @@ const (
 )
 
 var verbose = false
+var iobuffersize = 1000
 var ConfigFile *conf.ConfigFile
 var useTls bool = true
 var hash = sha256.New() // use the same hasher
