@@ -20,6 +20,7 @@
 package main
 
 import (
+	"fmt"
 	"http"
 	"io"
 	"json"
@@ -47,7 +48,7 @@ func NewProxyJobController() ProxyJobController {
 }
 
 func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := doProxy("GET", "/jobs/", c.proxy, nil)
+	val, err := Proxy("GET", "/jobs/", c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -64,7 +65,7 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	return
 }
 func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
-	val, err := doProxy("GET", "/jobs/"+jobId, c.proxy, nil)
+	val, err := Proxy("GET", "/jobs/"+jobId, c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -73,7 +74,7 @@ func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Err
 	return
 }
 func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	val, err := doProxy("POST", "/jobs/"+jobId, c.proxy, r.Body)
+	val, err := Proxy("POST", "/jobs/"+jobId, c.proxy, r.Body)
 	if err != nil {
 		return
 	}
@@ -88,11 +89,11 @@ func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error)
 	return
 }
 func (c ProxyJobController) Stop(jobId string) os.Error {
-	_, err := doProxy("POST", "/jobs/"+jobId+"/stop", c.proxy, nil)
+	_, err := Proxy("POST", "/jobs/"+jobId+"/stop", c.proxy, nil)
 	return err
 }
 func (c ProxyJobController) Kill(jobId string) os.Error {
-	_, err := doProxy("POST", "/jobs/"+jobId+"/kill", c.proxy, nil)
+	_, err := Proxy("POST", "/jobs/"+jobId+"/kill", c.proxy, nil)
 	return err
 }
 
@@ -115,7 +116,7 @@ func NewProxyNodeController() ProxyNodeController {
 }
 
 func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := doProxy("GET", "/nodes/", c.proxy, nil)
+	val, err := Proxy("GET", "/nodes/", c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -131,7 +132,7 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	return
 }
 func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	val, err := doProxy("GET", "/nodes/"+nodeId, c.proxy, nil)
+	val, err := Proxy("GET", "/nodes/"+nodeId, c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -140,21 +141,23 @@ func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.E
 	return
 }
 func (c ProxyNodeController) RestartAll() os.Error {
-	_, err := doProxy("POST", "/nodes/restart", c.proxy, nil)
+	_, err := Proxy("POST", "/nodes/restart", c.proxy, nil)
 	return err
 }
-func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	_, err := doProxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.proxy, nil)
-	return err
+func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) (err os.Error) {
+    log("ProxyNodeController.Resize:%v,%d", nodeId, numberOfThreads)
+	_, err = Proxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.proxy, nil)
+	return
 }
 func (c ProxyNodeController) KillAll() os.Error {
-	_, err := doProxy("POST", "/nodes/kill", c.proxy, nil)
+	_, err := Proxy("POST", "/nodes/kill", c.proxy, nil)
 	return err
 }
 
 // proxy support
 type JsonResponseWriter struct {
 	Content chan []byte
+	StatusCode chan int
 }
 
 func (w JsonResponseWriter) Header() http.Header {
@@ -164,11 +167,13 @@ func (w JsonResponseWriter) Write(b []byte) (int, os.Error) {
     w.Content <- b
 	return 0, os.EOF
 }
-func (w JsonResponseWriter) WriteHeader(int) {
+func (w JsonResponseWriter) WriteHeader(i int) {
+    w.StatusCode <- i
 	return
 }
 
-func doProxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
+func Proxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
+    vlog("Proxy(%v %v)", method, uri)
 	if reader == nil {
 		reader = strings.NewReader("")
 	}
@@ -178,8 +183,20 @@ func doProxy(method string, uri string, proxy *http.ReverseProxy, reader io.Read
 		return
 	}
 
-	rw := JsonResponseWriter{make(chan []byte, 1)}
-	proxy.ServeHTTP(rw, r)
-    val = <- rw.Content
-	return
+	r.Header.Set("x-golem-apikey", "test")
+
+    content := make(chan []byte, 1)
+    statuscode := make(chan int, 1)
+	proxy.ServeHTTP(JsonResponseWriter{Content: content, StatusCode: statuscode}, r)
+
+	code := <- statuscode
+	if http.StatusOK != code {
+	    // TODO : Figure out why this hangs...
+        vlog("Proxy(%v %v) [%d]", method, uri, code)
+        err = os.NewError(fmt.Sprintf("Inappropriate response [%v]", code))
+        return
+	}
+
+    val = <- content
+    return
 }

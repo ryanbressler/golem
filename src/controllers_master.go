@@ -128,7 +128,7 @@ func (c MasterNodeController) RestartAll() os.Error {
 	return nil
 }
 func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	log("Resize:%v,%i", nodeId, numberOfThreads)
+	log("MasterNodeController.Resize(%v,%d)", nodeId, numberOfThreads)
 
 	node, isin := c.master.NodeHandles[nodeId]
 	if isin {

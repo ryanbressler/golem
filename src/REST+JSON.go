@@ -143,17 +143,18 @@ type NodesRestJson struct {
 }
 
 func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log("%v /nodes", r.Method)
+	log("NodesRestJson.ServeHTTP(%v %v)", r.Method, r.URL.Path)
 
 	w.Header().Set("Content-Type", "application/json")
 
+    spliturl := splitRestUrl(r.URL.Path)
+    nparts := len(spliturl)
+
 	switch r.Method {
 	case "GET":
-		pathParts := splitRestUrl(r.URL.Path)
-		nparts := len(pathParts)
 		switch {
 		case nparts == 2:
-			WriteItemAsJson("/nodes", pathParts[1], this.nodeController, w)
+			WriteItemAsJson("/nodes", spliturl[1], this.nodeController, w)
 		default:
 			WriteItemsAsJson("/nodes", this.nodeController, w)
 		}
@@ -163,22 +164,20 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		spliturl := splitRestUrl(r.URL.Path)
-		nsplit := len(spliturl)
 		switch {
-		case nsplit == 2 && spliturl[1] == "restart":
+		case nparts == 2 && spliturl[1] == "restart":
 			if err := this.nodeController.RestartAll(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
-		case nsplit == 2 && spliturl[1] == "die":
+		case nparts == 2 && spliturl[1] == "die":
 			if err := this.nodeController.KillAll(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
-		case nsplit == 4 && spliturl[2] == "resize":
+		case nparts == 4 && spliturl[2] == "resize":
 			numberOfThreads, err := strconv.Atoi(spliturl[3])
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
@@ -196,7 +195,11 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func CheckApiKey(hashedpw string, r *http.Request) bool {
 	if hashedpw != "" {
-		pw := GetHashKey(r.Header.Get("x-golem-apikey"))
+	    apikey := r.Header.Get("x-golem-apikey")
+	    if apikey == "" {
+	        return false
+	    }
+		pw := GetHashKey(apikey)
 		return hashedpw == pw
 	}
 	return true
