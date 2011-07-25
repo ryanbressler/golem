@@ -27,54 +27,32 @@ import (
 
 // TODO: Kill submissions once they finish.
 type Submission struct {
-	Uri              string
-	SubId            string
+	Identity          Identity
+	Description    Description
+	Status            Status
+	Progress        Progress
+	Tasks            []Task
+
 	CoutFileChan     chan string
 	CerrFileChan     chan string
-	Tasks            []Task
 	ErrorChan        chan *Job
 	FinishedChan     chan *Job
-	TotalJobsChan    chan int
-	FinishedJobsChan chan int
-	ErroredJobsChan  chan int
 	stopChan         chan int
-	runningChan      chan bool
-	SubLocalTime     string
 }
 
-
-func NewSubmission(js []Task, jobChan chan *Job) *Submission {
-	iobuffersize, err := ConfigFile.GetInt("master", "buffersize")
-	if err != nil {
-		vlog("defaulting buffer to 1000:%v", err)
-		iobuffersize = 1000
-	}
-
-	subId := UniqueId()
-	localTime := time.SecondsToLocalTime(time.Seconds())
-	formattedTime := localTime.Format(time.ANSIC)
+func NewSubmission(jd JobDetails, jobChan chan *Job) *Submission {
 	s := Submission{
-		Uri:              fmt.Sprintf("/jobs/%v", subId),
-		SubId:            subId,
+	    Identity: jd.Identity,
+	    Description: jd.Description,
+	    Status: jd.Status,
+	    Progress: jd.Progress,
+		Tasks:      jd.Tasks,
 		CoutFileChan:     make(chan string, iobuffersize),
 		CerrFileChan:     make(chan string, iobuffersize),
-		Tasks:            js,
 		ErrorChan:        make(chan *Job, 1),
 		FinishedChan:     make(chan *Job, 1),
-		FinishedJobsChan: make(chan int, 1),
-		ErroredJobsChan:  make(chan int, 1),
-		TotalJobsChan:    make(chan int, 1),
-		stopChan:         make(chan int, 0),
-		runningChan:      make(chan bool, 1),
-		SubLocalTime:     formattedTime}
-	totalJobs := 0
-	for _, vals := range s.Tasks {
-		totalJobs += vals.Count
-	}
-	s.TotalJobsChan <- totalJobs
-	s.FinishedJobsChan <- 0
-	s.ErroredJobsChan <- 0
-	s.runningChan <- true
+		stopChan:         make(chan int, 0) }
+
 	go s.monitorJobs()
 	go s.writeIo()
 	go s.submitJobs(jobChan)
@@ -82,59 +60,17 @@ func NewSubmission(js []Task, jobChan chan *Job) *Submission {
 	return &s
 }
 
-func (s *Submission) MarshalJSON() ([]byte, os.Error) {
-	vlog("sniffing total jobs")
-	TotalJobs := <-s.TotalJobsChan
-	s.TotalJobsChan <- TotalJobs
-	vlog("sniffing finished jobs")
-	FinishedJobs := <-s.FinishedJobsChan
-	s.FinishedJobsChan <- FinishedJobs
-	vlog("sniffing errored jobs")
-	ErroredJobs := <-s.ErroredJobsChan
-	s.ErroredJobsChan <- ErroredJobs
-	vlog("sniffing running jobs")
-	running := <-s.runningChan
-	s.runningChan <- running
-
-	log("Describing SubId: %v, %v finished, %v errored, %v total, %v localtime", s.SubId, FinishedJobs, ErroredJobs, TotalJobs, s.SubLocalTime)
-	rv := fmt.Sprintf("{ uri:\"%v\", SubId:\"%v\", TotalJobs:%v, FinishedJobs:%v, ErroredJobs:%v, Running:%v, CreatedAt:\"%v\" }", s.Uri, s.SubId, TotalJobs, FinishedJobs, ErroredJobs, running, s.SubLocalTime)
-
-	vlog("Returning description")
-	return []byte(rv), nil
-}
-
-func (s *Submission) Stats() (total int, finished int, errored int, running bool) {
-	total = <-s.TotalJobsChan
-	s.TotalJobsChan <- total
-
-	finished = <-s.FinishedJobsChan
-	s.FinishedJobsChan <- finished
-
-	errored = <-s.ErroredJobsChan
-	s.ErroredJobsChan <- errored
-
-	running = <-s.runningChan
-	s.runningChan <- running
-
-	return
-}
-
 func (s *Submission) Stop() bool {
-	rv := false
-	running := <-s.runningChan
-	if running {
+	if s.Status.Running {
 		select {
 		case s.stopChan <- 1:
-			rv = true
-			log("Stoped submission for SubId: %v", s.SubId)
-			running = false
+			log("stopped: %v", s.Identity)
+			s.Status.Running = false
 		case <-time.After(250000000):
-			rv = false
-			log("Time out stoping SubId: %v", s.SubId)
+			log("timeout stopping: %v", s.Identity)
 		}
 	}
-	s.runningChan <- running
-	return rv
+	return s.Status.Running
 }
 
 func (s Submission) monitorJobs() {
@@ -143,34 +79,17 @@ func (s Submission) monitorJobs() {
 	for {
 		select {
 		case <-s.ErrorChan:
-			ErroredJobs := <-s.ErroredJobsChan
-			ErroredJobs++
-			s.ErroredJobsChan <- ErroredJobs
+			s.Progress.Errored = 1 + s.Progress.Errored
 		case <-s.FinishedChan:
-			FinishedJobs := <-s.FinishedJobsChan
-			FinishedJobs++
-			s.FinishedJobsChan <- FinishedJobs
+            s.Progress.Finished = 1 + s.Progress.Finished
 		}
 
-		TotalJobs := <-s.TotalJobsChan
-		s.TotalJobsChan <- TotalJobs
-
-		FinishedJobs := <-s.FinishedJobsChan
-		s.FinishedJobsChan <- FinishedJobs
-
-		ErroredJobs := <-s.ErroredJobsChan
-		s.ErroredJobsChan <- ErroredJobs
-
-		running := <-s.runningChan
-
-		vlog("Job update SubId: %v, %v finished, %v errored, %v total", s.SubId, FinishedJobs, ErroredJobs, TotalJobs)
-		if TotalJobs == (FinishedJobs + ErroredJobs) {
-			log("All Jobs done for SubId: %v, %v finished, %v errored", s.SubId, FinishedJobs, ErroredJobs)
-			//TODO: clean up submission object here
-			s.runningChan <- false
+		vlog("updating job: %v, %v, %v", s.Identity, s.Progress, s.Status)
+		if s.Progress.isComplete() {
+			s.Status.Running = false
+			log("job completed: %v, %v, %v", s.Identity, s.Progress, s.Status)
 			return
 		}
-		s.runningChan <- running
 	}
 }
 
@@ -182,26 +101,26 @@ func (s Submission) submitJobs(jobChan chan *Job) {
 		vlog("submitJobs:[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
-			case jobChan <- &Job{SubId: s.SubId, LineId: lineId, JobId: taskId, Args: vals.Args}:
+			case jobChan <- &Job{SubId: s.Identity.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
 				taskId++
 			case <-s.stopChan:
 				return //TODO: add indication that we stopped
 			}
 		}
 	}
-	log("[%d] tasks submitted for [%v]", taskId, s.SubId)
+	log("[%d] tasks submitted for [%v]", taskId, s.Identity)
 }
 
 func (s Submission) writeIo() {
-	vlog("writeIo")
+	vlog("Submission.writeIo(%v)", s.Identity)
 
-	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.SubId))
+	outf, err := os.Create(fmt.Sprintf("%v.out.txt", s.Identity.JobId))
 	if err != nil {
 		log("writeIo: %v", err)
 	}
 	defer outf.Close()
 
-	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.SubId))
+	errf, err := os.Create(fmt.Sprintf("%v.err.txt", s.Identity.JobId))
 	if err != nil {
 		log("writeIo: %v", err)
 	}

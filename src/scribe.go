@@ -31,7 +31,7 @@ type Scribe struct {
 	masterJobsUrl string
 }
 
-func NewScribe(store JobStore) *Scribe {
+func LaunchScribe(store JobStore) {
 	target, err := ConfigFile.GetString("scribe", "target")
 	if err != nil {
 		panic(err)
@@ -39,7 +39,7 @@ func NewScribe(store JobStore) *Scribe {
 
 	s := Scribe{store: store, masterJobsUrl: target + "/jobs/"}
 
-	ticker := time.NewTicker(3 * second)
+	ticker := time.NewTicker(10 * second)
 	go func() {
 		for {
 			select {
@@ -48,46 +48,49 @@ func NewScribe(store JobStore) *Scribe {
 			}
 		}
 	}()
-
-	return &s
 }
 
 func (this *Scribe) PollJobs() {
-	for _, jobHandle := range this.GetJobs() {
-		this.store.Update(jobHandle.JobId, jobHandle.Status)
+    vlog("Scribe.PollJobs")
+	for _, js := range this.GetJobs() {
+		this.store.Update(js.Identity.JobId, js.Status, js.Progress)
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
-	for _, jobHandle := range unscheduled {
-		this.PostJob(jobHandle)
+	vlog("Scribe.PollJobs:unsheduled:%d", len(unscheduled))
+	for _, u := range unscheduled {
+		this.PostJob(u)
 	}
 }
 
-func (this *Scribe) GetJobs() []JobHandle {
+func (this *Scribe) GetJobs() []JobDetails {
+    vlog("Scribe.GetJobs()")
 	resp, _, err := http.Get(this.masterJobsUrl)
 	if err != nil {
-		log("Error [%v]: %v", this.masterJobsUrl, err)
+	    vlog("Scribe.GetJobs:%v", err)
 		return nil
 	}
 
 	b := make([]byte, 100)
 	resp.Body.Read(b)
 
-	jobHandles := make([]JobHandle, 100)
-	json.Unmarshal(b, &jobHandles)
-	return jobHandles
+	lst := JobDetailsList{}
+	json.Unmarshal(b, &lst)
+	return lst.Items
 }
 
-func (this *Scribe) PostJob(jobHandle JobHandle) (err os.Error) {
-	log("PostJob(%v)", jobHandle)
+func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
+	log("Scribe.PostJob(%v)", jd.Identity)
 
-	jobPkg, err := this.store.Get(jobHandle.JobId)
+	tasks, err := this.store.Tasks(jd.Identity)
 	if err != nil {
+	    vlog("Scribe.PostJob(%v):%v", jd.Identity, err)
 		return
 	}
 
-	taskJson, err := json.Marshal(jobPkg.Tasks)
+	taskJson, err := json.Marshal(tasks)
 	if err != nil {
+	    vlog("Scribe.PostJob(%v):%v", jd.Identity, err)
 		return
 	}
 
@@ -95,7 +98,7 @@ func (this *Scribe) PostJob(jobHandle JobHandle) (err os.Error) {
 	data["jsonfile"] = string(taskJson)
 
 	header := http.Header{}
-	header.Set("x-golem-job-preassigned-id", jobHandle.JobId)
+	header.Set("x-golem-job-preassigned-id", jd.Identity.JobId)
 	http.PostForm(this.masterJobsUrl, data)
 
 	return

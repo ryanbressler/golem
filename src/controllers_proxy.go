@@ -52,12 +52,12 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 		return
 	}
 
-	js := []JobSubmission{}
+	js := JobDetailsList{}
 	if err = json.Unmarshal(val, js); err != nil {
 		return
 	}
 
-	for _, s := range js {
+	for _, s := range js.Items {
 		items = append(items, s)
 	}
 
@@ -68,7 +68,7 @@ func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Err
 	if err != nil {
 		return
 	}
-	item = Submission{}
+	item = JobDetails{}
 	err = json.Unmarshal(val, item)
 	return
 }
@@ -78,13 +78,13 @@ func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error)
 		return
 	}
 
-	jh := JobHandle{}
-	err = json.Unmarshal(val, jh)
+	js := JobDetails{}
+	err = json.Unmarshal(val, js)
 	if err != nil {
 		return
 	}
 
-	jobId = jh.JobId
+	jobId = js.Identity.JobId
 	return
 }
 func (c ProxyJobController) Stop(jobId string) os.Error {

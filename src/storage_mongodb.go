@@ -26,42 +26,14 @@ import (
 	"launchpad.net/gobson/bson"
 )
 
-type GolemJobC struct {
-	Type          string
-	Id            string
-	Owner         string
-	Label         string
-	TimeCreated   string
-	LastModified  string
-	TaskCount     int
-	TasksFinished int
-	TasksErrored  int
-	Running       bool
-	Scheduled     bool
-}
-
-func (this GolemJobC) ToJobHandle() (handle JobHandle) {
-	status := JobStatus{
-		TotalTasks:    this.TaskCount,
-		FinishedTasks: this.TasksFinished,
-		ErroredTasks:  this.TasksErrored,
-		Running:       this.Running}
-
-	handle = JobHandle{
-		JobId:        this.Id,
-		Owner:        this.Owner,
-		Label:        this.Label,
-		Type:         this.Type,
-		FirstCreated: ParseTime(this.TimeCreated),
-		LastModified: ParseTime(this.LastModified),
-		Status:       status}
-	return
-}
+//		FirstCreated: ParseTime(this.TimeCreated),
+//		LastModified: ParseTime(this.LastModified),
 
 type MongoJobStore struct {
 	session       *mgo.Session
 	storename     string
 	jobCollection string
+// jobsCollection  mgo.Collection
 }
 
 func NewMongoJobStore() *MongoJobStore {
@@ -83,61 +55,66 @@ func NewMongoJobStore() *MongoJobStore {
 		jobCollection: jobCollection}
 }
 
-func (this *MongoJobStore) Create(item JobPackage) (err os.Error) {
-	log("Create(%v)", item)
-
-	handle := item.Handle
-	status := handle.Status
-	golemJob := GolemJobC{
-		Type:          handle.Type,
-		Id:            handle.JobId,
-		Owner:         handle.Owner,
-		Label:         handle.Label,
-		TimeCreated:   handle.FirstCreated.String(),
-		LastModified:  handle.LastModified.String(),
-		TaskCount:     status.TotalTasks,
-		TasksFinished: status.FinishedTasks,
-		TasksErrored:  status.ErroredTasks,
-		Running:       status.Running,
-		Scheduled:     false}
-
-	this.JobsCollection().Insert(golemJob)
-
+func (this *MongoJobStore) Create(item JobDetails) (err os.Error) {
+	vlog("MongoJobStore.Create(%v)", item)
+	this.JobsCollection().Insert(item)
 	return
 }
 
-func (this *MongoJobStore) All() (items []JobHandle, err os.Error) {
+func (this *MongoJobStore) All() (items []JobDetails, err os.Error) {
 	items, err = this.FindJobs(bson.M{})
 	return
 }
 
-func (this *MongoJobStore) Unscheduled() (items []JobHandle, err os.Error) {
+func (this *MongoJobStore) Unscheduled() (items []JobDetails, err os.Error) {
 	items, err = this.FindJobs(bson.M{"scheduled": false})
 	return
 }
 
-func (this *MongoJobStore) Active() (items []JobHandle, err os.Error) {
+func (this *MongoJobStore) Active() (items []JobDetails, err os.Error) {
 	items, err = this.FindJobs(bson.M{"running": true})
 	return
 }
 
-func (this *MongoJobStore) Get(jobId string) (item JobPackage, err os.Error) {
-	log("Get(%v)", jobId)
+func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
+	vlog("MongoJobStore.Get(%v)", jobId)
 
-	job := GolemJobC{}
+    m := make(map[string]interface{})
 
-	err = this.JobsCollection().Find(bson.M{"id": jobId}).One(&job)
+ 	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
 	if err != nil {
+	    vlog("MongoJobStore.Get(%v):err=%v", jobId, err)
 		return
 	}
 
-	log("Get(%v):%v", jobId, job)
+	vlog("MongoJobStore.Get(%v):item=%v", jobId, m)
+	vlog("MongoJobStore.Get(%v):item=%v", jobId, m["handle"])
 
-	item = JobPackage{Handle: job.ToJobHandle()}
+	// TODO : Populate job details
+
 	return
 }
 
-func (this *MongoJobStore) Update(jobId string, status JobStatus) (err os.Error) {
+func (this *MongoJobStore) Tasks(identity Identity) (tasks []Task, err os.Error) {
+	vlog("MongoJobStore.Tasks(%v)", identity)
+
+    m := make(map[string]interface{})
+
+ 	err = this.JobsCollection().Find(bson.M{"jobid": identity.JobId}).One(m)
+	if err != nil {
+	    vlog("MongoJobStore.Tasks(%v):err=%v", identity, err)
+		return
+	}
+
+	vlog("MongoJobStore.Tasks(%v):item=%v", identity, m)
+	vlog("MongoJobStore.Tasks(%v):item=%v", identity, m["tasks"])
+
+	// TODO : Populate job details
+
+	return
+}
+
+func (this *MongoJobStore) Update(jobId string, status Status, progress Progress) (err os.Error) {
 	if jobId == "" {
 		err = os.NewError("No Job Id Found")
 		return
@@ -146,30 +123,35 @@ func (this *MongoJobStore) Update(jobId string, status JobStatus) (err os.Error)
 	now := time.Time{}
 
 	modifierMap := make(map[string]interface{})
-	modifierMap["scheduled"] = true // TODO : More granular
+	modifierMap["scheduled"] = status.Scheduled
 	modifierMap["running"] = status.Running
-	modifierMap["taskerrored"] = status.ErroredTasks
-	modifierMap["taskfinished"] = status.FinishedTasks
+	modifierMap["taskerrored"] = progress.Errored
+	modifierMap["taskfinished"] = progress.Finished
+	modifierMap["tasktotal"] = progress.Total
 	modifierMap["lastmodified"] = now.String()
 
-	err = this.JobsCollection().Update(bson.M{"id": jobId}, modifierMap)
+	err = this.JobsCollection().Update(bson.M{"jobid": jobId}, modifierMap)
 	return
 }
 
-func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobHandle, err os.Error) {
-	log("FindJobs(%v)", m)
+func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
+	vlog("MongoJobStore.FindJobs(%v)", m)
 
 	iter, err := this.JobsCollection().Find(m).Iter()
 	if err != nil {
+	    vlog("MongoJobStore.FindJobs(%v): %v", m, err)
 		return
 	}
 
-	job := GolemJobC{}
-	for err = iter.Next(&job); err != nil; {
-		items = append(items, job.ToJobHandle())
+	for {
+		jd := JobDetails{}
+		if nexterr := iter.Next(jd); nexterr != nil {
+		    break
+		}
+		items = append(items, jd)
 	}
 
-	log("Found %v %v jobs:", len(items), m)
+	vlog("MongoJobStore.FindJobs: %v jobs matching %v", len(items), m)
 	return
 }
 

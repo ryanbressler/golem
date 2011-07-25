@@ -19,30 +19,18 @@
 */
 package main
 
+import (
+    "time"
+)
+
 type ItemsHandle struct {
 	Items         []interface{}
 	NumberOfItems int
 }
 
-func NewItemsHandle(items []interface{}) ItemsHandle {
-	return ItemsHandle{Items: items, NumberOfItems: len(items)}
-}
-
-type JobSubmission struct {
-	Uri          string
-	SubId        string
-	CreatedAt    string
-	TotalJobs    int
-	FinishedJobs int
-	ErroredJobs  int
-	Running      bool
-}
-
-func NewJobSubmission(s *Submission) JobSubmission {
-	total, finished, errored, running := s.Stats()
-
-	return JobSubmission{Uri: s.Uri, SubId: s.SubId, CreatedAt: s.SubLocalTime,
-		TotalJobs: total, FinishedJobs: finished, ErroredJobs: errored, Running: running}
+type JobDetailsList struct {
+    Items []JobDetails
+    NumberOfItems int
 }
 
 type WorkerNode struct {
@@ -57,4 +45,66 @@ func NewWorkerNode(nh *NodeHandle) WorkerNode {
 	maxJobs, running := nh.Stats()
 	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
 		MaxJobs: maxJobs, Running: running}
+}
+
+// reformed entities
+type Identity struct {
+    JobId string
+    Uri string
+}
+
+type Description struct {
+    Owner string
+    Label string
+    Type string
+}
+
+type Timing struct {
+	FirstCreated *time.Time
+	LastModified *time.Time
+}
+
+type Progress struct {
+	Total  int
+	Finished  int
+	Errored  int
+}
+
+type Status struct {
+    // TODO : State
+    Running       bool
+    Scheduled   bool
+}
+
+type Task struct {
+	Count int
+	Args  []string
+}
+
+type JobDetails struct {
+    Identity Identity
+    Description Description
+    Timing Timing
+    Progress Progress
+    Status Status
+    Tasks []Task
+}
+
+func InitialStatus() Status {
+    return Status{false, false}
+}
+func InitialProgress(tasks []Task) Progress {
+	totalTasks := 0
+	for _, task := range tasks {
+		totalTasks += task.Count
+	}
+    return Progress{Total:totalTasks,Finished:0,Errored:0}
+}
+func InitialTiming() Timing {
+    now := time.Time{}
+    return Timing{&now, &now}
+}
+
+func (this Progress) isComplete() bool {
+    return this.Total == (this.Finished + this.Errored)
 }
