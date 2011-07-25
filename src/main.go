@@ -42,12 +42,13 @@ func main() {
 	setTls()
 
 	if isMaster {
+	    setBufferSize()
 		m := NewMaster()
 		HandleRestJson(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
 		mdb := NewMongoJobStore()
-		s := NewScribe(mdb)
-		HandleRestJson(ScribeJobController{s, mdb, NewProxyJobController()}, NewProxyNodeController())
+		LaunchScribe(mdb)
+		HandleRestJson(ScribeJobController{mdb, NewProxyJobController()}, NewProxyNodeController())
 	} else {
 		processes, masterhost := getWorkerProcesses()
 		RunNode(processes, masterhost)
@@ -79,6 +80,15 @@ func setTls() {
 		useTls = true
 	}
 	log("secure mode enabled [%v]", useTls)
+}
+
+func setBufferSize() {
+    bufsize, err := ConfigFile.GetInt("master", "buffersize")
+	if err != nil {
+		vlog("defaulting buffer to 1000:%v", err)
+		return
+	}
+	iobuffersize = bufsize
 }
 
 func getWorkerProcesses() (processes int, masterhost string) {
