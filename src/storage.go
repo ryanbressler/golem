@@ -24,7 +24,7 @@ import (
 )
 
 type JobStore interface {
-	Create(item JobDetails) (err os.Error)
+	Create(item JobDetails, tasks []Task) (err os.Error)
 
 	All() (items []JobDetails, err os.Error)
 
