@@ -121,7 +121,7 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	}
 
 	lst := WorkerNodeList{}
-	if err = json.Unmarshal(val, lst); err != nil {
+	if err = json.Unmarshal(val, &lst); err != nil {
 		return
 	}
 
@@ -154,14 +154,14 @@ func (c ProxyNodeController) KillAll() os.Error {
 
 // proxy support
 type JsonResponseWriter struct {
-	Bytes []byte
+	Content chan []byte
 }
 
 func (w JsonResponseWriter) Header() http.Header {
-	return nil
+	return http.Header{}
 }
 func (w JsonResponseWriter) Write(b []byte) (int, os.Error) {
-	w.Bytes = b
+    w.Content <- b
 	return 0, os.EOF
 }
 func (w JsonResponseWriter) WriteHeader(int) {
@@ -178,8 +178,8 @@ func doProxy(method string, uri string, proxy *http.ReverseProxy, reader io.Read
 		return
 	}
 
-	rw := JsonResponseWriter{}
+	rw := JsonResponseWriter{make(chan []byte, 1)}
 	proxy.ServeHTTP(rw, r)
-	val = rw.Bytes
+    val = <- rw.Content
 	return
 }
