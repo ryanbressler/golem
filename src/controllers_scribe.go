@@ -25,16 +25,16 @@ import (
 )
 
 type ScribeJobController struct {
-	store  JobStore
-	proxy  JobController
+	store JobStore
+	proxy JobController
 }
 
 func (this ScribeJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	retrieved, err := this.store.All()
 	if err == nil {
-        for _, item := range retrieved {
-            items = append(items, item)
-        }
+		for _, item := range retrieved {
+			items = append(items, item)
+		}
 	}
 	return
 }
@@ -53,7 +53,7 @@ func (this ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Er
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
-    job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
+	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 	err = this.store.Create(job, tasks)
 	return
 }

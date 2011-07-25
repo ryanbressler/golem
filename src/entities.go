@@ -20,7 +20,7 @@
 package main
 
 import (
-    "time"
+	"time"
 )
 
 type ItemsHandle struct {
@@ -29,13 +29,13 @@ type ItemsHandle struct {
 }
 
 type JobDetailsList struct {
-    Items []JobDetails
-    NumberOfItems int
+	Items         []JobDetails
+	NumberOfItems int
 }
 
 type WorkerNodeList struct {
-    Items []WorkerNode
-    NumberOfItems int
+	Items         []WorkerNode
+	NumberOfItems int
 }
 
 type WorkerNode struct {
@@ -59,46 +59,46 @@ type Task struct {
 }
 
 type JobDetails struct {
-    JobId string
-    Uri string
+	JobId string
+	Uri   string
 
-    Owner string
-    Label string
-    Type string
+	Owner string
+	Label string
+	Type  string
 
 	FirstCreated *time.Time
 	LastModified *time.Time
 
-    Progress TaskProgress
+	Progress TaskProgress
 
-    Running       bool
-    Scheduled   bool
+	Running   bool
+	Scheduled bool
 }
 
 type TaskProgress struct {
-	Total  int
-	Finished  int
+	Total    int
+	Finished int
 	Errored  int
 }
 
 func (this *TaskProgress) isComplete() bool {
-    return this.Total <= (this.Finished + this.Errored)
+	return this.Total <= (this.Finished + this.Errored)
 }
 
 func NewJobDetails(jobId string, owner string, label string, jobtype string, totalTasks int) JobDetails {
-    now := time.Time{}
+	now := time.Time{}
 
-    return JobDetails{
-        JobId: jobId, Uri: "/jobs/" + jobId,
-        Owner: owner, Label: label, Type: jobtype,
-        Progress: TaskProgress{ Total:totalTasks,Finished:0,Errored:0 },
-        Running: false, Scheduled: false,
-        FirstCreated: &now, LastModified: &now}
+	return JobDetails{
+		JobId: jobId, Uri: "/jobs/" + jobId,
+		Owner: owner, Label: label, Type: jobtype,
+		Progress: TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
+		Running:  false, Scheduled: false,
+		FirstCreated: &now, LastModified: &now}
 }
 
-func TotalTasks(tasks []Task) (totalTasks int)  {
- 	for _, task := range tasks {
- 		totalTasks += task.Count
- 	}
-    return
+func TotalTasks(tasks []Task) (totalTasks int) {
+	for _, task := range tasks {
+		totalTasks += task.Count
+	}
+	return
 }

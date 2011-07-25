@@ -147,8 +147,8 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-    spliturl := splitRestUrl(r.URL.Path)
-    nparts := len(spliturl)
+	spliturl := splitRestUrl(r.URL.Path)
+	nparts := len(spliturl)
 
 	switch r.Method {
 	case "GET":
@@ -195,10 +195,10 @@ func (this *NodesRestJson) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func CheckApiKey(hashedpw string, r *http.Request) bool {
 	if hashedpw != "" {
-	    apikey := r.Header.Get("x-golem-apikey")
-	    if apikey == "" {
-	        return false
-	    }
+		apikey := r.Header.Get("x-golem-apikey")
+		if apikey == "" {
+			return false
+		}
 		pw := GetHashKey(apikey)
 		return hashedpw == pw
 	}

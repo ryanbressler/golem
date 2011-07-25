@@ -30,7 +30,7 @@ type MongoJobStore struct {
 	session       *mgo.Session
 	storename     string
 	jobCollection string
-// jobsCollection  mgo.Collection
+	// jobsCollection  mgo.Collection
 }
 
 func NewMongoJobStore() *MongoJobStore {
@@ -77,11 +77,11 @@ func (this *MongoJobStore) Active() (items []JobDetails, err os.Error) {
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 	vlog("MongoJobStore.Get(%v)", jobId)
 
-    m := make(map[string]interface{})
+	m := make(map[string]interface{})
 
- 	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
+	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
 	if err != nil {
-	    vlog("MongoJobStore.Get(%v):err=%v", jobId, err)
+		vlog("MongoJobStore.Get(%v):err=%v", jobId, err)
 		return
 	}
 
@@ -96,11 +96,11 @@ func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 	vlog("MongoJobStore.Tasks(%v)", jobId)
 
-    m := make(map[string]interface{})
+	m := make(map[string]interface{})
 
- 	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
+	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
 	if err != nil {
-	    vlog("MongoJobStore.Tasks(%v):err=%v", jobId, err)
+		vlog("MongoJobStore.Tasks(%v):err=%v", jobId, err)
 		return
 	}
 
@@ -129,7 +129,7 @@ func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
 	modifierMap["taskfinished"] = progress.Finished
 	modifierMap["lastmodified"] = now.String()
 
-    // TODO: Proper update
+	// TODO: Proper update
 	err = this.JobsCollection().Update(bson.M{"jobid": item.JobId}, modifierMap)
 	return
 }
@@ -139,14 +139,14 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 
 	iter, err := this.JobsCollection().Find(m).Iter()
 	if err != nil {
-	    vlog("MongoJobStore.FindJobs(%v): %v", m, err)
+		vlog("MongoJobStore.FindJobs(%v): %v", m, err)
 		return
 	}
 
 	for {
 		jd := JobDetails{}
 		if nexterr := iter.Next(jd); nexterr != nil {
-		    break
+			break
 		}
 		items = append(items, jd)
 	}

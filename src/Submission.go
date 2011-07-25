@@ -27,27 +27,27 @@ import (
 
 // TODO: Kill submissions once they finish.
 type Submission struct {
-    Details           chan JobDetails
-	Tasks            []Task
+	Details chan JobDetails
+	Tasks   []Task
 
-	CoutFileChan     chan string
-	CerrFileChan     chan string
-	ErrorChan        chan *Job
-	FinishedChan     chan *Job
-	stopChan         chan int
+	CoutFileChan chan string
+	CerrFileChan chan string
+	ErrorChan    chan *Job
+	FinishedChan chan *Job
+	stopChan     chan int
 }
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
 	s := Submission{
-	    Details: make(chan JobDetails, 1),
-		Tasks:      tasks,
-		CoutFileChan:     make(chan string, iobuffersize),
-		CerrFileChan:     make(chan string, iobuffersize),
-		ErrorChan:        make(chan *Job, 1),
-		FinishedChan:     make(chan *Job, 1),
-		stopChan:         make(chan int, 0) }
+		Details:      make(chan JobDetails, 1),
+		Tasks:        tasks,
+		CoutFileChan: make(chan string, iobuffersize),
+		CerrFileChan: make(chan string, iobuffersize),
+		ErrorChan:    make(chan *Job, 1),
+		FinishedChan: make(chan *Job, 1),
+		stopChan:     make(chan int, 0)}
 
-    s.Details <- jd
+	s.Details <- jd
 
 	go s.MonitorWorkTasks()
 	go s.writeIo()
@@ -57,14 +57,14 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
 }
 
 func (s *Submission) Stop() bool {
-    dtls := s.SniffDetails()
+	dtls := s.SniffDetails()
 
 	if dtls.Running {
 		select {
 		case s.stopChan <- 1:
-		    dtls := <- s.Details
-		    dtls.Running = false
-		    s.Details <- dtls
+			dtls := <-s.Details
+			dtls.Running = false
+			s.Details <- dtls
 
 			log("Submission.Stop(): %v", dtls.JobId)
 		case <-time.After(250000000):
@@ -76,45 +76,45 @@ func (s *Submission) Stop() bool {
 }
 
 func (this *Submission) SniffDetails() JobDetails {
-    dtls := <- this.Details
-    this.Details <- dtls
+	dtls := <-this.Details
+	this.Details <- dtls
 	return dtls
 }
 
 func (s Submission) MonitorWorkTasks() {
-    for {
-            select {
-            case <-s.ErrorChan:
-                    Det := <-s.Details
-                    Det.Progress.Errored++
-                    s.Details<-Det
+	for {
+		select {
+		case <-s.ErrorChan:
+			Det := <-s.Details
+			Det.Progress.Errored++
+			s.Details <- Det
 
-                    vlog("MonitorWorkTasks [ERROR]", Det.JobId)
+			vlog("MonitorWorkTasks [ERROR]", Det.JobId)
 
-            case <-s.FinishedChan:
-                    Det := <-s.Details
-                    Det.Progress.Finished++
-                    s.Details<-Det
+		case <-s.FinishedChan:
+			Det := <-s.Details
+			Det.Progress.Finished++
+			s.Details <- Det
 
-                    vlog("MonitorWorkTasks [FINISHED]", Det.JobId)
-            }
+			vlog("MonitorWorkTasks [FINISHED]", Det.JobId)
+		}
 
-            dtls := s.SniffDetails()
-            if dtls.Progress.isComplete() {
-                    vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
-                    dtls = <- s.Details
-                    dtls.Running = false
-                    s.Details <- dtls
-                    return
-            }
+		dtls := s.SniffDetails()
+		if dtls.Progress.isComplete() {
+			vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
+			dtls = <-s.Details
+			dtls.Running = false
+			s.Details <- dtls
+			return
+		}
 
-    }
+	}
 }
 
 func (s Submission) submitJobs(jobChan chan *Job) {
 	vlog("submitJobs")
 
-    dtls := s.SniffDetails()
+	dtls := s.SniffDetails()
 	taskId := 0
 	for lineId, vals := range s.Tasks {
 		vlog("submitJobs:[%d,%v]", lineId, vals)
@@ -131,7 +131,7 @@ func (s Submission) submitJobs(jobChan chan *Job) {
 }
 
 func (s Submission) writeIo() {
-    dtls := s.SniffDetails()
+	dtls := s.SniffDetails()
 	vlog("Submission.writeIo(%v)", dtls.JobId)
 
 	outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))

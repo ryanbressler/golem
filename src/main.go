@@ -42,7 +42,7 @@ func main() {
 	setTls()
 
 	if isMaster {
-	    setBufferSize()
+		setBufferSize()
 		m := NewMaster()
 		HandleRestJson(MasterJobController{master: m}, MasterNodeController{master: m})
 	} else if isScribe {
@@ -83,7 +83,7 @@ func setTls() {
 }
 
 func setBufferSize() {
-    bufsize, err := ConfigFile.GetInt("master", "buffersize")
+	bufsize, err := ConfigFile.GetInt("master", "buffersize")
 	if err != nil {
 		vlog("defaulting buffer to 1000:%v", err)
 		return
