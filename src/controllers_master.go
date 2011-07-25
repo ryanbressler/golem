@@ -32,7 +32,7 @@ func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	log("MasterJobController.RetrieveAll")
 
 	for _, s := range c.master.subMap {
-		items = append(items, s.Details)
+		items = append(items, s.SniffDetails())
 	}
 
 	return
@@ -46,7 +46,7 @@ func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Er
 		return
 	}
 
-	item = s.Details
+	item = s.SniffDetails()
 	return
 }
 func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {

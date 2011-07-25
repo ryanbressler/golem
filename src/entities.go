@@ -69,16 +69,20 @@ type JobDetails struct {
 	FirstCreated *time.Time
 	LastModified *time.Time
 
-	Total  int
-	Finished  int
-	Errored  int
+    Progress TaskProgress
 
     Running       bool
     Scheduled   bool
 }
 
-func (this JobDetails) isComplete() bool {
-    return this.Total == (this.Finished + this.Errored)
+type TaskProgress struct {
+	Total  int
+	Finished  int
+	Errored  int
+}
+
+func (this *TaskProgress) isComplete() bool {
+    return this.Total <= (this.Finished + this.Errored)
 }
 
 func NewJobDetails(jobId string, owner string, label string, jobtype string, totalTasks int) JobDetails {
@@ -87,7 +91,7 @@ func NewJobDetails(jobId string, owner string, label string, jobtype string, tot
     return JobDetails{
         JobId: jobId, Uri: "/jobs/" + jobId,
         Owner: owner, Label: label, Type: jobtype,
-        Total:totalTasks,Finished:0,Errored:0,
+        Progress: TaskProgress{ Total:totalTasks,Finished:0,Errored:0 },
         Running: false, Scheduled: false,
         FirstCreated: &now, LastModified: &now}
 }
