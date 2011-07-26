@@ -27,13 +27,13 @@ import (
 )
 
 type MongoJobStore struct {
-	JOBS mgo.Collection
+	JOBS  mgo.Collection
 	TASKS mgo.Collection
 }
 
 type TaskHolder struct {
-    JobId string
-    Tasks []Task
+	JobId string
+	Tasks []Task
 }
 
 func NewMongoJobStore() *MongoJobStore {
@@ -55,27 +55,26 @@ func NewMongoJobStore() *MongoJobStore {
 	return &MongoJobStore{JOBS: db.C(jobCollection), TASKS: db.C(taskCollection)}
 }
 
-func (this *MongoJobStore) Create(item JobDetails, tasks []Task) (err os.Error) {
+func (this *MongoJobStore) Create(item JobDetails, tasks []Task) os.Error {
 	vlog("MongoJobStore.Create(%v)", item)
 	item.FirstCreated = time.LocalTime().String()
-	this.JOBS.Insert(item)
-	this.TASKS.Insert(TaskHolder{item.JobId, tasks})
-	return
+	err := this.JOBS.Insert(item)
+	if err != nil {
+		return err
+	}
+	return this.TASKS.Insert(TaskHolder{item.JobId, tasks})
 }
 
-func (this *MongoJobStore) All() (items []JobDetails, err os.Error) {
-	items, err = this.FindJobs(bson.M{})
-	return
+func (this *MongoJobStore) All() ([]JobDetails, os.Error) {
+	return this.FindJobs(bson.M{})
 }
 
-func (this *MongoJobStore) Unscheduled() (items []JobDetails, err os.Error) {
-	items, err = this.FindJobs(bson.M{"scheduled": false})
-	return
+func (this *MongoJobStore) Unscheduled() ([]JobDetails, os.Error) {
+	return this.FindJobs(bson.M{"scheduled": false})
 }
 
-func (this *MongoJobStore) Active() (items []JobDetails, err os.Error) {
-	items, err = this.FindJobs(bson.M{"running": true})
-	return
+func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
+	return this.FindJobs(bson.M{"running": true})
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
@@ -86,7 +85,7 @@ func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 	vlog("MongoJobStore.Tasks(%v)", jobId)
 
-    item := TaskHolder{}
+	item := TaskHolder{}
 	err = this.TASKS.Find(bson.M{"jobid": jobId}).One(&item)
 	if err != nil {
 		return
