@@ -30,7 +30,7 @@ import (
 type Scribe struct {
 	store         JobStore
 	masterJobsUrl string
-	apikey string
+	apikey        string
 }
 
 func LaunchScribe(store JobStore) {
@@ -93,16 +93,16 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	r, err := http.NewRequest("POST", this.masterJobsUrl, strings.NewReader(data.Encode()))
 	if err != nil {
-	    return
+		return
 	}
 
 	r.Header.Set("x-golem-job-preassigned-id", jd.JobId)
 	r.Header.Set("x-golem-apikey", this.apikey)
 
-    client := http.Client{}
-    resp, err := client.Do(r)
+	client := http.Client{}
+	resp, err := client.Do(r)
 
-    log("Client.Do:%v;%v",resp, err)
+	log("Client.Do:%v;%v", resp, err)
 
 	return
 }
