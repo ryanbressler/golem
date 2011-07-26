@@ -30,7 +30,7 @@ import (
 )
 
 type ProxyJobController struct {
-	proxy *http.ReverseProxy
+	proxy  *http.ReverseProxy
 	apikey string
 }
 
@@ -96,7 +96,7 @@ func (c ProxyJobController) Kill(jobId string) os.Error {
 }
 
 type ProxyNodeController struct {
-	proxy *http.ReverseProxy
+	proxy  *http.ReverseProxy
 	apikey string
 }
 
