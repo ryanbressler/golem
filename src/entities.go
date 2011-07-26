@@ -24,31 +24,17 @@ type ItemsHandle struct {
 	NumberOfItems int
 }
 
+// jobs
 type JobDetailsList struct {
 	Items         []JobDetails
 	NumberOfItems int
 }
 
-type WorkerNodeList struct {
-	Items         []WorkerNode
-	NumberOfItems int
+type TaskHolder struct {
+	JobId string
+	Tasks []Task
 }
 
-type WorkerNode struct {
-	NodeId   string
-	Uri      string
-	Hostname string
-	MaxJobs  int
-	Running  int
-}
-
-func NewWorkerNode(nh *NodeHandle) WorkerNode {
-	maxJobs, running := nh.Stats()
-	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
-		MaxJobs: maxJobs, Running: running}
-}
-
-// reformed entities
 type Task struct {
 	Count int
 	Args  []string
@@ -94,4 +80,47 @@ func TotalTasks(tasks []Task) (totalTasks int) {
 		totalTasks += task.Count
 	}
 	return
+}
+
+// workers
+const (
+	HELLO   = iota //sent from worker to master on connect, body is number of processes available
+	CHECKIN        //sent from worker every minute to keep connection alive
+
+	START //sent from master to start job, body is json job
+	KILL  //sent from master to stop jobs, SubId indicates what jobs to stop.
+
+	COUT   //cout from worker, body is line of cout
+	CERROR //cout from worker, body is line of cerror
+
+	JOBFINISHED //sent from worker on job finish, body is json job SubId set
+	JOBERROR    //sent from worker on job error, body is json job, SubId set
+
+	RESTART //Sent by master to nodes telling them to resart and reconnec themselves.
+	DIE     //tell nodes to shutdown.
+)
+
+type WorkerNodeList struct {
+	Items         []WorkerNode
+	NumberOfItems int
+}
+
+type WorkerNode struct {
+	NodeId   string
+	Uri      string
+	Hostname string
+	MaxJobs  int
+	Running  int
+}
+
+func NewWorkerNode(nh *NodeHandle) WorkerNode {
+	maxJobs, running := nh.Stats()
+	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
+		MaxJobs: maxJobs, Running: running}
+}
+
+type WorkerMessage struct {
+	Type  int
+	SubId string
+	Body  string
 }
