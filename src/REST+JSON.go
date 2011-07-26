@@ -43,10 +43,7 @@ type NodeController interface {
 }
 
 func HandleRestJson(jc JobController, nc NodeController) {
-	hostname, err := ConfigFile.GetString("default", "hostname")
-	if err != nil {
-		panic(err)
-	}
+	hostname := ConfigFile.GetRequiredString("default", "hostname")
 
 	hpw := ""
 	password, err := ConfigFile.GetString("default", "password")

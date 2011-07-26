@@ -34,11 +34,7 @@ type ProxyJobController struct {
 }
 
 func NewProxyJobController() ProxyJobController {
-	target, err := ConfigFile.GetString("scribe", "target")
-	if err != nil {
-		panic(err)
-	}
-
+	target := ConfigFile.GetRequiredString("scribe", "target")
 	url, err := http.ParseRequestURL(target)
 	if err != nil {
 		panic(err)
@@ -102,11 +98,7 @@ type ProxyNodeController struct {
 }
 
 func NewProxyNodeController() ProxyNodeController {
-	target, err := ConfigFile.GetString("scribe", "target")
-	if err != nil {
-		panic(err)
-	}
-
+	target := ConfigFile.GetRequiredString("scribe", "target")
 	url, err := http.ParseRequestURL(target)
 	if err != nil {
 		panic(err)

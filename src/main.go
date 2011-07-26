@@ -55,13 +55,13 @@ func main() {
 	}
 }
 
-func NewConfigFile(filepath string) *conf.ConfigFile {
+func NewConfigFile(filepath string) ConfigurationFile {
 	if filepath != "" {
 		c, err := conf.ReadConfigFile(filepath)
 		if err != nil {
 			panic(err)
 		}
-		return c
+		return ConfigurationFile{c}
 	}
 	panic(fmt.Sprintf("configuration file not found [%v]", filepath))
 }
@@ -97,11 +97,18 @@ func getWorkerProcesses() (processes int, masterhost string) {
 		log("worker proceses error, setting to 3: %v", err)
 		processes = 3
 	}
+	masterhost = ConfigFile.GetRequiredString("worker", "masterhost")
+	return
+}
 
-	masterhost, err = ConfigFile.GetString("worker", "masterhost")
+type ConfigurationFile struct {
+	*conf.ConfigFile
+}
+
+func (this *ConfigurationFile) GetRequiredString(section string, key string) (value string) {
+	value, err := this.GetString(section, key)
 	if err != nil {
 		panic(err)
 	}
-
 	return
 }

@@ -32,11 +32,7 @@ type Scribe struct {
 }
 
 func LaunchScribe(store JobStore) {
-	target, err := ConfigFile.GetString("scribe", "target")
-	if err != nil {
-		panic(err)
-	}
-
+	target := ConfigFile.GetRequiredString("scribe", "target")
 	s := Scribe{store: store, masterJobsUrl: target + "/jobs/"}
 
 	ticker := time.NewTicker(10 * second)
