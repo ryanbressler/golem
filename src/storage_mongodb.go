@@ -27,14 +27,11 @@ import (
 )
 
 type MongoJobStore struct {
-	session       *mgo.Session
-	storename     string
-	jobCollection string
-	// jobsCollection  mgo.Collection
+	jobsCollection  mgo.Collection
 }
 
 func NewMongoJobStore() *MongoJobStore {
-	golemstore, err := ConfigFile.GetString("mgodb", "store")
+	storename, err := ConfigFile.GetString("mgodb", "store")
 	if err != nil {
 		panic(err)
 	}
@@ -44,19 +41,29 @@ func NewMongoJobStore() *MongoJobStore {
 		panic(err)
 	}
 
-	session := NewMongoSession()
+	dbhost, err := ConfigFile.GetString("mgodb", "server")
+	if err != nil {
+		panic(err)
+	}
 
-	return &MongoJobStore{
-		session:       session,
-		storename:     golemstore,
-		jobCollection: jobCollection}
+	session, err := mgo.Mongo(dbhost)
+	if err != nil {
+		panic(err)
+	}
+
+	// Modes are Safe, Monotonic, and Strong, Strong tells the system to sync on inserts/updates
+	session.SetMode(mgo.Strong, true)
+
+	db := session.DB(storename)
+
+	return &MongoJobStore{jobsCollection: db.C(jobCollection)}
 }
 
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) (err os.Error) {
 	vlog("MongoJobStore.Create(%v)", item)
 	// TODO : Persist tasks
-	item.FirstCreated = GetCurrentTime()
-	this.JobsCollection().Insert(item)
+	item.FirstCreated = time.LocalTime().String()
+	this.jobsCollection.Insert(item)
 	return
 }
 
@@ -77,7 +84,7 @@ func (this *MongoJobStore) Active() (items []JobDetails, err os.Error) {
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 	vlog("MongoJobStore.Get(%v)", jobId)
-	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(&item)
+	err = this.jobsCollection.Find(bson.M{"jobid": jobId}).One(&item)
 	return
 }
 
@@ -86,7 +93,7 @@ func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 
 	m := make(map[string]interface{})
 
-	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
+	err = this.jobsCollection.Find(bson.M{"jobid": jobId}).One(m)
 	if err != nil {
 		vlog("MongoJobStore.Tasks(%v):err=%v", jobId, err)
 		return
@@ -106,7 +113,7 @@ func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
 		return
 	}
 
-	item.LastModified = GetCurrentTime()
+	item.LastModified = time.LocalTime().String()
 
 	progress := item.Progress
 
@@ -118,14 +125,14 @@ func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
 	modifierMap["lastmodified"] = item.LastModified
 
 	// TODO: Proper update
-	err = this.JobsCollection().Update(bson.M{"jobid": item.JobId}, modifierMap)
+	err = this.jobsCollection.Update(bson.M{"jobid": item.JobId}, modifierMap)
 	return
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
 	vlog("MongoJobStore.FindJobs(%v)", m)
 
-	iter, err := this.JobsCollection().Find(m).Iter()
+	iter, err := this.jobsCollection.Find(m).Iter()
 	if err != nil {
 		vlog("MongoJobStore.FindJobs(%v): %v", m, err)
 		return
@@ -141,31 +148,4 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 
 	vlog("MongoJobStore.FindJobs: %v jobs matching %v", len(items), m)
 	return
-}
-
-func (this *MongoJobStore) JobsCollection() mgo.Collection {
-	db := this.session.DB(this.storename)
-	return db.C(this.jobCollection)
-}
-
-func NewMongoSession() *mgo.Session {
-	dbhost, err := ConfigFile.GetString("mgodb", "server")
-	if err != nil {
-		panic(err)
-	}
-
-	session, err := mgo.Mongo(dbhost)
-	if err != nil {
-		panic(err)
-	}
-
-	// Modes are Safe, Monotonic, and Strong, Strong tells the system to sync on inserts/updates
-	session.SetMode(mgo.Strong, true)
-
-	return session
-}
-
-func GetCurrentTime() (val string) {
-	now := time.LocalTime()
-	return now.String()
 }
