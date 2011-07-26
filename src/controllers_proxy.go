@@ -31,20 +31,22 @@ import (
 
 type ProxyJobController struct {
 	proxy *http.ReverseProxy
+	apikey string
 }
 
 func NewProxyJobController() ProxyJobController {
 	target := ConfigFile.GetRequiredString("scribe", "target")
+	apikey := ConfigFile.GetRequiredString("default", "password")
 	url, err := http.ParseRequestURL(target)
 	if err != nil {
 		panic(err)
 	}
 
-	return ProxyJobController{http.NewSingleHostReverseProxy(url)}
+	return ProxyJobController{http.NewSingleHostReverseProxy(url), apikey}
 }
 
 func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := Proxy("GET", "/jobs/", c.proxy, nil)
+	val, err := Proxy("GET", "/jobs/", c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -61,7 +63,7 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	return
 }
 func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
-	val, err := Proxy("GET", "/jobs/"+jobId, c.proxy, nil)
+	val, err := Proxy("GET", "/jobs/"+jobId, c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -70,7 +72,7 @@ func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Err
 	return
 }
 func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	val, err := Proxy("POST", "/jobs/"+jobId, c.proxy, r.Body)
+	val, err := Proxy("POST", "/jobs/"+jobId, c.apikey, c.proxy, r.Body)
 	if err != nil {
 		return
 	}
@@ -85,30 +87,32 @@ func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error)
 	return
 }
 func (c ProxyJobController) Stop(jobId string) os.Error {
-	_, err := Proxy("POST", "/jobs/"+jobId+"/stop", c.proxy, nil)
+	_, err := Proxy("POST", "/jobs/"+jobId+"/stop", c.apikey, c.proxy, nil)
 	return err
 }
 func (c ProxyJobController) Kill(jobId string) os.Error {
-	_, err := Proxy("POST", "/jobs/"+jobId+"/kill", c.proxy, nil)
+	_, err := Proxy("POST", "/jobs/"+jobId+"/kill", c.apikey, c.proxy, nil)
 	return err
 }
 
 type ProxyNodeController struct {
 	proxy *http.ReverseProxy
+	apikey string
 }
 
 func NewProxyNodeController() ProxyNodeController {
 	target := ConfigFile.GetRequiredString("scribe", "target")
+	apikey := ConfigFile.GetRequiredString("default", "password")
 	url, err := http.ParseRequestURL(target)
 	if err != nil {
 		panic(err)
 	}
 
-	return ProxyNodeController{http.NewSingleHostReverseProxy(url)}
+	return ProxyNodeController{http.NewSingleHostReverseProxy(url), apikey}
 }
 
 func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := Proxy("GET", "/nodes/", c.proxy, nil)
+	val, err := Proxy("GET", "/nodes/", c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -124,7 +128,7 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	return
 }
 func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	val, err := Proxy("GET", "/nodes/"+nodeId, c.proxy, nil)
+	val, err := Proxy("GET", "/nodes/"+nodeId, c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
@@ -133,16 +137,15 @@ func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.E
 	return
 }
 func (c ProxyNodeController) RestartAll() os.Error {
-	_, err := Proxy("POST", "/nodes/restart", c.proxy, nil)
+	_, err := Proxy("POST", "/nodes/restart", c.apikey, c.proxy, nil)
 	return err
 }
 func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) (err os.Error) {
-	log("ProxyNodeController.Resize:%v,%d", nodeId, numberOfThreads)
-	_, err = Proxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.proxy, nil)
+	_, err = Proxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.apikey, c.proxy, nil)
 	return
 }
 func (c ProxyNodeController) KillAll() os.Error {
-	_, err := Proxy("POST", "/nodes/kill", c.proxy, nil)
+	_, err := Proxy("POST", "/nodes/kill", c.apikey, c.proxy, nil)
 	return err
 }
 
@@ -164,7 +167,7 @@ func (w JsonResponseWriter) WriteHeader(i int) {
 	return
 }
 
-func Proxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
+func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
 	vlog("Proxy(%v %v)", method, uri)
 	if reader == nil {
 		reader = strings.NewReader("")
@@ -175,7 +178,7 @@ func Proxy(method string, uri string, proxy *http.ReverseProxy, reader io.Reader
 		return
 	}
 
-	r.Header.Set("x-golem-apikey", "test")
+	r.Header.Set("x-golem-apikey", apikey)
 
 	content := make(chan []byte, 1)
 	statuscode := make(chan int, 1)
