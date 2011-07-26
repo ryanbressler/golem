@@ -27,7 +27,7 @@ import (
 )
 
 type MongoJobStore struct {
-	jobsCollection  mgo.Collection
+	jobsCollection mgo.Collection
 }
 
 func NewMongoJobStore() *MongoJobStore {
