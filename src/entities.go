@@ -19,10 +19,6 @@
 */
 package main
 
-import (
-	"time"
-)
-
 type ItemsHandle struct {
 	Items         []interface{}
 	NumberOfItems int
@@ -66,8 +62,8 @@ type JobDetails struct {
 	Label string
 	Type  string
 
-	FirstCreated *time.Time
-	LastModified *time.Time
+	FirstCreated string
+	LastModified string
 
 	Progress TaskProgress
 
@@ -86,14 +82,11 @@ func (this *TaskProgress) isComplete() bool {
 }
 
 func NewJobDetails(jobId string, owner string, label string, jobtype string, totalTasks int) JobDetails {
-	now := time.Time{}
-
 	return JobDetails{
 		JobId: jobId, Uri: "/jobs/" + jobId,
 		Owner: owner, Label: label, Type: jobtype,
 		Progress: TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
-		Running:  false, Scheduled: false,
-		FirstCreated: &now, LastModified: &now}
+		Running:  false, Scheduled: false}
 }
 
 func TotalTasks(tasks []Task) (totalTasks int) {
