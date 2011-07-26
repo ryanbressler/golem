@@ -96,26 +96,12 @@ func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 	return
 }
 
-func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
+func (this *MongoJobStore) Update(item JobDetails) os.Error {
 	if item.JobId == "" {
-		err = os.NewError("No Job Id Found")
-		return
+		return os.NewError("No Job Id Found")
 	}
 
-	item.LastModified = time.LocalTime().String()
-
-	progress := item.Progress
-
-	modifierMap := make(map[string]interface{})
-	modifierMap["scheduled"] = item.Scheduled
-	modifierMap["running"] = item.Running
-	modifierMap["taskerrored"] = progress.Errored
-	modifierMap["taskfinished"] = progress.Finished
-	modifierMap["lastmodified"] = item.LastModified
-
-	// TODO: Proper update
-	err = this.jobsCollection.Update(bson.M{"jobid": item.JobId}, modifierMap)
-	return
+	return this.jobsCollection.Update(bson.M{"jobid": item.JobId}, item)
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
