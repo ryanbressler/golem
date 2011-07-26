@@ -55,6 +55,7 @@ func NewMongoJobStore() *MongoJobStore {
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) (err os.Error) {
 	vlog("MongoJobStore.Create(%v)", item)
 	// TODO : Persist tasks
+	item.FirstCreated = GetCurrentTime()
 	this.JobsCollection().Insert(item)
 	return
 }
@@ -76,20 +77,7 @@ func (this *MongoJobStore) Active() (items []JobDetails, err os.Error) {
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 	vlog("MongoJobStore.Get(%v)", jobId)
-
-	m := make(map[string]interface{})
-
-	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(m)
-	if err != nil {
-		vlog("MongoJobStore.Get(%v):err=%v", jobId, err)
-		return
-	}
-
-	vlog("MongoJobStore.Get(%v):item=%v", jobId, m)
-	vlog("MongoJobStore.Get(%v):item=%v", jobId, m["handle"])
-
-	// TODO : Populate job details
-
+	err = this.JobsCollection().Find(bson.M{"jobid": jobId}).One(&item)
 	return
 }
 
@@ -118,7 +106,7 @@ func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
 		return
 	}
 
-	now := time.Time{}
+	item.LastModified = GetCurrentTime()
 
 	progress := item.Progress
 
@@ -127,7 +115,7 @@ func (this *MongoJobStore) Update(item JobDetails) (err os.Error) {
 	modifierMap["running"] = item.Running
 	modifierMap["taskerrored"] = progress.Errored
 	modifierMap["taskfinished"] = progress.Finished
-	modifierMap["lastmodified"] = now.String()
+	modifierMap["lastmodified"] = item.LastModified
 
 	// TODO: Proper update
 	err = this.JobsCollection().Update(bson.M{"jobid": item.JobId}, modifierMap)
@@ -145,7 +133,7 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 
 	for {
 		jd := JobDetails{}
-		if nexterr := iter.Next(jd); nexterr != nil {
+		if nexterr := iter.Next(&jd); nexterr != nil {
 			break
 		}
 		items = append(items, jd)
@@ -177,15 +165,7 @@ func NewMongoSession() *mgo.Session {
 	return session
 }
 
-func ParseTime(stringTime string) (tm *time.Time) {
-	if stringTime == "" {
-		tm = &time.Time{}
-		return
-	}
-
-	tm, err := time.Parse("UnixDate", stringTime)
-	if err != nil {
-		log("ParseTime(%v):%v", stringTime, err)
-	}
-	return
+func GetCurrentTime() (val string) {
+	now := time.LocalTime()
+	return now.String()
 }
