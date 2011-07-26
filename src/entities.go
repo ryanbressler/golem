@@ -120,7 +120,8 @@ func NewWorkerNode(nh *NodeHandle) WorkerNode {
 }
 
 type WorkerMessage struct {
-	Type  int
-	SubId string
-	Body  string
+	Type   int
+	SubId  string
+	Body   string
+	ErrMsg string
 }

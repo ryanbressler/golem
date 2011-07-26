@@ -36,7 +36,9 @@ func RestartIn(waitn int64) {
 		log("exec %s: %s\n", os.Args, err)
 		return
 	}
-	_, err = exec.Run(cmd, os.Args, nil, "./", exec.DevNull, exec.PassThrough, exec.PassThrough)
+
+	f := []*os.File{os.Stdin, os.Stdout, os.Stderr}
+	_, err = os.StartProcess(cmd, os.Args, &os.ProcAttr{Files: f})
 	if err != nil {
 		log("%v", err)
 	}

@@ -22,10 +22,12 @@ package main
 import (
 	"fmt"
 	"websocket"
+	"big"
 	"os"
 	"crypto/tls"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"crypto/rand"
 	"encoding/pem"
 	"time"
@@ -113,9 +115,9 @@ func GenerateTlsCert() tls.Certificate {
 	}
 
 	template := x509.Certificate{
-		SerialNumber:       []byte{0},
+		SerialNumber:       big.NewInt(0),
 		PublicKeyAlgorithm: x509.RSA,
-		Subject: x509.Name{
+		Subject: pkix.Name{
 			CommonName:   hostname,
 			Organization: []string{organization},
 		},

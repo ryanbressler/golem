@@ -20,15 +20,15 @@
 package main
 
 import (
-	"os"
+	"io"
 	"bufio"
 	"fmt"
 	"exec"
 	"time"
 )
 
-func pipeToChan(p *os.File, msgType int, Id string, ch chan WorkerMessage) {
-	bp := bufio.NewReader(p)
+func pipeToChan(r io.Reader, msgType int, Id string, ch chan WorkerMessage) {
+	bp := bufio.NewReader(r)
 
 	for {
 		line, err := bp.ReadString('\n')
@@ -49,7 +49,7 @@ func startJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 	job := NewJob(jsonjob)
 	jobcmd := job.Args[0]
 	//make sure the path to the exec is fully qualified
-	cmd, err := exec.LookPath(jobcmd)
+	exepath, err := exec.LookPath(jobcmd)
 	if err != nil {
 		con.OutChan <- WorkerMessage{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
 		log("exec %s: %s\n", jobcmd, err)
@@ -57,36 +57,51 @@ func startJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		return
 	}
 
-	args := job.Args[:]
+	args := job.Args[1:]
 	args = append(args, fmt.Sprintf("%v", job.SubId))
 	args = append(args, fmt.Sprintf("%v", job.LineId))
 	args = append(args, fmt.Sprintf("%v", job.JobId))
 
 	//start the job in test dir pass all stdio back to main.  note that cmd has to be the first thing in the args array
-	c, err := exec.Run(cmd, args, nil, "./", exec.DevNull, exec.Pipe, exec.Pipe)
+	cmd := exec.Command(exepath, args...)
+
+	outpipe, err := cmd.StdoutPipe()
 	if err != nil {
-		log("%v", err)
+		log("startJob.StdoutPipe:%v", err)
+		return
 	}
-	go pipeToChan(c.Stdout, COUT, job.SubId, con.OutChan)
-	go pipeToChan(c.Stderr, CERROR, job.SubId, con.OutChan)
-	kb := &Killable{Pid: c.Process.Pid, SubId: job.SubId, JobId: job.JobId}
+	errpipe, err := cmd.StderrPipe()
+	if err != nil {
+		log("startJob.StderrPipe:%v", err)
+		return
+	}
+
+	go pipeToChan(outpipe, COUT, job.SubId, con.OutChan)
+	go pipeToChan(errpipe, CERROR, job.SubId, con.OutChan)
+
+	err = cmd.Start()
+	if err != nil {
+		log("startJob.Start:%v", err)
+		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
+		return
+	}
+
+	kb := &Killable{Pid: cmd.Process.Pid, SubId: job.SubId, JobId: job.JobId}
 	jk.Registerchan <- kb
+	defer func() {
+		jk.Donechan <- kb
+	}()
+
 	//wait for the job to finish
-	w, err := c.Wait(0)
+	err = cmd.Wait()
 	if err != nil {
 		log("joberror:%v", err)
+		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
+		return
 	}
 
 	log("Finishing job %v", job.JobId)
-	//send signal back to main
-	if w.Exited() && w.ExitStatus() == 0 {
-
-		replyc <- &WorkerMessage{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
-	} else {
-		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
-	}
-	jk.Donechan <- kb
-
+	replyc <- &WorkerMessage{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
 }
 
 func CheckIn(c *Connection) {
