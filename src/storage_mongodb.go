@@ -31,11 +31,6 @@ type MongoJobStore struct {
 	TASKS mgo.Collection
 }
 
-type TaskHolder struct {
-	JobId string
-	Tasks []Task
-}
-
 func NewMongoJobStore() *MongoJobStore {
 	dbhost := ConfigFile.GetRequiredString("mgodb", "server")
 	storename := ConfigFile.GetRequiredString("mgodb", "store")
@@ -47,11 +42,9 @@ func NewMongoJobStore() *MongoJobStore {
 		panic(err)
 	}
 
-	// Modes are Safe, Monotonic, and Strong, Strong tells the system to sync on inserts/updates
-	session.SetMode(mgo.Strong, true)
+	session.SetMode(mgo.Strong, true) // [Safe, Monotonic, Strong] Strong syncs on inserts/updates
 
 	db := session.DB(storename)
-
 	return &MongoJobStore{JOBS: db.C(jobCollection), TASKS: db.C(taskCollection)}
 }
 
@@ -83,14 +76,11 @@ func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 }
 
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
-	vlog("MongoJobStore.Tasks(%v)", jobId)
-
 	item := TaskHolder{}
 	err = this.TASKS.Find(bson.M{"jobid": jobId}).One(&item)
-	if err != nil {
-		return
+	if err == nil {
+		tasks = item.Tasks
 	}
-	tasks = item.Tasks
 	return
 }
 
@@ -103,20 +93,15 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
-	vlog("MongoJobStore.FindJobs(%v)", m)
-
 	iter, err := this.JOBS.Find(m).Iter()
-	if err != nil {
-		return
-	}
-
-	for {
-		jd := JobDetails{}
-		if nexterr := iter.Next(&jd); nexterr != nil {
-			break
+	if err == nil {
+		for {
+			jd := JobDetails{}
+			if nexterr := iter.Next(&jd); nexterr != nil {
+				break
+			}
+			items = append(items, jd)
 		}
-		items = append(items, jd)
 	}
-
 	return
 }
