@@ -114,7 +114,11 @@ func (s Submission) MonitorWorkTasks() {
 func (s Submission) submitJobs(jobChan chan *Job) {
 	vlog("submitJobs")
 
-	dtls := s.SniffDetails()
+	dtls := <-s.Details
+	dtls.Scheduled = true
+	dtls.Running = true
+	s.Details <- dtls
+
 	taskId := 0
 	for lineId, vals := range s.Tasks {
 		vlog("submitJobs:[%d,%v]", lineId, vals)

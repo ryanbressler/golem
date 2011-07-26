@@ -23,33 +23,31 @@ import (
 	"http"
 	"json"
 	"os"
+	"strings"
 	"time"
 )
 
 type Scribe struct {
 	store         JobStore
 	masterJobsUrl string
+	apikey string
 }
 
 func LaunchScribe(store JobStore) {
 	target := ConfigFile.GetRequiredString("scribe", "target")
-	s := Scribe{store: store, masterJobsUrl: target + "/jobs/"}
+	apikey := ConfigFile.GetRequiredString("default", "password")
+	s := Scribe{store: store, masterJobsUrl: target + "/jobs/", apikey: apikey}
 
-	ticker := time.NewTicker(10 * second)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				s.PollJobs()
-			}
-		}
-	}()
+	for {
+		s.PollJobs()
+		time.Sleep(10 * second)
+	}
 }
 
 func (this *Scribe) PollJobs() {
 	vlog("Scribe.PollJobs")
-	for _, js := range this.GetJobs() {
-		this.store.Update(js)
+	for _, jd := range this.GetJobs() {
+		this.store.Update(jd)
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
@@ -61,7 +59,7 @@ func (this *Scribe) PollJobs() {
 
 func (this *Scribe) GetJobs() []JobDetails {
 	vlog("Scribe.GetJobs()")
-	resp, _, err := http.Get(this.masterJobsUrl)
+	resp, err := http.Get(this.masterJobsUrl)
 	if err != nil {
 		vlog("Scribe.GetJobs:%v", err)
 		return nil
@@ -90,12 +88,21 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 		return
 	}
 
-	data := make(map[string]string)
-	data["jsonfile"] = string(taskJson)
+	data := make(http.Values)
+	data.Set("jsonfile", string(taskJson))
 
-	header := http.Header{}
-	header.Set("x-golem-job-preassigned-id", jd.JobId)
-	http.PostForm(this.masterJobsUrl, data)
+	r, err := http.NewRequest("POST", this.masterJobsUrl, strings.NewReader(data.Encode()))
+	if err != nil {
+	    return
+	}
+
+	r.Header.Set("x-golem-job-preassigned-id", jd.JobId)
+	r.Header.Set("x-golem-apikey", this.apikey)
+
+    client := http.Client{}
+    resp, err := client.Do(r)
+
+    log("Client.Do:%v;%v",resp, err)
 
 	return
 }
