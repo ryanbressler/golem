@@ -27,13 +27,20 @@ import (
 )
 
 type MongoJobStore struct {
-	jobsCollection mgo.Collection
+	JOBS mgo.Collection
+	TASKS mgo.Collection
+}
+
+type TaskHolder struct {
+    JobId string
+    Tasks []Task
 }
 
 func NewMongoJobStore() *MongoJobStore {
+	dbhost := ConfigFile.GetRequiredString("mgodb", "server")
 	storename := ConfigFile.GetRequiredString("mgodb", "store")
 	jobCollection := ConfigFile.GetRequiredString("mgodb", "jobcollection")
-	dbhost := ConfigFile.GetRequiredString("mgodb", "server")
+	taskCollection := ConfigFile.GetRequiredString("mgodb", "taskcollection")
 
 	session, err := mgo.Mongo(dbhost)
 	if err != nil {
@@ -45,14 +52,14 @@ func NewMongoJobStore() *MongoJobStore {
 
 	db := session.DB(storename)
 
-	return &MongoJobStore{jobsCollection: db.C(jobCollection)}
+	return &MongoJobStore{JOBS: db.C(jobCollection), TASKS: db.C(taskCollection)}
 }
 
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) (err os.Error) {
 	vlog("MongoJobStore.Create(%v)", item)
-	// TODO : Persist tasks
 	item.FirstCreated = time.LocalTime().String()
-	this.jobsCollection.Insert(item)
+	this.JOBS.Insert(item)
+	this.TASKS.Insert(TaskHolder{item.JobId, tasks})
 	return
 }
 
@@ -72,27 +79,19 @@ func (this *MongoJobStore) Active() (items []JobDetails, err os.Error) {
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
-	vlog("MongoJobStore.Get(%v)", jobId)
-	err = this.jobsCollection.Find(bson.M{"jobid": jobId}).One(&item)
+	err = this.JOBS.Find(bson.M{"jobid": jobId}).One(&item)
 	return
 }
 
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 	vlog("MongoJobStore.Tasks(%v)", jobId)
 
-	m := make(map[string]interface{})
-
-	err = this.jobsCollection.Find(bson.M{"jobid": jobId}).One(m)
+    item := TaskHolder{}
+	err = this.TASKS.Find(bson.M{"jobid": jobId}).One(&item)
 	if err != nil {
-		vlog("MongoJobStore.Tasks(%v):err=%v", jobId, err)
 		return
 	}
-
-	vlog("MongoJobStore.Tasks(%v):item=%v", jobId, m)
-	vlog("MongoJobStore.Tasks(%v):item=%v", jobId, m["tasks"])
-
-	// TODO : Populate job details
-
+	tasks = item.Tasks
 	return
 }
 
@@ -101,15 +100,14 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 		return os.NewError("No Job Id Found")
 	}
 
-	return this.jobsCollection.Update(bson.M{"jobid": item.JobId}, item)
+	return this.JOBS.Update(bson.M{"jobid": item.JobId}, item)
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
 	vlog("MongoJobStore.FindJobs(%v)", m)
 
-	iter, err := this.jobsCollection.Find(m).Iter()
+	iter, err := this.JOBS.Find(m).Iter()
 	if err != nil {
-		vlog("MongoJobStore.FindJobs(%v): %v", m, err)
 		return
 	}
 
@@ -121,6 +119,5 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 		items = append(items, jd)
 	}
 
-	vlog("MongoJobStore.FindJobs: %v jobs matching %v", len(items), m)
 	return
 }
