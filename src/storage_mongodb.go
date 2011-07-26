@@ -31,20 +31,9 @@ type MongoJobStore struct {
 }
 
 func NewMongoJobStore() *MongoJobStore {
-	storename, err := ConfigFile.GetString("mgodb", "store")
-	if err != nil {
-		panic(err)
-	}
-
-	jobCollection, err := ConfigFile.GetString("mgodb", "jobcollection")
-	if err != nil {
-		panic(err)
-	}
-
-	dbhost, err := ConfigFile.GetString("mgodb", "server")
-	if err != nil {
-		panic(err)
-	}
+	storename := ConfigFile.GetRequiredString("mgodb", "store")
+	jobCollection := ConfigFile.GetRequiredString("mgodb", "jobcollection")
+	dbhost := ConfigFile.GetRequiredString("mgodb", "server")
 
 	session, err := mgo.Mongo(dbhost)
 	if err != nil {

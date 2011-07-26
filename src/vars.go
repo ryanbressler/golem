@@ -21,7 +21,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"goconf.googlecode.com/hg"
 )
 
 const (
@@ -31,6 +30,6 @@ const (
 
 var verbose = false
 var iobuffersize = 1000
-var ConfigFile *conf.ConfigFile
+var ConfigFile ConfigurationFile
 var useTls bool = true
 var hash = sha256.New() // use the same hasher
