@@ -61,6 +61,11 @@ func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error
 		jobId = UniqueId()
 	}
 
+	if _, isin := c.master.subMap[jobId]; isin {
+        vlog("NewJob: Exists: %v", jobId)
+        return
+	}
+
 	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")

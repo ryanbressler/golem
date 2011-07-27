@@ -62,15 +62,11 @@ func (this *Scribe) GetJobs() []JobDetails {
 	vlog("Scribe.GetJobs()")
 	resp, err := http.Get(this.masterJobsUrl)
 	if err != nil {
-		vlog("Scribe.GetJobs:%v", err)
 		return nil
 	}
 
-	b := make([]byte, 100)
-	resp.Body.Read(b)
-
-	lst := JobDetailsList{}
-	json.Unmarshal(b, &lst)
+	lst := JobDetailsList{Items:make([]JobDetails,0,0)}
+	json.NewDecoder(resp.Body).Decode(&lst)
 	return lst.Items
 }
 
@@ -78,11 +74,6 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	log("Scribe.PostJob(%v)", jd.JobId)
 
 	tasks, err := this.store.Tasks(jd.JobId)
-	if err != nil {
-		return
-	}
-
-	taskJson, err := json.Marshal(tasks)
 	if err != nil {
 		return
 	}
@@ -102,7 +93,7 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	go func() {
 		jsonFileWriter, _ := multipartWriter.CreateFormFile("jsonfile", "data.json")
-		jsonFileWriter.Write(taskJson)
+		json.NewEncoder(jsonFileWriter).Encode(tasks)
 		multipartWriter.Close()
 		pwriter.Close()
 	}()

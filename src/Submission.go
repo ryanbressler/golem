@@ -85,23 +85,23 @@ func (s Submission) MonitorWorkTasks() {
 	for {
 		select {
 		case <-s.ErrorChan:
-			Det := <-s.Details
-			Det.Progress.Errored++
-			s.Details <- Det
+			dtls := <-s.Details
+			dtls.Progress.Errored = 1 + dtls.Progress.Errored
+			s.Details <- dtls
 
-			vlog("MonitorWorkTasks [ERROR]", Det.JobId)
+			vlog("MonitorWorkTasks [ERROR] [%v,%v]", dtls.JobId, dtls.Progress.Errored)
 
 		case <-s.FinishedChan:
-			Det := <-s.Details
-			Det.Progress.Finished++
-			s.Details <- Det
+			dtls := <-s.Details
+			dtls.Progress.Finished = 1 + dtls.Progress.Finished
+			s.Details <- dtls
 
-			vlog("MonitorWorkTasks [FINISHED]", Det.JobId)
+			vlog("MonitorWorkTasks [FINISHED] [%v,%v]", dtls.JobId, dtls.Progress.Finished)
 		}
 
 		dtls := s.SniffDetails()
 		if dtls.Progress.isComplete() {
-			vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
+            vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
 			dtls = <-s.Details
 			dtls.Running = false
 			s.Details <- dtls
