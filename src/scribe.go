@@ -23,8 +23,9 @@ import (
 	"http"
 	"json"
 	"os"
-	"strings"
+	"io"
 	"time"
+	"mime/multipart"
 )
 
 type Scribe struct {
@@ -78,31 +79,37 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	tasks, err := this.store.Tasks(jd.JobId)
 	if err != nil {
-		vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
 		return
 	}
 
 	taskJson, err := json.Marshal(tasks)
 	if err != nil {
-		vlog("Scribe.PostJob(%v):%v", jd.JobId, err)
 		return
 	}
 
-	data := make(http.Values)
-	data.Set("jsonfile", string(taskJson))
+	preader, pwriter := io.Pipe()
 
-	r, err := http.NewRequest("POST", this.masterJobsUrl, strings.NewReader(data.Encode()))
+	r, err := http.NewRequest("POST", this.masterJobsUrl, preader)
 	if err != nil {
 		return
 	}
 
+	multipartWriter := multipart.NewWriter(pwriter)
+
+	r.Header.Set("Content-Type", multipartWriter.FormDataContentType())
 	r.Header.Set("x-golem-job-preassigned-id", jd.JobId)
 	r.Header.Set("x-golem-apikey", this.apikey)
 
+	go func() {
+		jsonFileWriter, _ := multipartWriter.CreateFormFile("jsonfile", "data.json")
+		jsonFileWriter.Write(taskJson)
+		multipartWriter.Close()
+		pwriter.Close()
+	}()
+
 	client := http.Client{}
 	resp, err := client.Do(r)
-
-	log("Client.Do:%v;%v", resp, err)
+	resp.Body.Close()
 
 	return
 }
