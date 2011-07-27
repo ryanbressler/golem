@@ -20,10 +20,10 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
     },
 
     renderGrid: function() {
-        var sc = this.joinArrays([{name: 'idx'}, {name: 'uri'}], this.storeColumns);
+        var sc = this.joinArrays([{name: 'idx'}, {name: 'Uri'}], this.storeColumns);
         var gc = this.joinArrays([
             this.selectionModel,
-            { header: "URI", width: 25, dataIndex: 'uri', sortable: false, hidden: true }
+            { header: "URI", width: 25, dataIndex: 'Uri', sortable: false, hidden: true }
         ], this.gridColumns);
         var tbar = this.joinArrays([
             { text: 'Refresh', iconCls:'refresh', ref: "../refreshButton" }
@@ -80,10 +80,10 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
     },
 
     getItemPointer: function(item) {
-        var itemPointer = this.itemPointers[item.uri];
+        var itemPointer = this.itemPointers[item.Uri];
         if (!itemPointer) {
             itemPointer = this.gridData.length;
-            this.itemPointers[item.uri] = itemPointer;
+            this.itemPointers[item.Uri] = itemPointer;
         }
         return itemPointer;
     },
@@ -94,8 +94,8 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
             method: "GET",
             success: function(o) {
                 var json = Ext.util.JSON.decode(o.responseText);
-                if (json && json.items) {
-                    Ext.each(json.items, this.addItem, this)
+                if (json && json.Items) {
+                    Ext.each(json.Items, this.addItem, this)
                     this.fireEvent("fetched");
                 }
             },
@@ -106,7 +106,7 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
     addItem: function(item) {
         var pointer = this.getItemPointer(item);
         var itemAsArray = this.getItemAsArray(item);
-        this.gridData[pointer] = this.joinArrays([pointer, item.uri], itemAsArray);
+        this.gridData[pointer] = this.joinArrays([pointer, item.Uri], itemAsArray);
     },
 
     joinArrays: function(a1, a2) {
