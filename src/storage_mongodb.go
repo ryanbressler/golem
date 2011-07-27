@@ -88,16 +88,16 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 		return os.NewError("No Job Id Found")
 	}
 
-    existing, err := this.Get(item.JobId)
-    if err != nil {
-        return err
-    }
+	existing, err := this.Get(item.JobId)
+	if err != nil {
+		return err
+	}
 
-    existing.LastModified = time.LocalTime().String()
-    existing.Progress.Finished = item.Progress.Finished
-    existing.Progress.Errored = item.Progress.Errored
-    existing.Running = item.Running
-    existing.Scheduled = item.Scheduled
+	existing.LastModified = time.LocalTime().String()
+	existing.Progress.Finished = item.Progress.Finished
+	existing.Progress.Errored = item.Progress.Errored
+	existing.Running = item.Running
+	existing.Scheduled = item.Scheduled
 
 	return this.JOBS.Update(bson.M{"jobid": item.JobId}, existing)
 }
