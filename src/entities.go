@@ -20,7 +20,7 @@
 package main
 
 import (
-    "time"
+	"time"
 )
 
 type ItemsHandle struct {
@@ -76,8 +76,8 @@ func NewJobDetails(jobId string, owner string, label string, jobtype string, tot
 		JobId: jobId, Uri: "/jobs/" + jobId,
 		Owner: owner, Label: label, Type: jobtype,
 		FirstCreated: time.LocalTime().String(),
-		Progress: TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
-		Running:  false, Scheduled: false}
+		Progress:     TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
+		Running:      false, Scheduled: false}
 }
 
 func TotalTasks(tasks []Task) (totalTasks int) {
