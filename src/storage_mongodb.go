@@ -50,7 +50,6 @@ func NewMongoJobStore() *MongoJobStore {
 
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) os.Error {
 	vlog("MongoJobStore.Create(%v)", item)
-	item.FirstCreated = time.LocalTime().String()
 	err := this.JOBS.Insert(item)
 	if err != nil {
 		return err
@@ -89,7 +88,18 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 		return os.NewError("No Job Id Found")
 	}
 
-	return this.JOBS.Update(bson.M{"jobid": item.JobId}, item)
+    existing, err := this.Get(item.JobId)
+    if err != nil {
+        return err
+    }
+
+    existing.LastModified = time.LocalTime().String()
+    existing.Progress.Finished = item.Progress.Finished
+    existing.Progress.Errored = item.Progress.Errored
+    existing.Running = item.Running
+    existing.Scheduled = item.Scheduled
+
+	return this.JOBS.Update(bson.M{"jobid": item.JobId}, existing)
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {

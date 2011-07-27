@@ -19,6 +19,10 @@
 */
 package main
 
+import (
+    "time"
+)
+
 type ItemsHandle struct {
 	Items         []interface{}
 	NumberOfItems int
@@ -71,6 +75,7 @@ func NewJobDetails(jobId string, owner string, label string, jobtype string, tot
 	return JobDetails{
 		JobId: jobId, Uri: "/jobs/" + jobId,
 		Owner: owner, Label: label, Type: jobtype,
+		FirstCreated: time.LocalTime().String(),
 		Progress: TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
 		Running:  false, Scheduled: false}
 }
