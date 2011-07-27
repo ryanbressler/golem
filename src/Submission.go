@@ -101,7 +101,7 @@ func (s Submission) MonitorWorkTasks() {
 
 		dtls := s.SniffDetails()
 		if dtls.Progress.isComplete() {
-            vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
+			vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
 			dtls = <-s.Details
 			dtls.Running = false
 			s.Details <- dtls
