@@ -65,7 +65,7 @@ func (this *Scribe) GetJobs() []JobDetails {
 		return nil
 	}
 
-	lst := JobDetailsList{Items:make([]JobDetails,0,0)}
+	lst := JobDetailsList{Items: make([]JobDetails, 0, 0)}
 	json.NewDecoder(resp.Body).Decode(&lst)
 	return lst.Items
 }
