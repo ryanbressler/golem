@@ -64,6 +64,7 @@ func (s *Submission) Stop() bool {
 		case s.stopChan <- 1:
 			dtls := <-s.Details
 			dtls.Running = false
+			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
 			log("Submission.Stop(): %v", dtls.JobId)
@@ -87,6 +88,7 @@ func (s Submission) MonitorWorkTasks() {
 		case <-s.ErrorChan:
 			dtls := <-s.Details
 			dtls.Progress.Errored = 1 + dtls.Progress.Errored
+			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
 			vlog("MonitorWorkTasks [ERROR] [%v,%v]", dtls.JobId, dtls.Progress.Errored)
@@ -94,6 +96,7 @@ func (s Submission) MonitorWorkTasks() {
 		case <-s.FinishedChan:
 			dtls := <-s.Details
 			dtls.Progress.Finished = 1 + dtls.Progress.Finished
+			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
 			vlog("MonitorWorkTasks [FINISHED] [%v,%v]", dtls.JobId, dtls.Progress.Finished)
@@ -104,6 +107,7 @@ func (s Submission) MonitorWorkTasks() {
 			vlog("MonitorWorkTasks [COMPLETED]: %v", dtls.JobId)
 			dtls = <-s.Details
 			dtls.Running = false
+			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 			return
 		}
@@ -117,6 +121,7 @@ func (s Submission) submitJobs(jobChan chan *Job) {
 	dtls := <-s.Details
 	dtls.Scheduled = true
 	dtls.Running = true
+	dtls.LastModified = time.LocalTime().String()
 	s.Details <- dtls
 
 	taskId := 0
