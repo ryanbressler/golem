@@ -18,6 +18,12 @@
 
     <script type="text/javascript">
         Ext.onReady(function() {
+            var banner = {
+                region: "north",
+                height: 80,
+                html: '<img src="images/banner.png" alt="Golem"/>'
+            };
+
             var jobsGrid = new JobsGrid({
                 url: "/jobs/",
                 gridPanelConfig: {
@@ -51,6 +57,7 @@
             new Ext.Viewport({
                 layout: "border",
                 items: [
+                    banner,
                     jobsGrid.grid,
                     nodesGrid.grid
                 ],
