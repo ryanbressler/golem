@@ -49,7 +49,7 @@ die                                 : kill everything ... rarelly used
 """
 
 class HTTPSTLSv1Connection(httplib.HTTPConnection):
-        "This class allows communication via TLS, it is version of httplib.HTTPSConnection that specifies TLSv1."
+        """This class allows communication via TLS, it is version of httplib.HTTPSConnection that specifies TLSv1."""
 
         default_port = httplib.HTTPS_PORT
 
@@ -60,7 +60,7 @@ class HTTPSTLSv1Connection(httplib.HTTPConnection):
             self.cert_file = cert_file
 
         def connect(self):
-            "Connect to a host on a given (TLS) port."
+            """Connect to a host on a given (TLS) port."""
 
             sock = socket.create_connection((self.host, self.port),
                                             self.timeout)
@@ -69,9 +69,10 @@ class HTTPSTLSv1Connection(httplib.HTTPConnection):
                 self._tunnel()
             self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file, False,ssl.CERT_NONE,ssl.PROTOCOL_TLSv1)
 
-"""multipart encodes a form. data should be a dictionary of the the form fields and filebody 
-should be a string of the body of the file"""
+
 def encode_multipart_formdata(data, filebody):
+    """multipart encodes a form. data should be a dictionary of the the form fields and filebody
+	should be a string of the body of the file"""
     BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
     CRLF = '\r\n'
     L = []
@@ -92,12 +93,13 @@ def encode_multipart_formdata(data, filebody):
     content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
     return content_type, body
 
-"""
-posts a multipart form to url, paramMap should be a dictionary of the form fields, json data 
-should be a string of the body of the file (json in our case) and password should be the password 
-to icnlude in the header
-"""
+
 def doGet(url):
+    """
+    posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
+    should be a string of the body of the file (json in our case) and password should be the password
+    to include in the header
+    """
     u = urlparse.urlparse(url)
     conn=0
     if u.scheme == "http":
@@ -121,12 +123,12 @@ def doGet(url):
 
     #conn.close()
 
-"""
-posts a multipart form to url, paramMap should be a dictionary of the form fields, json data 
-should be a string of the body of the file (json in our case) and password should be the password 
-to icnlude in the header
-"""
 def doPost(url, paramMap, jsondata,password):
+    """
+    posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
+    should be a string of the body of the file (json in our case) and password should be the password
+    to include in the header
+    """
 
     u = urlparse.urlparse(url)
     
