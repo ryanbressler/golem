@@ -139,8 +139,6 @@ def doPost(url, paramMap, jsondata,password):
     print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
     
 
-    
-    conn=0
     if u.scheme == "http":
         conn = httplib.HTTPConnection(u.hostname,u.port)
     else:
@@ -162,6 +160,73 @@ def doPost(url, paramMap, jsondata,password):
 
     #conn.close()
 
+
+def canonizeMaster(master):
+    """Attaches an http or https prefix onto the master connection string if needed.
+    """
+    if master[0:4] != "http":
+        if supporttls:
+            print "Using https."
+            canonicalMaster = "https://" + master
+        else:
+            print "Using http (insecure)."
+            canonicalMaster = "http://" + master
+    if canonicalMaster[0:5] == "https" and supporttls == False:
+        raise ValueError("HTTPS specified, but the SSL package tlslite is not available. Install tlslite.")
+    return canonicalMaster
+
+
+def runOneLine(cmd, count, args, pwd, url):
+    jobs = [{"Count": int(count), "Args": args}]
+    jobs = json.dumps(jobs)
+    data = {'command': cmd}
+    print "Submitting run request to %s." % url
+    doPost(url, data, jobs, pwd)
+
+
+def generateJobList(fo):
+    """Generator that produces a sequence of job dicts from a runlist file. More efficient than list approach.
+    """
+    for line in fo:
+        values = line.split()
+        yield {"Count": int(values[0]), "Args": values[1:]}
+
+
+def runList(cmd, fo, pwd, url):
+    jobs = generateJobList(fo)
+    jobs = json.dumps(jobs)
+    data = {'command': cmd}
+    print "Submitting run request to %s." % url
+    doPost(url, data, jobs, pwd)
+
+
+def runOnEach(cmd, jobs, pwd, url):
+    jobs = json.dumps(jobs)
+    data = {'command': cmd}
+    print "Submitting run request to %s." % url
+    doPost(url, data, jobs, pwd)
+
+
+def getJobList(url):
+    doGet(url)
+
+
+def stopJob(jobId, pwd, url):
+    doPost(url + jobId + "/stop", {}, "", pwd)
+
+
+def killJob(jobId, pwd, url):
+    doPost(url + jobId + "/kill", {}, "", pwd)
+
+
+def getJobStatus(jobId, url):
+    doGet(url + jobId)
+
+
+def getNodesStatus(master):
+    doGet(master + "/nodes/")
+
+
 def main():
     if len(sys.argv)==1:
         print usage
@@ -175,79 +240,47 @@ def main():
         commandIndex = 4
     
     
-    cmd = sys.argv[commandIndex]
-    
-    if master[0:4] != "http":
-        if supporttls:
-            print "Using https."
-            master = "https://"+master
-        else:
-            print "Using http (insecure)."
-            master = "http://"+master
-    if master[0:5] == "https" and supporttls == False:
-        return "To use https please install the python package tlslite."
+    cmd = sys.argv[commandIndex].lower()
+
+    master = canonizeMaster(master)
     
     url = master+"/jobs/"
+
     if cmd == "run":
-        
-        jobs = [{"Count":int(sys.argv[commandIndex+1]),"Args":sys.argv[commandIndex+2:]}]
-        jobs = json.dumps(jobs)
-        data = {'command':cmd}
-        print "Submitting run request to %s."%url
-        doPost(url,data,jobs,pwd)
-    
-    if cmd == "runlist":
-        fo = open(sys.argv[commandIndex+1])
-        jobs=[]
-        for line in fo:
-            values = line.split()
-            jobs.append({"Count":int(values[0]),"Args":values[1:]})
-        jobs = json.dumps(jobs)
-        data = {'command':cmd}
-        print "Submitting run request to %s."%url
-        doPost(url,data,jobs,pwd)
-        
-    if cmd == "runoneach":
-        
-        jobs = [{"Args":sys.argv[commandIndex+1:]}]
-        jobs = json.dumps(jobs)
-        data = {'command':cmd}
-        print "Submitting run request to %s."%url
-        doPost(url,data,jobs,pwd)
-    if cmd == "jobs" or cmd == "list":
-        doGet(url)
-        
-    if cmd == "stop":
+        runOneLine(cmd, int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2], pwd, url)
+    elif cmd == "runlist":
+        runList(cmd, open(sys.argv[commandIndex + 1]), pwd, url)
+    elif cmd == "runoneach":
+        jobs = [{"Args": sys.argv[commandIndex + 1:]}]
+        runOnEach(cmd, jobs, pwd, url)
+    elif cmd == "jobs" or cmd == "list":
+        getJobList(url)
+    elif cmd == "stop":
         jobId = sys.argv[commandIndex+1]
-        doPost(url+jobId+"/stop",{},"",pwd)
-    if cmd == "kill":
+        stopJob(jobId, pwd, url)
+    elif cmd == "kill":
         jobId = sys.argv[commandIndex+1]
-        doPost(url+jobId+"/kill",{},"",pwd)
-    if cmd == "status":
+        killJob(jobId, pwd, url)
+    elif cmd == "status":
         jobId = sys.argv[commandIndex+1]
-        doGet(url+jobId)
-        
-    if cmd == "nodes":
-        doGet(master+"/nodes/")
-    if cmd == "resize":
+        getJobStatus(jobId, url)
+    elif cmd == "nodes":
+        getNodesStatus(master)
+    elif cmd == "resize":
+        #TODO refactor once I understand what this does
         doPost(master+"/nodes/"+sys.argv[commandIndex+1]+"/resize/"+sys.argv[commandIndex+2],{},"",pwd)
-    if cmd == "restart":
+    elif cmd == "restart":
         input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
         if input == "Y":
             doPost(master+"/nodes/restart",{},"",pwd)
         else:
             print "Canceled"
-    if cmd == "die":
+    elif cmd == "die":
         input = raw_input("This kill the entire cluster down and is almost never used. Enter \"Y\" to continue.>")
         if input == "Y":
             doPost(master+"/nodes/die",{},"",pwd)
         else:
             print "Canceled"
-    
-    
-        
-    
-    
     
 
 if __name__ == "__main__":
