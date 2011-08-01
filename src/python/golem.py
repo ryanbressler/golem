@@ -21,10 +21,8 @@
 import sys
 try: import json #python 2.6 included simplejson as json
 except ImportError: import simplejson as json
-import urllib
 import httplib
 import urlparse
-import os
 import socket
 supporttls=True
 try: import ssl
@@ -101,7 +99,6 @@ def doGet(url):
     to include in the header
     """
     u = urlparse.urlparse(url)
-    conn=0
     if u.scheme == "http":
         conn = httplib.HTTPConnection(u.hostname,u.port)
     else:
@@ -171,71 +168,69 @@ def main():
         return
         
     master = sys.argv[1]
-    cmdi = 2
+    commandIndex = 2
     pwd = ""
     if sys.argv[2] == "-p":
         pwd = sys.argv[3]   
-        cmdi = 4
+        commandIndex = 4
     
     
-    cmd = sys.argv[cmdi]
-
-    #Todo: default to http when not tls.
+    cmd = sys.argv[commandIndex]
     
     if master[0:4] != "http":
         if supporttls:
             print "Using https."
             master = "https://"+master
         else:
-            print "Using http (unsecure)."
+            print "Using http (insecure)."
             master = "http://"+master
     if master[0:5] == "https" and supporttls == False:
-        return "To use https please instal the python package tlslite."
+        return "To use https please install the python package tlslite."
     
     url = master+"/jobs/"
     if cmd == "run":
         
-        jobs = [{"Count":int(sys.argv[cmdi+1]),"Args":sys.argv[cmdi+2:]}]
+        jobs = [{"Count":int(sys.argv[commandIndex+1]),"Args":sys.argv[commandIndex+2:]}]
         jobs = json.dumps(jobs)
         data = {'command':cmd}
-        print "Submiting run request to %s."%(url)
+        print "Submitting run request to %s."%url
         doPost(url,data,jobs,pwd)
     
     if cmd == "runlist":
-        fo = open(sys.argv[cmdi+1])
+        fo = open(sys.argv[commandIndex+1])
         jobs=[]
         for line in fo:
-            vals = line.split()
-            jobs.append({"Count":int(vals[0]),"Args":vals[1:]})
+            values = line.split()
+            jobs.append({"Count":int(values[0]),"Args":values[1:]})
         jobs = json.dumps(jobs)
         data = {'command':cmd}
-        print "Submiting run request to %s."%(url)
+        print "Submitting run request to %s."%url
         doPost(url,data,jobs,pwd)
         
     if cmd == "runoneach":
         
-        jobs = [{"Args":sys.argv[cmdi+1:]}]
+        jobs = [{"Args":sys.argv[commandIndex+1:]}]
         jobs = json.dumps(jobs)
         data = {'command':cmd}
-        print "Submiting run request to %s."%(url)
+        print "Submitting run request to %s."%url
         doPost(url,data,jobs,pwd)
     if cmd == "jobs" or cmd == "list":
         doGet(url)
         
     if cmd == "stop":
-        jobid = sys.argv[cmdi+1]
-        doPost(url+jobid+"/stop",{},"",pwd)
+        jobId = sys.argv[commandIndex+1]
+        doPost(url+jobId+"/stop",{},"",pwd)
     if cmd == "kill":
-        jobid = sys.argv[cmdi+1]
-        doPost(url+jobid+"/kill",{},"",pwd)
+        jobId = sys.argv[commandIndex+1]
+        doPost(url+jobId+"/kill",{},"",pwd)
     if cmd == "status":
-        jobid = sys.argv[cmdi+1]
-        doGet(url+jobid)
+        jobId = sys.argv[commandIndex+1]
+        doGet(url+jobId)
         
     if cmd == "nodes":
         doGet(master+"/nodes/")
     if cmd == "resize":
-        doPost(master+"/nodes/"+sys.argv[cmdi+1]+"/resize/"+sys.argv[cmdi+2],{},"",pwd)
+        doPost(master+"/nodes/"+sys.argv[commandIndex+1]+"/resize/"+sys.argv[commandIndex+2],{},"",pwd)
     if cmd == "restart":
         input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
         if input == "Y":
