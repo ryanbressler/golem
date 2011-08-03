@@ -92,7 +92,7 @@ def encode_multipart_formdata(data, filebody):
     return content_type, body
 
 
-def doGet(url):
+def doGet(url, loud=True):
     """
     posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
     should be a string of the body of the file (json in our case) and password should be the password
@@ -109,18 +109,20 @@ def doGet(url):
     conn.request("GET", u.path)
 
     resp = conn.getresponse()
-    if resp.status == 200:
+    output = None
+    if resp.status == 200 and loud:
         output = resp.read()
         try:
             print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
         except:
             print output
-    else:
+    elif loud:
         print resp.status, resp.reason
 
+    return resp, output
     #conn.close()
 
-def doPost(url, paramMap, jsondata,password):
+def doPost(url, paramMap, jsondata,password, loud=True):
     """
     posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
     should be a string of the body of the file (json in our case) and password should be the password
@@ -148,16 +150,18 @@ def doPost(url, paramMap, jsondata,password):
         
     conn.request("POST", u.path, body, headers)
 
+    output = None
     resp = conn.getresponse()
-    if resp.status == 200:
+    if resp.status == 200 and loud:
         output = resp.read()
         try:
             print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
         except:
             print output
-    else:
+    elif loud:
         print resp.status, resp.reason
 
+    return resp, output
     #conn.close()
 
 
@@ -176,12 +180,12 @@ def canonizeMaster(master):
     return canonicalMaster
 
 
-def runOneLine(cmd, count, args, pwd, url):
+def runOneLine(count, args, pwd, url):
     jobs = [{"Count": int(count), "Args": args}]
     jobs = json.dumps(jobs)
-    data = {'command': cmd}
+    data = {'command': "run"}
     print "Submitting run request to %s." % url
-    doPost(url, data, jobs, pwd)
+    return doPost(url, data, jobs, pwd)
 
 
 def generateJobList(fo):
@@ -192,39 +196,39 @@ def generateJobList(fo):
         yield {"Count": int(values[0]), "Args": values[1:]}
 
 
-def runList(cmd, fo, pwd, url):
+def runList(fo, pwd, url):
     jobs = generateJobList(fo)
-    jobs = json.dumps(jobs)
-    data = {'command': cmd}
+    jobs = json.dumps([job for job in jobs])
+    data = {'command': "runlist"}
     print "Submitting run request to %s." % url
-    doPost(url, data, jobs, pwd)
+    return doPost(url, data, jobs, pwd)
 
 
-def runOnEach(cmd, jobs, pwd, url):
+def runOnEach(jobs, pwd, url):
     jobs = json.dumps(jobs)
-    data = {'command': cmd}
+    data = {'command': "runoneach"}
     print "Submitting run request to %s." % url
-    doPost(url, data, jobs, pwd)
+    return doPost(url, data, jobs, pwd)
 
 
 def getJobList(url):
-    doGet(url)
+    return doGet(url)
 
 
 def stopJob(jobId, pwd, url):
-    doPost(url + jobId + "/stop", {}, "", pwd)
+    return doPost(url + jobId + "/stop", {}, "", pwd)
 
 
 def killJob(jobId, pwd, url):
-    doPost(url + jobId + "/kill", {}, "", pwd)
+    return doPost(url + jobId + "/kill", {}, "", pwd)
 
 
 def getJobStatus(jobId, url):
-    doGet(url + jobId)
+    return doGet(url + jobId)
 
 
 def getNodesStatus(master):
-    doGet(master + "/nodes/")
+    return doGet(master + "/nodes/")
 
 
 def main():
@@ -247,12 +251,12 @@ def main():
     url = master+"/jobs/"
 
     if cmd == "run":
-        runOneLine(cmd, int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2], pwd, url)
+        runOneLine(int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2:], pwd, url)
     elif cmd == "runlist":
-        runList(cmd, open(sys.argv[commandIndex + 1]), pwd, url)
+        runList(open(sys.argv[commandIndex + 1]), pwd, url)
     elif cmd == "runoneach":
         jobs = [{"Args": sys.argv[commandIndex + 1:]}]
-        runOnEach(cmd, jobs, pwd, url)
+        runOnEach(jobs, pwd, url)
     elif cmd == "jobs" or cmd == "list":
         getJobList(url)
     elif cmd == "stop":
