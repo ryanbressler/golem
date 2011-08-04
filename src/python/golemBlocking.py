@@ -19,7 +19,6 @@ import re
 import sys
 
 import golem
-import signal
 import optparse
 import time
 
@@ -47,7 +46,20 @@ def stall(jobid, composedUrl):
             return contentDict
         time.sleep(QUERY_INTERVAL)
 
-#TODO: invent function printUsage()
+usage = """Usage: golemBlocking.py hostname [-p password] command and args
+where command and args can be:
+run n job_executable exeutable args : run job_executable n times with the supplied args
+runlist listofjobs.txt              : run each line (n n job_executable exeutable args) of the file
+
+This version of the script waits for all machines to stop processing before halting.
+If interrupted at the keyboard, the remote job is stopped.
+
+golemBlocking produces a JOBID.DAT file containing only the ID of the job that the run of
+golemBlocking created, to aid in finding the output later.
+"""
+
+def printUsage():
+    print usage
 
 def main(argv):
     parser = optparse.OptionParser()
@@ -95,6 +107,11 @@ def main(argv):
     except KeyboardInterrupt:
         golem.stopJob(id, password, url)
         print "Job halted."
+
+    jobid_dat = open("JOBID.DAT", "w")
+    jobid_dat.write(id)
+    jobid_dat.flush()
+    jobid_dat.close()
 
 
 if __name__ == "__main__":
