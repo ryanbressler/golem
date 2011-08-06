@@ -61,6 +61,19 @@ golemBlocking created, to aid in finding the output later.
 def printUsage():
     print usage
 
+
+def jobIdFromResponse(content):
+    try:
+        contentDict = json.JSONDecoder().decode(content)
+        id = contentDict["id"]
+    except ValueError:
+        try:
+            id = re.search(r'[\s\{]"?id:"(\w*)"', content).group(1)
+        except AttributeError:
+            id = re.search(r"[\s\{]'?id:'(\w*)'", content).group(1)
+    return id
+
+
 def main(argv):
     parser = optparse.OptionParser()
     parser.add_option("-p", "--password", dest="password", help="Specify the password for connecting to the server.",
@@ -93,14 +106,7 @@ def main(argv):
     else:
         raise ValueError("golemBlocking can only handle the commands 'run', 'runlist', and 'runoneach'.")
 
-    try:
-        contentDict = json.JSONDecoder().decode(content)
-        id = contentDict["id"]
-    except ValueError:
-        try:
-            id = re.search(r'[\s\{]"?id:"(\w*)"',content).group(1)
-        except AttributeError:
-            id = re.search(r"[\s\{]'?id:'(\w*)'", content).group(1)
+    id = jobIdFromResponse(content)
 
     try:
         stall(id, url)
