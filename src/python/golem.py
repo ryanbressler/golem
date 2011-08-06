@@ -196,12 +196,16 @@ def generateJobList(fo):
         yield {"Count": int(values[0]), "Args": values[1:]}
 
 
-def runList(fo, pwd, url):
-    jobs = generateJobList(fo)
+def runBatch(jobs, pwd, url):
     jobs = json.dumps([job for job in jobs])
     data = {'command': "runlist"}
     print "Submitting run request to %s." % url
     return doPost(url, data, jobs, pwd)
+
+
+def runList(fo, pwd, url):
+    jobs = generateJobList(fo)
+    return runBatch(jobs, pwd, url)
 
 
 def runOnEach(jobs, pwd, url):
