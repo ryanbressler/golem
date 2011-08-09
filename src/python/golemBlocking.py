@@ -87,7 +87,7 @@ def main(argv):
     if len(args) < 3:
         print "Not enough arguments."
         printUsage()
-        sys.exit(status=1)
+        sys.exit(status=493)
 
     master = args[0]
 
