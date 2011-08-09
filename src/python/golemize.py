@@ -11,7 +11,7 @@ except ImportError:
 import golem
 import golemBlocking
 import sys
-import optparse
+import inspect
 import cPickle
 import uuid
 
@@ -20,21 +20,26 @@ def unpickleSequence(pickleFiles):
     in the parametric list. If an exception is expressed, it is rethrown here.
     """
     for filePath in pickleFiles:
-        seq = cPickle.load(filePath)
-        for errorflag, data in seq:
-            if errorflag:
-                raise data
-            else:
-                yield data
+        picklefile = open(filePath, "rb")
+        try:
+            seq = cPickle.load(picklefile)
+            for errorflag, data in seq:
+                if errorflag:
+                    raise data
+                else:
+                    yield data
+        finally:
+            picklefile.close()
 
 class Golemizer:
-    def __init__(self, serverUrl, serverPass, golemOutputPath, golemIdSeq, pickleScratch, pyPath = "/hpc/bin/python", pickleOut = None, taskSize = 10):
+    def __init__(self, serverUrl, serverPass, golemOutputPath, golemIdSeq, pickleScratch, thisLibraryPath, pyPath = "/hpc/bin/python", pickleOut = None, taskSize = 10):
         self.masterPath = golem.canonizeMaster(serverUrl) + "/jobs/"
         self.serverPass = serverPass
         self.golemOutPath = golemOutputPath
-        self.golemIds = [str(id) for id in golemIdSeq]
+        self.golemIds = ["{0:02d}".format(id) for id in golemIdSeq]
         self.pickleInputShare = pickleScratch
         self.pyPath = pyPath
+        self.thisLibraryPath = thisLibraryPath
         if pickleOut:
             self.jobOutputPath = pickleOut
         else:
@@ -62,7 +67,7 @@ class Golemizer:
         """
         restoreThisCwdOrPeopleWillHateMePassionately = os.getcwd()
         try:
-            outName = uuid.uuid1()
+            outName = str(uuid.uuid1())
             os.chdir(self.pickleInputShare)
             os.mkdir(outName) #insecure: mode 0777
             os.chdir(outName)
@@ -85,14 +90,22 @@ class Golemizer:
                 pickleCount += 1
 
             if not alternateSource:
-                target = sys.path[0]
+                #restore original path or getabsfile doesn't work correctly as of 2.7
+                os.chdir(restoreThisCwdOrPeopleWillHateMePassionately)
+                target = inspect.getabsfile(targetFunction)
+                os.chdir(self.pickleInputShare)
+                os.chdir(outName)
+                #print "===> Original file:", target
             else:
                 target = alternateSource
 
             if binplace:
-                shutil.copy2(target, picklePath)
-                target = os.path.join(picklePath, os.path.basename(target))
-
+                #print "===> Original file:", target
+                newTarget = os.path.join(picklePath, os.path.basename(target))
+                #print "===> New file:", newTarget
+                shutil.copy2(target, newTarget)
+                target = newTarget
+                
             commonFile = open("common.pkl", "wb")
             commonObjectPickler = cPickle.Pickler(commonFile, 2)
             commonObjectPickler.dump(commonData)
@@ -101,12 +114,13 @@ class Golemizer:
             commonFile.close()
 
             runlist = [
-                    {"Count":1, "Args":[scriptname,
-                                        self.pyPath,
+                    {"Count":1, "Args":[self.pyPath,
+                                        self.thisLibraryPath,
                                         "--golemtask",
                                         os.path.join(picklePath, "common.pkl"),
                                         os.path.join(picklePath, str(n)+".pkl"), #we are making certain filename assumptions on the client side
-                                        self.jobOutputPath]
+                                        self.jobOutputPath,
+                                        target]
                     }
                 for n in range(0, pickleCount)]
 
@@ -129,9 +143,12 @@ class Golemizer:
 
             #because we're already performing the match, decorate-sort-undecorate is the best sort strategy here
             for resultPath in resultPathGenerator:
-                match = filenamePattern.match(resultPath)
-                if match:
-                    resultFilesNumbered.append((int(match.group(1)), resultPath))
+                print "==>", resultPath
+                for file in os.listdir(resultPath):
+                    match = filenamePattern.match(file)
+                    if match:
+                        print "====>", file
+                        resultFilesNumbered.append((int(match.group(1)), os.path.join(resultPath, file)))
 
             resultFilesNumbered.sort()
 
@@ -159,7 +176,8 @@ def dictToGolemizer(config):
             int(config["highGolemID"]),
             1
         ),
-        config("golemStagingRoot"),
+        config["golemStagingRoot"],
+        config["golemizeScriptPath"],
         pythonBinPath,
         pickleOut,
         taskSize
@@ -168,13 +186,16 @@ def dictToGolemizer(config):
 def jsonToGolemizer(jsonfile):
     return dictToGolemizer(json.load(jsonfile))
 
-def shunt():
+def jumpToTask():
     #The traditionally "Right" thing to do is to use a ConfigParser or equivalent. However,
     #the case-sensitive position-sensitive spot equality comparison for --golemtask is fine when we've forcibly
     #constructed the relevant args ourselves. It minimizes delay, and minimizes chance of interfering
     #with some legit command line that for some reason uses --golemtask (hopefully not in position 1).
+    if len(sys.argv) < 9:
+        raise ValueError("Not a valid command line (wrong count)") #not one of our command lines
+
     if sys.argv[1] != "--golemtask":
-        return
+        raise ValueError("Not a valid command line (not a --golemtask)")
 
     #NORETURN beyond this point
 
@@ -183,10 +204,21 @@ def shunt():
     # 2:    common data path (contains common data and function pointer)
     # 3:    task data path (contains sequence of Stuff that should be given to calculation function)
     # 4:    output path (usually "./", but available in case we want to centralize output)
-    # 5:    job ID (automatically added by golem, we use it)
-    # 6:    row ID (automatically added by golem, we ignore it)
-    # 7:    task ID (automatically added, we ignore it, better be equal to 6 since we're only firing tasks once)
+    # 5:    host script path
+    # 6:    job ID (automatically added by golem, we use it)
+    # 7:    row ID (automatically added by golem, we ignore it)
+    # 8:    task ID (automatically added, we ignore it, better be equal to 6 since we're only firing tasks once)
 
+    inScript = sys.argv[5]
+
+    sys.path.append(os.path.dirname(inScript))#puts the original script on the module search path for depickle
+    modname = os.path.basename(inScript).split(".")[0]
+    targetModule = __import__(modname)
+    globalRef = globals()
+    for thingie in dir(targetModule):
+        if thingie not in globalRef:
+            globalRef[thingie] = targetModule.__dict__[thingie]
+    
     commonFile = open(sys.argv[2], "rb")
     commonUnpickle = cPickle.Unpickler(commonFile)
     commonData = commonUnpickle.load()
@@ -213,10 +245,20 @@ def shunt():
 
     trunc = (os.path.basename(sys.argv[3]))[:-4] #truncates ".pkl"
 
-    outFileName = sys.argv[5]+"_"+trunc+".out.pkl" #this name is sacred to finding the results, including the jobID
+    outFileName = sys.argv[6]+"_"+trunc+".out.pkl" #this name is sacred to finding the results, including the jobID
     outFileName = os.path.join(sys.argv[4], outFileName)
     outFile = open(outFileName, "wb")
 
     cPickle.dump(ret, outFile, 2)
+    outFile.flush()
+    outFile.close()
 
-    sys.exit(failureCount)
+    return failureCount
+
+if __name__ == "__main__":
+    try:
+        print jumpToTask()
+    except ValueError:
+        print "This Python module is a library."
+        print "It is invoked as a script in its own right as part of its operation, but this is not such an invocation."
+        print "Please read the documentation for more details."
