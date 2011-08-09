@@ -143,11 +143,11 @@ class Golemizer:
 
             #because we're already performing the match, decorate-sort-undecorate is the best sort strategy here
             for resultPath in resultPathGenerator:
-                print "==>", resultPath
+                #print "==>", resultPath
                 for file in os.listdir(resultPath):
                     match = filenamePattern.match(file)
                     if match:
-                        print "====>", file
+                        #print "====>", file
                         resultFilesNumbered.append((int(match.group(1)), os.path.join(resultPath, file)))
 
             resultFilesNumbered.sort()
