@@ -31,6 +31,12 @@ def unpickleSequence(pickleFiles):
         finally:
             picklefile.close()
 
+class ExecutionFailure(Exception):
+    def __init__(self, message):
+        self.message = message
+    def __str__(self):
+        return "ExecutionFailure: " + repr(self.message)
+
 class Golemizer:
     def __init__(self, serverUrl, serverPass, golemOutputPath, golemIdSeq, pickleScratch, thisLibraryPath, pyPath = "/hpc/bin/python", pickleOut = None, taskSize = 10):
         self.masterPath = golem.canonizeMaster(serverUrl) + "/jobs/"
@@ -150,6 +156,8 @@ class Golemizer:
                         #print "====>", file
                         resultFilesNumbered.append((int(match.group(1)), os.path.join(resultPath, file)))
 
+            if len(resultFilesNumbered) != pickleCount:
+                raise ExecutionFailure("Unknown error prevented one or more task bundles from completing.")
             resultFilesNumbered.sort()
 
             return unpickleSequence((pair[1] for pair in resultFilesNumbered))
