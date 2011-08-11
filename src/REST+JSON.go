@@ -54,7 +54,7 @@ func HandleRestJson(jc JobController, nc NodeController) {
 	}
 
 	http.Handle("/", &RootHandler{})
-	http.Handle("/html/", http.FileServer("html", "/html"))
+	http.Handle("/html/", http.FileServer(http.Dir("html")))
 	http.Handle("/jobs/", &JobsRestJson{jc, hpw})
 	http.Handle("/nodes/", &NodesRestJson{nc, hpw})
 
