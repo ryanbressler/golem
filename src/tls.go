@@ -114,8 +114,13 @@ func GenerateTlsCert() tls.Certificate {
 		organization = "Golem"
 	}
 
+	randomSerialNum, err := rand.Int(rand.Reader, big.NewInt(9223372036854775807))
+	if err != nil {
+		panic(err)
+	}
+
 	template := x509.Certificate{
-		SerialNumber:       big.NewInt(0),
+		SerialNumber:       randomSerialNum,
 		PublicKeyAlgorithm: x509.RSA,
 		Subject: pkix.Name{
 			CommonName:   hostname,
