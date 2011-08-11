@@ -28,7 +28,7 @@ import (
 )
 
 func splitRestUrl(path string) []string {
-	spliturl := strings.Split(path, "/", -1)
+	spliturl := strings.Split(path, "/")
 	pathParts := make([]string, 0, 2)
 	for _, part := range spliturl {
 		if part != "" {
