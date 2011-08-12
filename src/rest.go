@@ -107,14 +107,11 @@ func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.Response
 
 	vlog("WriteItemAsJson(%v/%v):item=%v", baseUri, itemId, item)
 
-	val, err := json.Marshal(item)
+	err = json.NewEncoder(w).Encode(item)
 	if err != nil {
 		vlog("WriteItemAsJson(%v/%v):%v", baseUri, itemId, err)
 		w.WriteHeader(http.StatusBadRequest)
-		return
 	}
-
-	w.Write(val)
 }
 
 // TODO : Deal with URI, proper not found
@@ -129,13 +126,9 @@ func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
 	itemsHandle := ItemsHandle{Items: items, NumberOfItems: len(items)}
 	vlog("WriteItemsAsJson(%v):%v", baseUri, itemsHandle)
 
-	// json.NewEncoder
-	val, err := json.Marshal(itemsHandle)
+	err = json.NewEncoder(w).Encode(itemsHandle)
 	if err != nil {
 		vlog("WriteItemsAsJson(%v):%v", baseUri, err)
 		w.WriteHeader(http.StatusBadRequest)
-		return
 	}
-
-	w.Write(val)
 }

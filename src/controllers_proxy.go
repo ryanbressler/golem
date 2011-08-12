@@ -56,7 +56,6 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 		return
 	}
 
-
 	for _, s := range js.Items {
 		items = append(items, s)
 	}
@@ -117,7 +116,7 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 		return
 	}
 
-    lst := WorkerNodeList{}
+	lst := WorkerNodeList{}
 	if err = NewDecoder(val).Decode(&lst); err != nil {
 		return
 	}
@@ -133,7 +132,7 @@ func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.E
 		return
 	}
 	item = WorkerNode{}
-    err = NewDecoder(val).Decode(&item)
+	err = NewDecoder(val).Decode(&item)
 	return
 }
 func (c ProxyNodeController) RestartAll() os.Error {
@@ -193,11 +192,12 @@ func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, r
 	}
 
 	val = <-content
+	vlog("Proxy(%v %v):[%v]", method, uri, string(val))
 	return
 }
-func NewDecoder(val []byte) (*json.Decoder) {
-    value := string(val)
-    vlog("NewDecoder(%v)", value)
-    reader := strings.NewReader(value)
+func NewDecoder(val []byte) *json.Decoder {
+	value := string(val)
+	vlog("NewDecoder(%v)", value)
+	reader := strings.NewReader(value)
 	return json.NewDecoder(reader)
 }
