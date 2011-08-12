@@ -196,6 +196,8 @@ func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, r
 	return
 }
 func NewDecoder(val []byte) (*json.Decoder) {
-    reader := strings.NewReader(string(val))
+    value := string(val)
+    vlog("NewDecoder(%v)", value)
+    reader := strings.NewReader(value)
 	return json.NewDecoder(reader)
 }
