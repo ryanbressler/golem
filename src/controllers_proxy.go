@@ -52,9 +52,10 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	}
 
 	js := JobDetailsList{}
-	if err = json.Unmarshal(val, js); err != nil {
+	if err = NewDecoder(val).Decode(&js); err != nil {
 		return
 	}
+
 
 	for _, s := range js.Items {
 		items = append(items, s)
@@ -68,7 +69,7 @@ func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Err
 		return
 	}
 	item = JobDetails{}
-	err = json.Unmarshal(val, item)
+	err = NewDecoder(val).Decode(&item)
 	return
 }
 func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
@@ -78,8 +79,7 @@ func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error)
 	}
 
 	jd := JobDetails{}
-	err = json.Unmarshal(val, jd)
-	if err != nil {
+	if err = NewDecoder(val).Decode(&jd); err != nil {
 		return
 	}
 
@@ -117,8 +117,8 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 		return
 	}
 
-	lst := WorkerNodeList{}
-	if err = json.Unmarshal(val, &lst); err != nil {
+    lst := WorkerNodeList{}
+	if err = NewDecoder(val).Decode(&lst); err != nil {
 		return
 	}
 
@@ -133,7 +133,7 @@ func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.E
 		return
 	}
 	item = WorkerNode{}
-	err = json.Unmarshal(val, item)
+    err = NewDecoder(val).Decode(&item)
 	return
 }
 func (c ProxyNodeController) RestartAll() os.Error {
@@ -194,4 +194,8 @@ func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, r
 
 	val = <-content
 	return
+}
+func NewDecoder(val []byte) (*json.Decoder) {
+    reader := strings.NewReader(string(val))
+	return json.NewDecoder(reader)
 }
