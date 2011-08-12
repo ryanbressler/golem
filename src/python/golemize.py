@@ -37,6 +37,12 @@ class ExecutionFailure(Exception):
     def __str__(self):
         return "ExecutionFailure: " + repr(self.message)
 
+class InfiniteRecursionError(Exception):
+    def __init__(self, message):
+        self.message = message
+    def __str__(self):
+        return "InfiniteRecursionError: " + repr(self.message)
+
 class Golemizer:
     def __init__(self, serverUrl, serverPass, golemOutputPath, golemIdSeq, pickleScratch, thisLibraryPath, pyPath = "/hpc/bin/python", pickleOut = None, taskSize = 10):
         self.masterPath = golem.canonizeMaster(serverUrl) + "/jobs/"
@@ -65,12 +71,20 @@ class Golemizer:
         nextPickle.flush()
         nextPickle.close()
 
-    def goDoIt(self, inputSeq, commonData, targetFunction, binplace = True, alternateSource = None):
+    def goDoIt(self, inputSeq, commonData, targetFunction, binplace = True, alternateSource = None, recursive = False):
         """
         Executes a function on the Golem cluster indicated by the settings for this object.
         inputSeq: inputs to the function to run. This will be desequenced and run in a batch of method calls, one
         call per item.
         """
+        if not recursive:
+            if sys.argv[1] == "--golemtask":
+                #uh-oh
+                raise InfiniteRecursionError("goDoIt called from something that was already a Golem task, " +
+                                        "without the 'recursive' flag indicating that this is intentional." +
+                                        "Make sure to test for __name__ == '__main__' in your main program," +
+                                        "or it will try to execute in its entirety when Golemizer tries to import.")
+
         restoreThisCwdOrPeopleWillHateMePassionately = os.getcwd()
         try:
             outName = str(uuid.uuid1())
@@ -221,7 +235,19 @@ def jumpToTask():
 
     sys.path.append(os.path.dirname(inScript))#puts the original script on the module search path for depickle
     modname = os.path.basename(inScript).split(".")[0]
-    targetModule = __import__(modname)
+    try:
+        targetModule = __import__(modname)
+    except InfiniteRecursionError as emergencyBrake:
+        #provide a useful explanation for the kill
+        trunc = (os.path.basename(sys.argv[3]))[:-4] #truncates ".pkl"
+        outFileName = sys.argv[6]+"_"+trunc+".out.pkl" #this name is sacred to finding the results, including the jobID
+        outFileName = os.path.join(sys.argv[4], outFileName)
+        outFile = open(outFileName, "wb")
+        cPickle.dump([(True, emergencyBrake)], outFile, 2)
+        outFile.flush()
+        outFile.close()
+        raise emergencyBrake
+
     globalRef = globals()
     for thingie in dir(targetModule):
         if thingie not in globalRef:
