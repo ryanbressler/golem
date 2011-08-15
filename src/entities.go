@@ -111,17 +111,18 @@ type WorkerNodeList struct {
 }
 
 type WorkerNode struct {
-	NodeId   string
-	Uri      string
-	Hostname string
-	MaxJobs  int
-	Running  int
+	NodeId      string
+	Uri         string
+	Hostname    string
+	MaxJobs     int
+	RunningJobs int
+	Running     bool
 }
 
 func NewWorkerNode(nh *NodeHandle) WorkerNode {
 	maxJobs, running := nh.Stats()
 	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
-		MaxJobs: maxJobs, Running: running}
+		MaxJobs: maxJobs, RunningJobs: running, Running: (running > 0)}
 }
 
 type WorkerMessage struct {
