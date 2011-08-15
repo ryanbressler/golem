@@ -108,7 +108,7 @@ type MasterNodeController struct {
 }
 
 func (c MasterNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("MasterJobController.RetrieveAll")
+	log("MasterNodeController.RetrieveAll")
 
 	for _, n := range c.master.NodeHandles {
 		items = append(items, NewWorkerNode(n))
@@ -116,7 +116,7 @@ func (c MasterNodeController) RetrieveAll() (items []interface{}, err os.Error) 
 	return
 }
 func (c MasterNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	log("Retrieve:%v", nodeId)
+	log("MasterNodeController.Retrieve:%v", nodeId)
 	nh, isin := c.master.NodeHandles[nodeId]
 	if isin == false {
 		err = os.NewError("node " + nodeId + " not found")
@@ -126,7 +126,7 @@ func (c MasterNodeController) Retrieve(nodeId string) (item interface{}, err os.
 	return
 }
 func (c MasterNodeController) RestartAll() os.Error {
-	log("Restart")
+	log("MasterNodeController.Restart")
 
 	c.master.Broadcast(&WorkerMessage{Type: RESTART})
 	log("Restarting in 10 seconds.")
@@ -146,7 +146,7 @@ func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Erro
 	return os.NewError("node not found")
 }
 func (c MasterNodeController) KillAll() os.Error {
-	log("Kill")
+	log("MasterNodeController.KillAll")
 
 	c.master.Broadcast(&WorkerMessage{Type: DIE})
 	log("dying in 10 seconds.")
