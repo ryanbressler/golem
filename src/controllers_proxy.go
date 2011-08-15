@@ -25,7 +25,6 @@ import (
 	"io"
 	"json"
 	"strconv"
-	"strings"
 	"os"
 )
 
@@ -46,13 +45,13 @@ func NewProxyJobController() ProxyJobController {
 }
 
 func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := Proxy("GET", "/jobs/", c.apikey, c.proxy, nil)
+	decoder, err := Proxy("GET", "/jobs/", c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
 
 	js := JobDetailsList{}
-	if err = NewDecoder(val).Decode(&js); err != nil {
+	if err = decoder.Decode(&js); err != nil {
 		return
 	}
 
@@ -63,22 +62,22 @@ func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
 	return
 }
 func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
-	val, err := Proxy("GET", "/jobs/"+jobId, c.apikey, c.proxy, nil)
+	decoder, err := Proxy("GET", "/jobs/"+jobId, c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
 	item = JobDetails{}
-	err = NewDecoder(val).Decode(&item)
+	err = decoder.Decode(&item)
 	return
 }
 func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	val, err := Proxy("POST", "/jobs/"+jobId, c.apikey, c.proxy, r.Body)
+	decoder, err := Proxy("POST", "/jobs/"+jobId, c.apikey, c.proxy, r.Body)
 	if err != nil {
 		return
 	}
 
 	jd := JobDetails{}
-	if err = NewDecoder(val).Decode(&jd); err != nil {
+	if err = decoder.Decode(&jd); err != nil {
 		return
 	}
 
@@ -111,13 +110,13 @@ func NewProxyNodeController() ProxyNodeController {
 }
 
 func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := Proxy("GET", "/nodes/", c.apikey, c.proxy, nil)
+	decoder, err := Proxy("GET", "/nodes/", c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
 
 	lst := WorkerNodeList{}
-	if err = NewDecoder(val).Decode(&lst); err != nil {
+	if err = decoder.Decode(&lst); err != nil {
 		return
 	}
 
@@ -127,12 +126,12 @@ func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
 	return
 }
 func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	val, err := Proxy("GET", "/nodes/"+nodeId, c.apikey, c.proxy, nil)
+	decoder, err := Proxy("GET", "/nodes/"+nodeId, c.apikey, c.proxy, nil)
 	if err != nil {
 		return
 	}
 	item = WorkerNode{}
-	err = NewDecoder(val).Decode(&item)
+	err = decoder.Decode(&item)
 	return
 }
 func (c ProxyNodeController) RestartAll() os.Error {
@@ -149,55 +148,41 @@ func (c ProxyNodeController) KillAll() os.Error {
 }
 
 // proxy support
-type JsonResponseWriter struct {
-	Content    chan []byte
+type PipeResponseWriter struct {
+	Reader      io.Reader
+	Writer      io.Writer
 	StatusCode chan int
 }
-
-func (w JsonResponseWriter) Header() http.Header {
+func NewPipeResponseWriter() PipeResponseWriter {
+	preader, pwriter := io.Pipe()
+	return PipeResponseWriter{ preader, pwriter, make(chan int, 1) }
+}
+func (w PipeResponseWriter) Header() http.Header {
 	return http.Header{}
 }
-func (w JsonResponseWriter) Write(b []byte) (int, os.Error) {
-	w.Content <- b
-	return 0, os.EOF
+func (w PipeResponseWriter) Write(b []byte) (int, os.Error) {
+    return w.Writer.Write(b)
 }
-func (w JsonResponseWriter) WriteHeader(i int) {
+func (w PipeResponseWriter) WriteHeader(i int) {
 	w.StatusCode <- i
 	return
 }
 
-func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
+func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, body io.ReadCloser) (decoder *json.Decoder, err os.Error) {
 	vlog("Proxy(%v %v)", method, uri)
-	if reader == nil {
-		reader = strings.NewReader("")
-	}
 
-	r, err := http.NewRequest(method, uri, reader)
-	if err != nil {
-		return
-	}
-
+	r, _ := http.NewRequest(method, uri, body)
 	r.Header.Set("x-golem-apikey", apikey)
 
-	content := make(chan []byte, 1)
-	statuscode := make(chan int, 1)
-	proxy.ServeHTTP(JsonResponseWriter{Content: content, StatusCode: statuscode}, r)
+	responseWriter := NewPipeResponseWriter()
+    go proxy.ServeHTTP(responseWriter, r)
 
-	code := <-statuscode
-	if http.StatusOK != code {
-		// TODO : Figure out why this hangs...
-		vlog("Proxy(%v %v) [%d]", method, uri, code)
-		err = os.NewError(fmt.Sprintf("Inappropriate response [%v]", code))
+    statusCode := <- responseWriter.StatusCode
+	if http.StatusOK != statusCode {
+		err = os.NewError(fmt.Sprintf("proxy [%v %v]: %d", method, uri, statusCode))
 		return
 	}
 
-	val = <-content
-	vlog("Proxy(%v %v):[%v]", method, uri, string(val))
+    decoder = json.NewDecoder(responseWriter.Reader)
 	return
-}
-func NewDecoder(val []byte) *json.Decoder {
-	value := string(val)
-	vlog("NewDecoder(%v)", value)
-	reader := strings.NewReader(value)
-	return json.NewDecoder(reader)
 }
