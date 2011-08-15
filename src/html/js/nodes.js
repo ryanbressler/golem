@@ -11,7 +11,7 @@ NodesGrid = Ext.extend(ItemsGrid, {
             { header: "Hostname", width: 10, sortable: true, dataIndex: 'Hostname' },
             { header: "Max Jobs", width: 10, sortable: true, dataIndex: 'MaxJobs' },
             { header: "Running Jobs", width: 10, sortable: true, dataIndex: 'RunningJobs' },
-            { header: "Running", width: 10, sortable: true, dataIndex: 'Running' }
+            { header: "Running", width: 10, sortable: true, dataIndex: 'Running', hidden: true }
         ];
         this.storeColumns = [
             {name: 'NodeId'},
