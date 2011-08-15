@@ -10,12 +10,14 @@ NodesGrid = Ext.extend(ItemsGrid, {
             { header: "Node Id", width: 25, dataIndex: 'NodeId', sortable: false },
             { header: "Hostname", width: 10, sortable: true, dataIndex: 'Hostname' },
             { header: "Max Jobs", width: 10, sortable: true, dataIndex: 'MaxJobs' },
+            { header: "Running Jobs", width: 10, sortable: true, dataIndex: 'RunningJobs' },
             { header: "Running", width: 10, sortable: true, dataIndex: 'Running' }
         ];
         this.storeColumns = [
             {name: 'NodeId'},
             {name: 'Hostname'},
             {name: 'MaxJobs', type: 'int'},
+            {name: 'RunningJobs', type: 'int'},
             {name: 'Running' }
         ];
         NodesGrid.superclass.constructor.call(this);
@@ -26,6 +28,7 @@ NodesGrid = Ext.extend(ItemsGrid, {
             node.NodeId,
             node.Hostname,
             node.MaxJobs,
+            node.RunningJobs,
             node.Running
         ];
     }
