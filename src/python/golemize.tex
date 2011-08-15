@@ -94,7 +94,6 @@ Any of the configuration settings of a Golemizer can be changed after constructi
 	\item[masterPath] The canonical path to the Golem master server being connected to. This is not the same as the serverURL parameter; it was run through \texttt{golem.canonizeMaster} first.
 	\item[serverPass] The password to connect to the server. serverPass parameter to the initializer.
 	\item[golemOutPath] Root path to Golem working directories. golemOutputPath parameter to the initializer.
-	\item[golemIds] List of strings containing the ID numbers of Golem workers in use. This includes the leading 0s on single-digit IDs.
 	\item[pickleInputShare] Share to put pickled input data on. pickleScratch parameter to the initializer.
 	\item[pyPath] Path to the workers' Python interpreters. pyPath parameter to the initializer.
 	\item[thisLibraryPath] Where the workers should find \texttt{golemize.py}. thisLibraryPath parameter to the initializer.
@@ -225,8 +224,6 @@ The configuration file is a file representing a single JSON object with the fiel
 		serverURL & string & * & Address, including port, of the Golem master server.\\
 		serverPassword & string & * & Password for job queue access to the Golem master server.\\
 		golemResultRoot & string & * & File path to the root directory for Golem working directories.\\
-		lowGolemID & int & * & Lowest-numbered Golem worker ID (usually 1).\\
-		highGolemID & int & * & Highest-numbered Golem worker ID (usually the number of workers).\\
 		golemStagingRoot & string & * & File path, also visible from the workers, where \texttt{golemize.py} can write intermediate files.\\
 		golemizeScriptPath & string & * & File path, also visible from the workers, to \texttt{golemize.py}.\\
 		pythonBin & string & & Path to the Python executable on the worker machines.\\

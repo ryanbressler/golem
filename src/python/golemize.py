@@ -44,11 +44,11 @@ class InfiniteRecursionError(Exception):
         return "InfiniteRecursionError: " + repr(self.message)
 
 class Golemizer:
-    def __init__(self, serverUrl, serverPass, golemOutputPath, golemIdSeq, pickleScratch, thisLibraryPath, pyPath = "/hpc/bin/python", pickleOut = None, taskSize = 10):
+    def __init__(self, serverUrl, serverPass, golemOutputPath, pickleScratch, thisLibraryPath, pyPath = "/hpc/bin/python", pickleOut = None, taskSize = 10):
         self.masterPath = golem.canonizeMaster(serverUrl) + "/jobs/"
         self.serverPass = serverPass
         self.golemOutPath = golemOutputPath
-        self.golemIds = ["{0:02d}".format(id) for id in golemIdSeq]
+        #self.golemIds = ["{0:02d}".format(id) for id in golemIdSeq]
         self.pickleInputShare = pickleScratch
         self.pyPath = pyPath
         self.thisLibraryPath = thisLibraryPath
@@ -78,7 +78,7 @@ class Golemizer:
         call per item.
         """
         if not recursive:
-            if sys.argv[1] == "--golemtask":
+            if len(sys.argv) > 1 and sys.argv[1] == "--golemtask":
                 #uh-oh
                 raise InfiniteRecursionError("goDoIt called from something that was already a Golem task, " +
                                         "without the 'recursive' flag indicating that this is intentional." +
@@ -103,7 +103,7 @@ class Golemizer:
                 if n >= localLimit:
                     self._spill(nextList, pickleCount)
                     nextList = []
-                    n = 0;
+                    n = 0
                     pickleCount += 1
             if nextList:
                 self._spill(nextList, pickleCount)
@@ -151,11 +151,18 @@ class Golemizer:
             #Note: We're choosing to ignore stdout/stderr. We can revisit this design decision later and decide to
             #do something instead, if we really desperately want to
 
+            #resultPathGenerator = (os.path.abspath(
+            #    os.path.join(
+            #        self.golemOutPath, "golem_" + x + os.sep, self.jobOutputPath,
+            #    )
+            #) for x in self.golemIds)
+
+            golemDirPattern =re.compile("golem_\\d+")
+
             resultPathGenerator = (os.path.abspath(
-                os.path.join(
-                    self.golemOutPath, "golem_" + x + os.sep, self.jobOutputPath,
-                )
-            ) for x in self.golemIds)
+                    os.path.join(self.golemOutPath, foo))\
+                    for foo in os.listdir(self.golemOutPath)\
+                    if golemDirPattern.match(foo))
 
             resultFilesNumbered = []
 
@@ -171,7 +178,9 @@ class Golemizer:
                         resultFilesNumbered.append((int(match.group(1)), os.path.join(resultPath, file)))
 
             if len(resultFilesNumbered) != pickleCount:
-                raise ExecutionFailure("Unknown error prevented one or more task bundles from completing.")
+                raise ExecutionFailure(
+                    "Unknown error prevented {0} of {1} task bundles from completing.".format(
+                        pickleCount - len(resultFilesNumbered), pickleCount))
             resultFilesNumbered.sort()
 
             return unpickleSequence((pair[1] for pair in resultFilesNumbered))
@@ -193,11 +202,11 @@ def dictToGolemizer(config):
         config["serverURL"],
         config["serverPassword"],
         config["golemResultRoot"],
-        range(
-            int(config["lowGolemID"]),
-            int(config["highGolemID"]),
-            1
-        ),
+        #range(
+        #    int(config["lowGolemID"]),
+        #    int(config["highGolemID"]),
+        #    1
+        #),
         config["golemStagingRoot"],
         config["golemizeScriptPath"],
         pythonBinPath,

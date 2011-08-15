@@ -65,12 +65,12 @@ def printUsage():
 def jobIdFromResponse(content):
     try:
         contentDict = json.JSONDecoder().decode(content)
-        id = contentDict["id"]
-    except ValueError:
+        id = contentDict["JobId"]
+    except (ValueError, KeyError, AttributeError):
         try:
-            id = re.search(r'[\s\{]"?id:"(\w*)"', content).group(1)
+            id = re.search(r'[\s\{]"?JobId:"(\w*)"', content).group(1)
         except AttributeError:
-            id = re.search(r"[\s\{]'?id:'(\w*)'", content).group(1)
+            id = re.search(r"[\s\{]'?JobId:'(\w*)'", content).group(1)
     return id
 
 
