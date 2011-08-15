@@ -149,19 +149,20 @@ func (c ProxyNodeController) KillAll() os.Error {
 
 // proxy support
 type PipeResponseWriter struct {
-	Reader      io.Reader
-	Writer      io.Writer
+	Reader     io.Reader
+	Writer     io.Writer
 	StatusCode chan int
 }
+
 func NewPipeResponseWriter() PipeResponseWriter {
 	preader, pwriter := io.Pipe()
-	return PipeResponseWriter{ preader, pwriter, make(chan int, 1) }
+	return PipeResponseWriter{preader, pwriter, make(chan int, 1)}
 }
 func (w PipeResponseWriter) Header() http.Header {
 	return http.Header{}
 }
 func (w PipeResponseWriter) Write(b []byte) (int, os.Error) {
-    return w.Writer.Write(b)
+	return w.Writer.Write(b)
 }
 func (w PipeResponseWriter) WriteHeader(i int) {
 	w.StatusCode <- i
@@ -175,14 +176,14 @@ func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, b
 	r.Header.Set("x-golem-apikey", apikey)
 
 	responseWriter := NewPipeResponseWriter()
-    go proxy.ServeHTTP(responseWriter, r)
+	go proxy.ServeHTTP(responseWriter, r)
 
-    statusCode := <- responseWriter.StatusCode
+	statusCode := <-responseWriter.StatusCode
 	if http.StatusOK != statusCode {
 		err = os.NewError(fmt.Sprintf("proxy [%v %v]: %d", method, uri, statusCode))
 		return
 	}
 
-    decoder = json.NewDecoder(responseWriter.Reader)
+	decoder = json.NewDecoder(responseWriter.Reader)
 	return
 }
