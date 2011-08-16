@@ -30,9 +30,11 @@ func main() {
 	var configurationFile string
 	var isMaster bool
 	var isScribe bool
+	var isAddama bool
 
 	flag.BoolVar(&isMaster, "m", false, "Start as master node.")
 	flag.BoolVar(&isScribe, "s", false, "Start as scribe node.")
+	flag.BoolVar(&isAddama, "a", false, "Start as addama node.")
 	flag.StringVar(&configurationFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
@@ -49,6 +51,8 @@ func main() {
 		mdb := NewMongoJobStore()
 		go LaunchScribe(mdb)
 		HandleRestJson(ScribeJobController{mdb, NewProxyJobController()}, NewProxyNodeController())
+	} else if isAddama {
+		HandleAddamaCalls()
 	} else {
 		processes, masterhost := getWorkerProcesses()
 		RunNode(processes, masterhost)
