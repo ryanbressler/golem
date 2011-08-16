@@ -13,6 +13,8 @@ GOFILES=\
 	controllers_proxy.go\
 	master.go\
 	scribe.go\
+	addama.go\
+	httplib.go\
 	control.go\
 	jobkiller.go\
 	uniqueid.go\
