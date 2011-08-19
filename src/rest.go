@@ -20,40 +20,11 @@
 package main
 
 import (
-	"strings"
 	"http"
 	"json"
 	"mime/multipart"
 	"os"
 )
-
-func splitRestUrl(path string) []string {
-	spliturl := strings.Split(path, "/")
-	pathParts := make([]string, 0, 2)
-	for _, part := range spliturl {
-		if part != "" {
-			pathParts = append(pathParts, part)
-		}
-	}
-	return pathParts
-}
-
-//parser for rest jobs request
-func parseJobUri(path string) (jobid string, verb string) {
-	pathParts := splitRestUrl(path)
-	nparts := len(pathParts)
-	jobid = ""
-	verb = ""
-	switch {
-	case nparts == 2:
-		jobid = pathParts[1]
-	case nparts == 3:
-		jobid = pathParts[1]
-		verb = pathParts[2]
-	}
-	vlog("Parsed job request id:\"%v\" verb:\"%v\"", jobid, verb)
-	return
-}
 
 func getHeader(r *http.Request, headerName string, defaultValue string) string {
 	val := r.Header.Get(headerName)
@@ -94,41 +65,4 @@ func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
 	vlog("loadJson: decoding jsonfile")
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
 	return
-}
-
-// TODO : Deal with URI, proper not found
-func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
-	item, err := r.Retrieve(itemId)
-	if err != nil {
-		vlog("WriteItemAsJson(%v/%v):%v", baseUri, itemId, err)
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	vlog("WriteItemAsJson(%v/%v):item=%v", baseUri, itemId, item)
-
-	err = json.NewEncoder(w).Encode(item)
-	if err != nil {
-		vlog("WriteItemAsJson(%v/%v):%v", baseUri, itemId, err)
-		w.WriteHeader(http.StatusBadRequest)
-	}
-}
-
-// TODO : Deal with URI, proper not found
-func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
-	items, err := r.RetrieveAll()
-	if err != nil {
-		vlog("WriteItemsAsJson(%v):%v", baseUri, err)
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	itemsHandle := ItemsHandle{Items: items, NumberOfItems: len(items)}
-	vlog("WriteItemsAsJson(%v):%v", baseUri, itemsHandle)
-
-	err = json.NewEncoder(w).Encode(itemsHandle)
-	if err != nil {
-		vlog("WriteItemsAsJson(%v):%v", baseUri, err)
-		w.WriteHeader(http.StatusBadRequest)
-	}
 }

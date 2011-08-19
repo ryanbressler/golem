@@ -21,48 +21,40 @@ package main
 
 import (
 	"http"
-	"os"
+	"json"
+	"strconv"
 )
 
 type MasterJobController struct {
 	master *Master
 }
-
-func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("MasterJobController.RetrieveAll")
-
-	for _, s := range c.master.subMap {
+// GET /jobs
+func (this MasterJobController) Index(rw http.ResponseWriter) {
+    items := make([]JobDetails, 0, 0)
+	for _, s := range this.master.subMap {
 		items = append(items, s.SniffDetails())
 	}
 
-	return
-}
-func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
-	log("Retrieve:%v", jobId)
-
-	s, isin := c.master.subMap[jobId]
-	if isin == false {
-		err = os.NewError("job " + jobId + " not found")
-		return
+	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
+	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
 	}
-
-	item = s.SniffDetails()
-	return
 }
-func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
+// POST /jobs
+func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) {
 	tasks := make([]Task, 0, 100)
-	if err = loadJson(r, &tasks); err != nil {
-		vlog("MasterJobController.NewJob: %v", err)
+	if err := loadJson(r, &tasks); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
-	jobId = getHeader(r, "x-golem-job-preassigned-id", "")
+	jobId := getHeader(r, "x-golem-job-preassigned-id", "")
 	if jobId == "" {
 		jobId = UniqueId()
 	}
 
-	if _, isin := c.master.subMap[jobId]; isin {
-		vlog("NewJob: Exists: %v", jobId)
+	if _, isin := this.master.subMap[jobId]; isin {
+		vlog("Create: Exists: %v", jobId)
 		return
 	}
 
@@ -71,86 +63,109 @@ func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
 	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
+	this.master.subMap[jobId] = NewSubmission(jd, tasks, this.master.jobChan)
 
-	c.master.subMap[jobId] = NewSubmission(jd, tasks, c.master.jobChan)
-	log("NewJob: %v", jd.JobId)
-
-	return
-}
-func (c MasterJobController) Stop(jobId string) os.Error {
-	log("Stop:%v", jobId)
-
-	job, isin := c.master.subMap[jobId]
-	if isin {
-		if job.Stop() {
-			return nil
-		}
-		return os.NewError("unable to stop")
+	if err := json.NewEncoder(rw).Encode(jd); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
-	return os.NewError("job not found")
 }
-func (c MasterJobController) Kill(jobId string) os.Error {
-	log("Kill:%v", jobId)
-
-	job, isin := c.master.subMap[jobId]
-	if isin {
-		c.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
-		if job.Stop() {
-			return nil
-		}
-		return os.NewError("unable to stop/kill")
+// GET /jobs/id
+func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
+	s, isin := this.master.subMap[id]
+	if isin == false {
+	    http.Error(rw, "job " + id + " not found", http.StatusNotFound)
+		return
 	}
-	return os.NewError("job not found")
+
+	if err := json.NewEncoder(rw).Encode(s.SniffDetails()); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	}
+}
+// POST /jobs/id/stop or POST /jobs/id/kill
+func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+    if len(parts) < 2 {
+        http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
+        return
+    }
+
+    jobId := parts[0]
+    job, isin := this.master.subMap[jobId]
+    if isin == false {
+        http.Error(rw, "job " + jobId + " not found", http.StatusNotFound)
+        return
+    }
+
+    if parts[1] == "stop" {
+        if job.Stop() == false {
+            http.Error(rw, "unable to stop", http.StatusExpectationFailed)
+        }
+    } else if parts[1] == "kill" {
+        if job.Stop() == false {
+            http.Error(rw, "unable to stop", http.StatusExpectationFailed)
+        }
+        this.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
+    }
 }
 
 type MasterNodeController struct {
 	master *Master
 }
-
-func (c MasterNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("MasterNodeController.RetrieveAll")
-
-	for _, n := range c.master.NodeHandles {
+// GET /nodes
+func (this MasterNodeController) Index(rw http.ResponseWriter) {
+    items := make([]WorkerNode, 0, 0)
+	for _, n := range this.master.NodeHandles {
 		items = append(items, NewWorkerNode(n))
 	}
-	return
+
+	workerNodes := WorkerNodeList{Items: items, NumberOfItems: len(items)}
+	if err := json.NewEncoder(rw).Encode(workerNodes); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
-func (c MasterNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	log("MasterNodeController.Retrieve:%v", nodeId)
-	nh, isin := c.master.NodeHandles[nodeId]
+// GET /nodes/id
+func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
+	nh, isin := this.master.NodeHandles[nodeId]
 	if isin == false {
-		err = os.NewError("node " + nodeId + " not found")
+	    http.Error(rw, "node " + nodeId + " not found", http.StatusNotFound)
 		return
 	}
-	item = NewWorkerNode(nh)
-	return
-}
-func (c MasterNodeController) RestartAll() os.Error {
-	log("MasterNodeController.Restart")
 
-	c.master.Broadcast(&WorkerMessage{Type: RESTART})
-	log("Restarting in 10 seconds.")
-	go RestartIn(3000000000)
-
-	return nil
-}
-func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	log("MasterNodeController.Resize(%v,%d)", nodeId, numberOfThreads)
-
-	node, isin := c.master.NodeHandles[nodeId]
-	if isin {
-		node.ReSize(numberOfThreads)
-		return nil
+    if err := json.NewEncoder(rw).Encode(NewWorkerNode(nh)); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
 	}
-
-	return os.NewError("node not found")
 }
-func (c MasterNodeController) KillAll() os.Error {
-	log("MasterNodeController.KillAll")
+// POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
+func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+    vlog("MasterNodeController.Act(%v):%v", r.URL.Path, parts)
+    if parts[0] == "restart" {
+        this.master.Broadcast(&WorkerMessage{Type: RESTART})
+        log("Restarting in 10 seconds.")
+        go RestartIn(10 * second)
+        return
 
-	c.master.Broadcast(&WorkerMessage{Type: DIE})
-	log("dying in 10 seconds.")
-	go DieIn(3000000000)
+    }
 
-	return nil
+    if parts[0] == "die" {
+        this.master.Broadcast(&WorkerMessage{Type: DIE})
+        log("Dying in 10 seconds.")
+        go DieIn(10 * second)
+        return
+    }
+
+    if parts[1] == "resize" {
+        nodeId := parts[0]
+        numberOfThreads, err := strconv.Atoi(parts[2])
+        if err != nil {
+            http.Error(rw, err.String(), http.StatusBadRequest)
+            return
+        }
+
+        node, isin := this.master.NodeHandles[nodeId]
+        if isin == false {
+            http.Error(rw, "node " + nodeId + " not found", http.StatusNotFound)
+            return
+        }
+
+        node.ReSize(numberOfThreads)
+    }
 }

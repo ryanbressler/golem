@@ -23,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"goconf.googlecode.com/hg"
+	"github.com/hrovira/rest.go"
 )
 
 //parse args and start as master, scribe or worker
@@ -46,11 +47,16 @@ func main() {
 	if isMaster {
 		setBufferSize()
 		m := NewMaster()
-		HandleRestJson(MasterJobController{master: m}, MasterNodeController{master: m})
+		hostname := ConfigFile.GetRequiredString("default", "hostname")
+
+		rest.Resource("jobs", MasterJobController{master: m})
+		rest.Resource("nodes", MasterNodeController{master: m})
+		ListenAndServeTLSorNot(hostname, nil);
 	} else if isScribe {
 		mdb := NewMongoJobStore()
 		go LaunchScribe(mdb)
-		HandleRestJson(ScribeJobController{mdb, NewProxyJobController()}, NewProxyNodeController())
+        rest.Resource("jobs", ScribeJobController{mdb, NewProxyJobController()})
+		rest.Resource("nodes", NewProxyNodeController())
 	} else if isAddama {
 		HandleAddamaCalls()
 	} else {
