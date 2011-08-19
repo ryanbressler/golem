@@ -21,46 +21,75 @@ package main
 
 import (
 	"http"
-	"os"
+	"json"
 )
 
 type ScribeJobController struct {
 	store JobStore
-	proxy JobController
+	proxy ProxyJobController
 }
 
-func (this ScribeJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	retrieved, err := this.store.All()
+// GET /jobs
+func (this ScribeJobController) Index(rw http.ResponseWriter) {
+    items, err := this.store.All();
 	if err == nil {
-		for _, item := range retrieved {
-			items = append(items, item)
-		}
+        http.Error(rw, err.String(), http.StatusBadRequest)
+        return
 	}
-	return
+
+	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
+	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
-func (this ScribeJobController) Retrieve(jobId string) (interface{}, os.Error) {
-	return this.store.Get(jobId)
-}
-func (this ScribeJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
+// POST /jobs
+func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) {
 	tasks := make([]Task, 0, 100)
-	if err = loadJson(r, &tasks); err != nil {
-		vlog("ScribeJobController.NewJob:%v", err)
+	if err := loadJson(r, &tasks); err != nil {
+        http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
-	jobId = UniqueId()
+	jobId := UniqueId()
 	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
 	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
-	err = this.store.Create(job, tasks)
-	return
+	if err := this.store.Create(job, tasks); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	    return
+	}
+	if err := json.NewEncoder(rw).Encode(job); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
+// GET /jobs/id
+func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
+	jd, err := this.store.Get(id)
+	if err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	    return
+	}
+	if err := json.NewEncoder(rw).Encode(jd); err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	}
+}
+// POST /jobs/id/stop or POST /jobs/id/kill
+func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+    if len(parts) < 2 {
+        http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
+        return
+    }
 
-func (c ScribeJobController) Stop(jobId string) os.Error {
-	return c.proxy.Stop(jobId)
-}
-func (c ScribeJobController) Kill(jobId string) os.Error {
-	return c.proxy.Kill(jobId)
+    jobId := parts[0]
+    if parts[1] == "stop" {
+        if err := this.proxy.Stop(jobId); err != nil {
+            http.Error(rw, err.String(), http.StatusBadRequest)
+        }
+    } else if parts[1] == "kill" {
+        if err := this.proxy.Kill(jobId); err != nil {
+            http.Error(rw, err.String(), http.StatusBadRequest)
+        }
+    }
 }
