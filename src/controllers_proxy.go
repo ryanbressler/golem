@@ -30,22 +30,22 @@ type ProxyNodeController struct {
 
 // GET /nodes
 func (this ProxyNodeController) Index(rw http.ResponseWriter) {
-    preq, _ := http.NewRequest("GET", "/nodes", nil)
-    go this.proxy.ServeHTTP(rw, preq)
+	preq, _ := http.NewRequest("GET", "/nodes", nil)
+	go this.proxy.ServeHTTP(rw, preq)
 }
 // GET /nodes/id
 func (this ProxyNodeController) Find(rw http.ResponseWriter, nodeId string) {
-    preq, _ := http.NewRequest("GET", "/nodes/" + nodeId, nil)
-    go this.proxy.ServeHTTP(rw, preq)
+	preq, _ := http.NewRequest("GET", "/nodes/"+nodeId, nil)
+	go this.proxy.ServeHTTP(rw, preq)
 }
 // POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
 func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
-    if CheckApiKey(this.apikey, r) == false {
-        http.Error(rw, "api key required in header", http.StatusForbidden)
-        return
-    }
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
+		return
+	}
 
-    preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
+	preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	preq.Header.Set("x-golem-apikey", this.apikey)
-    go this.proxy.ServeHTTP(rw, preq)
+	go this.proxy.ServeHTTP(rw, preq)
 }

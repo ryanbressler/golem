@@ -46,32 +46,32 @@ func main() {
 	setTls()
 
 	if isMaster {
-        hostname := ConfigFile.GetRequiredString("default", "hostname")
-        password := ConfigFile.GetRequiredString("default", "password")
+		hostname := ConfigFile.GetRequiredString("default", "hostname")
+		password := ConfigFile.GetRequiredString("default", "password")
 
 		setBufferSize()
 		m := NewMaster()
 
 		rest.Resource("jobs", MasterJobController{m, password})
 		rest.Resource("nodes", MasterNodeController{m, password})
-		ListenAndServeTLSorNot(hostname, nil);
+		ListenAndServeTLSorNot(hostname, nil)
 	} else if isScribe {
-        hostname := ConfigFile.GetRequiredString("default", "hostname")
-        password := ConfigFile.GetRequiredString("default", "password")
+		hostname := ConfigFile.GetRequiredString("default", "hostname")
+		password := ConfigFile.GetRequiredString("default", "password")
 
-        url, err := http.ParseRequestURL(ConfigFile.GetRequiredString("scribe", "target"))
-        if err != nil {
-            panic(err.String())
-        }
+		url, err := http.ParseRequestURL(ConfigFile.GetRequiredString("scribe", "target"))
+		if err != nil {
+			panic(err.String())
+		}
 
-        proxy := http.NewSingleHostReverseProxy(url)
+		proxy := http.NewSingleHostReverseProxy(url)
 
 		mdb := NewMongoJobStore()
 		go LaunchScribe(mdb)
 
-        rest.Resource("jobs", ScribeJobController{mdb, proxy, password})
+		rest.Resource("jobs", ScribeJobController{mdb, proxy, password})
 		rest.Resource("nodes", ProxyNodeController{proxy, password})
-		ListenAndServeTLSorNot(hostname, nil);
+		ListenAndServeTLSorNot(hostname, nil)
 	} else if isAddama {
 		HandleAddamaCalls()
 	} else {

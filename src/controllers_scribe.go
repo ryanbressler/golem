@@ -25,34 +25,34 @@ import (
 )
 
 type ScribeJobController struct {
-	store JobStore
+	store  JobStore
 	proxy  *http.ReverseProxy
 	apikey string
 }
 
 // GET /jobs
 func (this ScribeJobController) Index(rw http.ResponseWriter) {
-    items, err := this.store.All();
+	items, err := this.store.All()
 	if err == nil {
-        http.Error(rw, err.String(), http.StatusBadRequest)
-        return
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 
 	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
 }
 // POST /jobs
 func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) {
-    if CheckApiKey(this.apikey, r) == false {
-        http.Error(rw, "api key required in header", http.StatusForbidden)
-        return
-    }
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
+		return
+	}
 
 	tasks := make([]Task, 0, 100)
 	if err := loadJson(r, &tasks); err != nil {
-        http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
@@ -63,37 +63,37 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 
 	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 	if err := this.store.Create(job, tasks); err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
-	    return
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 	if err := json.NewEncoder(rw).Encode(job); err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
 }
 // GET /jobs/id
 func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
 	jd, err := this.store.Get(id)
 	if err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
-	    return
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 	if err := json.NewEncoder(rw).Encode(jd); err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
 }
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
-    if CheckApiKey(this.apikey, r) == false {
-        http.Error(rw, "api key required in header", http.StatusForbidden)
-        return
-    }
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
+		return
+	}
 
-    if len(parts) < 2 {
-        http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
-        return
-    }
+	if len(parts) < 2 {
+		http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
+		return
+	}
 
-    preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
+	preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	preq.Header.Set("x-golem-apikey", this.apikey)
-    go this.proxy.ServeHTTP(rw, preq)
+	go this.proxy.ServeHTTP(rw, preq)
 }
