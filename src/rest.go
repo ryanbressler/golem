@@ -66,3 +66,14 @@ func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
 	return
 }
+
+func CheckApiKey(apikey string, r *http.Request) bool {
+	if apikey != "" {
+		headerkey := r.Header.Get("x-golem-apikey")
+		if headerkey == "" {
+			return false
+		}
+		return headerkey == apikey
+	}
+	return true
+}

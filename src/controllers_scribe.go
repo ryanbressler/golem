@@ -26,7 +26,8 @@ import (
 
 type ScribeJobController struct {
 	store JobStore
-	proxy ProxyJobController
+	proxy  *http.ReverseProxy
+	apikey string
 }
 
 // GET /jobs
@@ -44,6 +45,11 @@ func (this ScribeJobController) Index(rw http.ResponseWriter) {
 }
 // POST /jobs
 func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) {
+    if CheckApiKey(this.apikey, r) == false {
+        http.Error(rw, "api key required in header", http.StatusForbidden)
+        return
+    }
+
 	tasks := make([]Task, 0, 100)
 	if err := loadJson(r, &tasks); err != nil {
         http.Error(rw, err.String(), http.StatusBadRequest)
@@ -77,19 +83,17 @@ func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
 }
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+    if CheckApiKey(this.apikey, r) == false {
+        http.Error(rw, "api key required in header", http.StatusForbidden)
+        return
+    }
+
     if len(parts) < 2 {
         http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
         return
     }
 
-    jobId := parts[0]
-    if parts[1] == "stop" {
-        if err := this.proxy.Stop(jobId); err != nil {
-            http.Error(rw, err.String(), http.StatusBadRequest)
-        }
-    } else if parts[1] == "kill" {
-        if err := this.proxy.Kill(jobId); err != nil {
-            http.Error(rw, err.String(), http.StatusBadRequest)
-        }
-    }
+    preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
+	preq.Header.Set("x-golem-apikey", this.apikey)
+    go this.proxy.ServeHTTP(rw, preq)
 }

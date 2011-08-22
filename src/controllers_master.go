@@ -27,6 +27,7 @@ import (
 
 type MasterJobController struct {
 	master *Master
+	apikey string
 }
 // GET /jobs
 func (this MasterJobController) Index(rw http.ResponseWriter) {
@@ -42,6 +43,11 @@ func (this MasterJobController) Index(rw http.ResponseWriter) {
 }
 // POST /jobs
 func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) {
+    if CheckApiKey(this.apikey, r) == false {
+        http.Error(rw, "api key required in header", http.StatusForbidden)
+        return
+    }
+
 	tasks := make([]Task, 0, 100)
 	if err := loadJson(r, &tasks); err != nil {
 	    http.Error(rw, err.String(), http.StatusBadRequest)
@@ -83,6 +89,11 @@ func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
 }
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+    if CheckApiKey(this.apikey, r) == false {
+        http.Error(rw, "api key required in header", http.StatusForbidden)
+        return
+    }
+
     if len(parts) < 2 {
         http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
         return
@@ -109,6 +120,7 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 
 type MasterNodeController struct {
 	master *Master
+	apikey string
 }
 // GET /nodes
 func (this MasterNodeController) Index(rw http.ResponseWriter) {
@@ -137,6 +149,12 @@ func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
 // POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
 func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
     vlog("MasterNodeController.Act(%v):%v", r.URL.Path, parts)
+
+    if CheckApiKey(this.apikey, r) == false {
+        http.Error(rw, "api key required in header", http.StatusForbidden)
+        return
+    }
+
     if parts[0] == "restart" {
         this.master.Broadcast(&WorkerMessage{Type: RESTART})
         log("Restarting in 10 seconds.")

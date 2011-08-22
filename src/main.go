@@ -22,6 +22,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"http"
 	"goconf.googlecode.com/hg"
 	"github.com/hrovira/rest.go"
 )
@@ -45,18 +46,32 @@ func main() {
 	setTls()
 
 	if isMaster {
+        hostname := ConfigFile.GetRequiredString("default", "hostname")
+        password := ConfigFile.GetRequiredString("default", "password")
+
 		setBufferSize()
 		m := NewMaster()
-		hostname := ConfigFile.GetRequiredString("default", "hostname")
 
-		rest.Resource("jobs", MasterJobController{master: m})
-		rest.Resource("nodes", MasterNodeController{master: m})
+		rest.Resource("jobs", MasterJobController{m, password})
+		rest.Resource("nodes", MasterNodeController{m, password})
 		ListenAndServeTLSorNot(hostname, nil);
 	} else if isScribe {
+        hostname := ConfigFile.GetRequiredString("default", "hostname")
+        password := ConfigFile.GetRequiredString("default", "password")
+
+        url, err := http.ParseRequestURL(ConfigFile.GetRequiredString("scribe", "target"))
+        if err != nil {
+            panic(err.String())
+        }
+
+        proxy := http.NewSingleHostReverseProxy(url)
+
 		mdb := NewMongoJobStore()
 		go LaunchScribe(mdb)
-        rest.Resource("jobs", ScribeJobController{mdb, NewProxyJobController()})
-		rest.Resource("nodes", NewProxyNodeController())
+
+        rest.Resource("jobs", ScribeJobController{mdb, proxy, password})
+		rest.Resource("nodes", ProxyNodeController{proxy, password})
+		ListenAndServeTLSorNot(hostname, nil);
 	} else if isAddama {
 		HandleAddamaCalls()
 	} else {
