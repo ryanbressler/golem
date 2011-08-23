@@ -29,15 +29,14 @@ import (
 )
 
 type Scribe struct {
-	store         JobStore
 	masterJobsUrl string
 	apikey        string
 }
 
-func LaunchScribe(store JobStore) {
+func LaunchScribe() {
 	target := ConfigFile.GetRequiredString("scribe", "target")
 	apikey := ConfigFile.GetRequiredString("default", "password")
-	s := Scribe{store: store, masterJobsUrl: target + "/jobs/", apikey: apikey}
+	s := Scribe{masterJobsUrl: target + "/jobs/", apikey: apikey}
 
 	for {
 		s.PollJobs()
@@ -47,11 +46,12 @@ func LaunchScribe(store JobStore) {
 
 func (this *Scribe) PollJobs() {
 	vlog("Scribe.PollJobs")
+	store := NewMongoJobStore()
 	for _, jd := range this.GetJobs() {
-		this.store.Update(jd)
+		store.Update(jd)
 	}
 
-	unscheduled, _ := this.store.Unscheduled()
+	unscheduled, _ := store.Unscheduled()
 	vlog("Scribe.PollJobs:unsheduled:%d", len(unscheduled))
 	for _, u := range unscheduled {
 		this.PostJob(u)
@@ -73,7 +73,8 @@ func (this *Scribe) GetJobs() []JobDetails {
 func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	log("Scribe.PostJob(%v)", jd.JobId)
 
-	tasks, err := this.store.Tasks(jd.JobId)
+    store := NewMongoJobStore()
+	tasks, err := store.Tasks(jd.JobId)
 	if err != nil {
 		return
 	}
