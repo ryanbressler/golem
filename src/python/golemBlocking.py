@@ -15,6 +15,13 @@
 #    License along with this library; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 #
+
+"""
+Extension to golem.py. As a library, provides a method to wait for a specified job to complete.
+As a script, performs the 'run' or 'runlist' operations from golem.py, but does not terminate
+until the remote job is complete.
+"""
+
 import re
 import sys
 
@@ -29,7 +36,7 @@ except ImportError:
 
 QUERY_INTERVAL = 3.0 #in seconds
 
-def stall(jobid, composedUrl):
+def stall(jobid, composedUrl, loud=True):
     """
     Waits until the specified job is no longer Running.
     If it can't communicate with the server, it will throw an IOError.
@@ -38,7 +45,7 @@ def stall(jobid, composedUrl):
     """
     decoder = json.JSONDecoder()
     while True:
-        response, content = golem.getJobStatus(jobid, composedUrl)
+        response, content = golem.getJobStatus(jobid, composedUrl, loud)
         if response.status != 200:
             raise IOError("Unsuccessful status when communicating with server: " + response)
         contentDict = decoder.decode(content)
@@ -59,10 +66,23 @@ golemBlocking created, to aid in finding the output later.
 """
 
 def printUsage():
+    """
+    Prints a usage message. No parameters, returns None.
+    """
     print usage
 
 
 def jobIdFromResponse(content):
+    """
+    Extracts a jobID from the body of a Golem response.
+    Parameter:
+        content - String containing the body of the response from a Golem server to a job queue request.
+    Returns:
+        String representing the job ID embedded in that response.
+    Throws:
+        A creative variety of exceptions if the string isn't similar to the body of a Golem response. If this
+        function starts throwing exceptions left and right, revisit it- perhaps the server protocol changed.
+    """
     try:
         contentDict = json.JSONDecoder().decode(content)
         id = contentDict["JobId"]
@@ -75,10 +95,14 @@ def jobIdFromResponse(content):
 
 
 def main(argv):
+    """
+    Handles command line arguments and uses them to start a job (or job batch) and wait for it to finish.
+    Intended to be used interactively from the __name__ == "__main__" check.
+    """
     parser = optparse.OptionParser()
     parser.add_option("-p", "--password", dest="password", help="Specify the password for connecting to the server.",
                       default="")
-    parser.add_option("-e", "--echo", dest="echo", action="store_true", default=False)
+    parser.add_option("-e", "--echo", dest="echo", action="store_true", default=False, help = "Not yet implemented")
     flags, args = parser.parse_args(argv[1:4]) #because "late params" are actually arguments to the target script
 
     password = flags.password
