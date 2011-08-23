@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"http"
 	"goconf.googlecode.com/hg"
-	"github.com/hrovira/rest.go"
+	"github.com/codeforsystemsbiology/rest.go"
 )
 
 //parse args and start as master, scribe or worker
