@@ -73,7 +73,7 @@ func (this *Scribe) GetJobs() []JobDetails {
 func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	log("Scribe.PostJob(%v)", jd.JobId)
 
-    store := NewMongoJobStore()
+	store := NewMongoJobStore()
 	tasks, err := store.Tasks(jd.JobId)
 	if err != nil {
 		return
