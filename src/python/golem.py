@@ -110,12 +110,13 @@ def doGet(url, loud=True):
 
     resp = conn.getresponse()
     output = None
-    if resp.status == 200 and loud:
+    if resp.status == 200:
         output = resp.read()
-        try:
-            print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
-        except:
-            print output
+        if loud:
+            try:
+                print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
+            except:
+                print output
     elif loud:
         print resp.status, resp.reason
 
@@ -138,7 +139,7 @@ def doPost(url, paramMap, jsondata,password, loud=True):
         "x-golem-apikey":password }
 
 
-    print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
+    if loud: print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
     
 
     if u.scheme == "http":
@@ -152,12 +153,13 @@ def doPost(url, paramMap, jsondata,password, loud=True):
 
     output = None
     resp = conn.getresponse()
-    if resp.status == 200 and loud:
+    if resp.status == 200:
         output = resp.read()
-        try:
-            print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
-        except:
-            print output
+        if loud:
+            try:
+                print json.dumps(json.JSONDecoder().decode(output), sort_keys=True, indent=4)
+            except:
+                print output
     elif loud:
         print resp.status, resp.reason
 
@@ -165,27 +167,40 @@ def doPost(url, paramMap, jsondata,password, loud=True):
     #conn.close()
 
 
-def canonizeMaster(master):
+def canonizeMaster(master, loud = True):
     """Attaches an http or https prefix onto the master connection string if needed.
     """
     if master[0:4] != "http":
         if supporttls:
-            print "Using https."
+            if loud: print "Using https."
             canonicalMaster = "https://" + master
         else:
-            print "Using http (insecure)."
+            if loud: print "Using http (insecure)."
             canonicalMaster = "http://" + master
     if canonicalMaster[0:5] == "https" and supporttls == False:
         raise ValueError("HTTPS specified, but the SSL package tlslite is not available. Install tlslite.")
     return canonicalMaster
 
 
-def runOneLine(count, args, pwd, url):
+def runOneLine(count, args, pwd, url, loud = True):
+    """
+    Runs a single command on a specified Golem cluster.
+    Parameters:
+        count - Number of times to run the command.
+        args - Argument list to the command, including the command itself and all parameters.
+        pwd - password to the Golem server.
+        url - URL to the Golem server.
+        loud - whether or not to print status messages on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
     jobs = [{"Count": int(count), "Args": args}]
     jobs = json.dumps(jobs)
     data = {'command': "run"}
-    print "Submitting run request to %s." % url
-    return doPost(url, data, jobs, pwd)
+    if loud : print "Submitting run request to %s." % url
+    return doPost(url, data, jobs, pwd, loud)
 
 
 def generateJobList(fo):
@@ -196,46 +211,145 @@ def generateJobList(fo):
         yield {"Count": int(values[0]), "Args": values[1:]}
 
 
-def runBatch(jobs, pwd, url):
+def runBatch(jobs, pwd, url, loud=True):
+    """
+    Runs a Python list of jobs on the specified Golem cluster.
+    Parameters:
+        jobs - iterable sequence of dict-like objects fitting the job schema. Keys are of type string:
+            "Count" - integer representing the number of times to run this job
+            "Args" - list of strings representing the command line to run, including executable
+        pwd - password for the Golem server
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print status messages on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
     jobs = json.dumps([job for job in jobs])
     data = {'command': "runlist"}
-    print "Submitting run request to %s." % url
-    return doPost(url, data, jobs, pwd)
+    if loud: print "Submitting run request to %s." % url
+    return doPost(url, data, jobs, pwd, loud)
 
 
-def runList(fo, pwd, url):
+def runList(fo, pwd, url, loud=True):
+    """
+    Interprets an open file as a runlist, then executes it on the specified Golem cluster.
+    Parameters:
+        fo - Readable open file-like-object representing a runlist.
+        pwd - password for the Golem server
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print status messages on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
     jobs = generateJobList(fo)
-    return runBatch(jobs, pwd, url)
+    return runBatch(jobs, pwd, url, loud)
 
 
-def runOnEach(jobs, pwd, url):
+def runOnEach(jobs, pwd, url, loud=True):
+    """
+    Runs a single job on each machine in a Golem cluster.
+    Parameters:
+        jobs - a single dict fitting the job schema. Keys are of type string:
+            "Count" - integer representing the number of times to run this job
+            "Args" - list of strings representing the command line to run, including executable
+        pwd - the password for the Golem server
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print status messages on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
     jobs = json.dumps(jobs)
     data = {'command': "runoneach"}
     print "Submitting run request to %s." % url
     return doPost(url, data, jobs, pwd)
 
 
-def getJobList(url):
-    return doGet(url)
+def getJobList(url, loud=True):
+    """
+    Queries the Golem server for the list of current and previous jobs.
+    Parameters:
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print the response on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
+    return doGet(url, loud)
 
 
-def stopJob(jobId, pwd, url):
-    return doPost(url + jobId + "/stop", {}, "", pwd)
+def stopJob(jobId, pwd, url, loud = True):
+    """Stop a job identified by ID.
+    Parameters:
+        jobId - String of the ID of job to stop
+        pwd - password for the Golem server
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print the response on stdout. Defualts to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
+    return doPost(url + jobId + "/stop", {}, "", pwd, loud)
 
 
-def killJob(jobId, pwd, url):
-    return doPost(url + jobId + "/kill", {}, "", pwd)
+def killJob(jobId, pwd, url, loud=True):
+    """
+    Kill a job identified by ID.
+    Parameters:
+        jobId - String of the ID of job to kill
+        pwd - password for the Golem server
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print the response on stdout. Defualts to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
+    return doPost(url + jobId + "/kill", {}, "", pwd, loud)
 
 
-def getJobStatus(jobId, url):
-    return doGet(url + jobId)
+def getJobStatus(jobId, url, loud=True):
+    """
+    Queries the Golem server for the status of a particular job.
+    Parameters:
+        jobID - String of the ID of job to kill
+        url - URL to reach the Golem server, including protocol and port
+        loud - whether to print the response on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
+    return doGet(url + jobId, loud)
 
 
-def getNodesStatus(master):
-    return doGet(master + "/nodes/")
+def getNodesStatus(master, loud=True):
+    """
+    Queries the golem server for the status of its nodes.
+    Parameters:
+        master - URL to reach the Golem server, including protocol and port
+        loud - whether to print the response to stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
+    return doGet(master + "/nodes/", loud)
 
 
 def main():
+    """
+    Parses argv and performs the user-specified commands. See usage info.
+
+    Called if __name___ == "__main__". Not really intended to be called otherwise. Hardwired to reference sys.argv.
+    """
     if len(sys.argv)==1:
         print usage
         return
