@@ -47,8 +47,7 @@ func NewAddamaProxy(apikey string) *AddamaProxy {
 	registrar.Register("/addama/registry/mappings"+uri, "mapping", mapping)
 
 	url, _ := http.ParseRequestURL(target)
-	proxy := http.NewSingleHostReverseProxy(url)
-	return &AddamaProxy{proxy: proxy, registrykey: registrykey, apikey: apikey, baseuri: uri}
+	return &AddamaProxy{target: url, registrykey: registrykey, apikey: apikey, baseuri: uri}
 }
 
 func NewRegistrar(connectionFilePath string) *Registrar {
@@ -86,7 +85,7 @@ func (this *Registrar) Register(uri string, registrationType string, registratio
 }
 
 type AddamaProxy struct {
-	proxy       *http.ReverseProxy
+	target      *http.URL
 	registrykey string
 	apikey      string
 	baseuri     string
@@ -104,5 +103,6 @@ func (this *AddamaProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	preq, _ := http.NewRequest(r.Method, uri, r.Body)
 	preq.Header.Set("x-golem-apikey", this.apikey)
 
-	go this.proxy.ServeHTTP(w, preq)
+	proxy := http.NewSingleHostReverseProxy(this.target)
+	go proxy.ServeHTTP(w, preq)
 }
