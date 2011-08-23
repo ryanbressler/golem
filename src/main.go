@@ -45,10 +45,10 @@ func main() {
 	setVerbose()
 	setTls()
 
-    if contentDir, _ := ConfigFile.GetString("default", "contentDirectory"); contentDir != "" {
-        log("serving content from [%v]", contentDir)
-        http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
-    }
+	if contentDir, _ := ConfigFile.GetString("default", "contentDirectory"); contentDir != "" {
+		log("serving content from [%v]", contentDir)
+		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
+	}
 
 	if isMaster {
 		hostname := ConfigFile.GetRequiredString("default", "hostname")
