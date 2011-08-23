@@ -73,7 +73,11 @@ func main() {
 		rest.Resource("nodes", ProxyNodeController{proxy, password})
 		ListenAndServeTLSorNot(hostname, nil)
 	} else if isAddama {
-		HandleAddamaCalls()
+		hostname := ConfigFile.GetRequiredString("default", "hostname")
+		password := ConfigFile.GetRequiredString("default", "password")
+
+		http.Handle("/", NewAddamaProxy(password))
+		ListenAndServeTLSorNot(hostname, nil)
 	} else {
 		processes, masterhost := getWorkerProcesses()
 		RunNode(processes, masterhost)
