@@ -31,7 +31,7 @@ type ScribeJobController struct {
 
 // GET /jobs
 func (this ScribeJobController) Index(rw http.ResponseWriter) {
-    store := NewMongoJobStore()
+	store := NewMongoJobStore()
 	items, err := store.All()
 	if err == nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -61,7 +61,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	label := getHeader(r, "x-golem-job-label", jobId)
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
-    store := NewMongoJobStore()
+	store := NewMongoJobStore()
 	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 	if err := store.Create(job, tasks); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -73,7 +73,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 }
 // GET /jobs/id
 func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
-    store := NewMongoJobStore()
+	store := NewMongoJobStore()
 	jd, err := store.Get(id)
 	if err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
