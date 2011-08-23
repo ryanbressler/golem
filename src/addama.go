@@ -24,6 +24,7 @@ import (
 	"http"
 	"strings"
 	"goconf.googlecode.com/hg"
+	"github.com/codeforsystemsbiology/httplib.go"
 )
 
 func NewAddamaProxy(apikey string) *AddamaProxy {
@@ -67,10 +68,10 @@ type Registrar struct {
 func (this *Registrar) Register(uri string, registrationType string, registration string) http.Header {
 	vlog("Register(%v%v, %v, %v)", this.host, uri, registrationType, registration)
 
-	requestBuilder := Post(this.host + uri)
+	requestBuilder := httplib.Post(this.host + uri)
 	requestBuilder.Header("x-addama-apikey", this.apikey)
 	requestBuilder.Param(registrationType, registration)
-	resp, err := requestBuilder.getResponse()
+	resp, err := requestBuilder.AsResponse()
 	if err != nil {
 		panic(err)
 	}
