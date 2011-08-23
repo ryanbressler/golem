@@ -26,10 +26,7 @@ import (
 	"goconf.googlecode.com/hg"
 )
 
-func HandleAddamaCalls() {
-	hostname := ConfigFile.GetRequiredString("default", "hostname")
-	password := ConfigFile.GetRequiredString("default", "password")
-
+func NewAddamaProxy(apikey string) *AddamaProxy {
 	target := ConfigFile.GetRequiredString("addama", "target")
 	connectionFile := ConfigFile.GetRequiredString("addama", "connectionFile")
 	serviceHost := ConfigFile.GetRequiredString("addama", "host")
@@ -48,11 +45,9 @@ func HandleAddamaCalls() {
 	mapping := fmt.Sprintf(" { uri: '%v', label: '%v', service: '%v' } ", uri, label, serviceUri)
 	registrar.Register("/addama/registry/mappings"+uri, "mapping", mapping)
 
-	http.Handle("/", NewAddamaProxy(target, registrykey, password, uri))
-
-	log("addama service running at %v", hostname)
-
-	ListenAndServeTLSorNot(hostname, nil)
+	url, _ := http.ParseRequestURL(target)
+	proxy := http.NewSingleHostReverseProxy(url)
+	return &AddamaProxy{proxy: proxy, registrykey: registrykey, apikey: apikey, baseuri: uri}
 }
 
 func NewRegistrar(connectionFilePath string) *Registrar {
@@ -87,12 +82,6 @@ func (this *Registrar) Register(uri string, registrationType string, registratio
 	vlog("Register(%v%v): %d", this.host, uri, resp.StatusCode)
 
 	return resp.Header
-}
-
-func NewAddamaProxy(target string, registrykey string, apikey string, baseuri string) *AddamaProxy {
-	url, _ := http.ParseRequestURL(target)
-	proxy := http.NewSingleHostReverseProxy(url)
-	return &AddamaProxy{proxy: proxy, registrykey: registrykey, apikey: apikey, baseuri: baseuri}
 }
 
 type AddamaProxy struct {
