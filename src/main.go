@@ -66,10 +66,9 @@ func main() {
 
 		proxy := http.NewSingleHostReverseProxy(url)
 
-		mdb := NewMongoJobStore()
-		go LaunchScribe(mdb)
+		go LaunchScribe()
 
-		rest.Resource("jobs", ScribeJobController{mdb, proxy, password})
+		rest.Resource("jobs", ScribeJobController{proxy, password})
 		rest.Resource("nodes", ProxyNodeController{proxy, password})
 		ListenAndServeTLSorNot(hostname, nil)
 	} else if isAddama {

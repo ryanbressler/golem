@@ -39,7 +39,7 @@ func NewMongoJobStore() *MongoJobStore {
 
 	session, err := mgo.Mongo(dbhost)
 	if err != nil {
-		panic(err)
+		log("NewMongoJobStore():%v", err.String())
 	}
 
 	session.SetMode(mgo.Strong, true) // [Safe, Monotonic, Strong] Strong syncs on inserts/updates
