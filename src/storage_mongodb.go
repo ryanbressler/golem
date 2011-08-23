@@ -27,8 +27,9 @@ import (
 )
 
 type MongoJobStore struct {
-	JOBS  mgo.Collection
-	TASKS mgo.Collection
+	database mgo.Database
+	JOBS     string
+	TASKS    string
 }
 
 func NewMongoJobStore() *MongoJobStore {
@@ -36,6 +37,7 @@ func NewMongoJobStore() *MongoJobStore {
 	storename := ConfigFile.GetRequiredString("mgodb", "store")
 	jobCollection := ConfigFile.GetRequiredString("mgodb", "jobcollection")
 	taskCollection := ConfigFile.GetRequiredString("mgodb", "taskcollection")
+	log("NewMongoJobStore():%v:%v:%v:%v", dbhost, storename, jobCollection, taskCollection)
 
 	session, err := mgo.Mongo(dbhost)
 	if err != nil {
@@ -45,16 +47,22 @@ func NewMongoJobStore() *MongoJobStore {
 	session.SetMode(mgo.Strong, true) // [Safe, Monotonic, Strong] Strong syncs on inserts/updates
 
 	db := session.DB(storename)
-	return &MongoJobStore{JOBS: db.C(jobCollection), TASKS: db.C(taskCollection)}
+	return &MongoJobStore{database: db, JOBS: jobCollection, TASKS: taskCollection}
 }
 
+func (this *MongoJobStore) DbJobs() mgo.Collection {
+	return this.database.C(this.JOBS)
+}
+func (this *MongoJobStore) DbTasks() mgo.Collection {
+	return this.database.C(this.TASKS)
+}
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) os.Error {
 	vlog("MongoJobStore.Create(%v)", item)
-	err := this.JOBS.Insert(item)
+	err := this.DbJobs().Insert(item)
 	if err != nil {
 		return err
 	}
-	return this.TASKS.Insert(TaskHolder{item.JobId, tasks})
+	return this.DbTasks().Insert(TaskHolder{item.JobId, tasks})
 }
 
 func (this *MongoJobStore) All() ([]JobDetails, os.Error) {
@@ -70,13 +78,13 @@ func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
-	err = this.JOBS.Find(bson.M{"jobid": jobId}).One(&item)
+	err = this.DbJobs().Find(bson.M{"jobid": jobId}).One(&item)
 	return
 }
 
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 	item := TaskHolder{}
-	err = this.TASKS.Find(bson.M{"jobid": jobId}).One(&item)
+	err = this.DbTasks().Find(bson.M{"jobid": jobId}).One(&item)
 	if err == nil {
 		tasks = item.Tasks
 	}
@@ -99,11 +107,11 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 	existing.Running = item.Running
 	existing.Scheduled = item.Scheduled
 
-	return this.JOBS.Update(bson.M{"jobid": item.JobId}, existing)
+	return this.DbJobs().Update(bson.M{"jobid": item.JobId}, existing)
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
-	iter, err := this.JOBS.Find(m).Iter()
+	iter, err := this.DbJobs().Find(m).Iter()
 	if err == nil {
 		for {
 			jd := JobDetails{}
