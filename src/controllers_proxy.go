@@ -33,8 +33,8 @@ type ProxyNodeController struct {
 func (this ProxyNodeController) Index(rw http.ResponseWriter) {
 	preq, err := http.NewRequest("GET", "/nodes/", strings.NewReader(""))
 	if err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
-	    return
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 
 	vlog("ProxyNodeController.Index():%v", this.target)
@@ -45,8 +45,8 @@ func (this ProxyNodeController) Index(rw http.ResponseWriter) {
 func (this ProxyNodeController) Find(rw http.ResponseWriter, nodeId string) {
 	preq, err := http.NewRequest("GET", "/nodes/"+nodeId, strings.NewReader(""))
 	if err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
-	    return
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 
 	vlog("ProxyNodeController.Find(%v):%v", nodeId, this.target)
@@ -62,8 +62,8 @@ func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *h
 
 	preq, err := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	if err != nil {
-	    http.Error(rw, err.String(), http.StatusBadRequest)
-	    return
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 
 	preq.Header.Set("x-golem-apikey", this.apikey)
