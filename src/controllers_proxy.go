@@ -21,6 +21,7 @@ package main
 
 import (
 	"http"
+	"strings"
 )
 
 type ProxyNodeController struct {
@@ -30,15 +31,27 @@ type ProxyNodeController struct {
 
 // GET /nodes
 func (this ProxyNodeController) Index(rw http.ResponseWriter) {
-	preq, _ := http.NewRequest("GET", "/nodes", nil)
+	preq, err := http.NewRequest("GET", "/nodes/", strings.NewReader(""))
+	if err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	    return
+	}
+
+	vlog("ProxyNodeController.Index():%v", this.target)
 	proxy := http.NewSingleHostReverseProxy(this.target)
-	go proxy.ServeHTTP(rw, preq)
+	proxy.ServeHTTP(rw, preq)
 }
 // GET /nodes/id
 func (this ProxyNodeController) Find(rw http.ResponseWriter, nodeId string) {
-	preq, _ := http.NewRequest("GET", "/nodes/"+nodeId, nil)
+	preq, err := http.NewRequest("GET", "/nodes/"+nodeId, strings.NewReader(""))
+	if err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	    return
+	}
+
+	vlog("ProxyNodeController.Find(%v):%v", nodeId, this.target)
 	proxy := http.NewSingleHostReverseProxy(this.target)
-	go proxy.ServeHTTP(rw, preq)
+	proxy.ServeHTTP(rw, preq)
 }
 // POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
 func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
@@ -47,8 +60,15 @@ func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *h
 		return
 	}
 
-	preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
+	preq, err := http.NewRequest(r.Method, r.URL.Path, r.Body)
+	if err != nil {
+	    http.Error(rw, err.String(), http.StatusBadRequest)
+	    return
+	}
+
 	preq.Header.Set("x-golem-apikey", this.apikey)
+
+	vlog("ProxyNodeController.Act():%v", this.target)
 	proxy := http.NewSingleHostReverseProxy(this.target)
-	go proxy.ServeHTTP(rw, preq)
+	proxy.ServeHTTP(rw, preq)
 }
