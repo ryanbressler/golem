@@ -113,16 +113,16 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
 	iter, err := this.DbJobs().Find(m).Iter()
 	if err != nil {
-	    log("MongoJobStore.FindJobs(%v):%v", m, err)
-	    return
-    }
+		log("MongoJobStore.FindJobs(%v):%v", m, err)
+		return
+	}
 
-    for {
-        jd := JobDetails{}
-        if nexterr := iter.Next(&jd); nexterr != nil {
-            break
-        }
-        items = append(items, jd)
-    }
-    return
+	for {
+		jd := JobDetails{}
+		if nexterr := iter.Next(&jd); nexterr != nil {
+			break
+		}
+		items = append(items, jd)
+	}
+	return
 }
