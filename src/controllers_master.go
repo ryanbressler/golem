@@ -33,7 +33,7 @@ type MasterJobController struct {
 func (this MasterJobController) Index(rw http.ResponseWriter) {
 	vlog("MasterJobController Index")
 	items := make([]JobDetails, 0, 0)
-	
+
 	vlog("MasterJobController Index for loop")
 	for _, s := range this.master.subMap {
 		items = append(items, s.SniffDetails())
@@ -74,11 +74,11 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
 	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
-	
+
 	vlog("MasterJobController Create creating")
 	this.master.subMap[jobId] = NewSubmission(jd, tasks, this.master.jobChan)
 	vlog("MasterJobController Created")
-	
+
 	if err := json.NewEncoder(rw).Encode(jd); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
@@ -119,8 +119,7 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 		http.Error(rw, "job "+jobId+" not found", http.StatusNotFound)
 		return
 	}
-	
-	
+
 	if parts[1] == "stop" {
 		vlog("MasterJobController Act Stopping")
 		if job.Stop() == false {
