@@ -31,10 +31,14 @@ type MasterJobController struct {
 }
 // GET /jobs
 func (this MasterJobController) Index(rw http.ResponseWriter) {
+	vlog("MasterJobController Index")
 	items := make([]JobDetails, 0, 0)
+	
+	vlog("MasterJobController Index for loop")
 	for _, s := range this.master.subMap {
 		items = append(items, s.SniffDetails())
 	}
+	vlog("MasterJobController Index for loop done")
 
 	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
@@ -43,6 +47,7 @@ func (this MasterJobController) Index(rw http.ResponseWriter) {
 }
 // POST /jobs
 func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) {
+	vlog("MasterJobController Create")
 	if CheckApiKey(this.apikey, r) == false {
 		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return
@@ -69,19 +74,25 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
 
 	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
+	
+	vlog("MasterJobController Create creating")
 	this.master.subMap[jobId] = NewSubmission(jd, tasks, this.master.jobChan)
-
+	vlog("MasterJobController Created")
+	
 	if err := json.NewEncoder(rw).Encode(jd); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
 }
 // GET /jobs/id
 func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
+	vlog("MasterJobController Find")
 	s, isin := this.master.subMap[id]
 	if isin == false {
+		vlog("MasterJobController Find: not found")
 		http.Error(rw, "job "+id+" not found", http.StatusNotFound)
 		return
 	}
+	vlog("MasterJobController Find: fount")
 
 	if err := json.NewEncoder(rw).Encode(s.SniffDetails()); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -89,6 +100,7 @@ func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
 }
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+	vlog("MasterJobController Act")
 	if CheckApiKey(this.apikey, r) == false {
 		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return
@@ -100,22 +112,28 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 	}
 
 	jobId := parts[0]
+	vlog("MasterJobController Act Finding")
 	job, isin := this.master.subMap[jobId]
 	if isin == false {
+		vlog("MasterJobController Act Not Found")
 		http.Error(rw, "job "+jobId+" not found", http.StatusNotFound)
 		return
 	}
-
+	
+	
 	if parts[1] == "stop" {
+		vlog("MasterJobController Act Stopping")
 		if job.Stop() == false {
 			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
 		}
 	} else if parts[1] == "kill" {
+		vlog("MasterJobController Act Killing")
 		if job.Stop() == false {
 			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
 		}
 		this.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
 	}
+	vlog("MasterJobController Act Returning")
 }
 
 type MasterNodeController struct {
@@ -124,11 +142,13 @@ type MasterNodeController struct {
 }
 // GET /nodes
 func (this MasterNodeController) Index(rw http.ResponseWriter) {
+	vlog("MasterNodeController Index")
 	items := make([]WorkerNode, 0, 0)
+	vlog("MasterNodeController Index for loop")
 	for _, n := range this.master.NodeHandles {
 		items = append(items, NewWorkerNode(n))
 	}
-
+	vlog("MasterNodeController Index for loop done")
 	workerNodes := WorkerNodeList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(workerNodes); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -136,11 +156,14 @@ func (this MasterNodeController) Index(rw http.ResponseWriter) {
 }
 // GET /nodes/id
 func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
+	vlog("MasterNodeController Find")
 	nh, isin := this.master.NodeHandles[nodeId]
 	if isin == false {
+		vlog("MasterNodeController Find not found")
 		http.Error(rw, "node "+nodeId+" not found", http.StatusNotFound)
 		return
 	}
+	vlog("MasterNodeController Find found")
 
 	if err := json.NewEncoder(rw).Encode(NewWorkerNode(nh)); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
