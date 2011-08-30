@@ -21,9 +21,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"http"
-	"goconf.googlecode.com/hg"
 	"github.com/codeforsystemsbiology/rest.go"
 )
 
@@ -40,7 +38,7 @@ func main() {
 	flag.StringVar(&configurationFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
-	configFile := NewConfigFile(configurationFile)
+	configFile := NewConfigurationFile(configurationFile)
 
 	GlobalVerbose(configFile)
 	GlobalTls(configFile)
@@ -120,33 +118,10 @@ func StartWorker(configFile ConfigurationFile) {
 	RunNode(processes, masterhost)
 }
 
-func NewConfigFile(filepath string) ConfigurationFile {
-	if filepath != "" {
-		c, err := conf.ReadConfigFile(filepath)
-		if err != nil {
-			panic(err)
-		}
-		return ConfigurationFile{c}
-	}
-	panic(fmt.Sprintf("configuration file not found [%v]", filepath))
-}
-
 func StartHtmlHandler(configFile ConfigurationFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
 		info("serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
 		http.Handle("/", http.RedirectHandler("/html/index.html", http.StatusTemporaryRedirect))
 	}
-}
-
-type ConfigurationFile struct {
-	*conf.ConfigFile
-}
-
-func (this *ConfigurationFile) GetRequiredString(section string, key string) (value string) {
-	value, err := this.GetString(section, key)
-	if err != nil {
-		panic(err)
-	}
-	return
 }
