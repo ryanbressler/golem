@@ -4,7 +4,6 @@ TARG=golem
 GOFILES=\
 	vars.go\
 	log.go\
-	Job.go\
 	Connection.go\
 	Submission.go\
 	controllers_master.go\

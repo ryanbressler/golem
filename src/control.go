@@ -23,42 +23,34 @@ import (
 	"os"
 	"exec"
 	"time"
-	"syscall"
 )
 
-//restarts his process using the origional commands after waitn nanoseconds then die
+// restarts process using the original commands after wait time in nanoseconds, then die
 func RestartIn(waitn int64) {
-	log("Restart in %v nanoseconds", waitn)
-	time.Sleep(waitn)
-	log("Restarting.")
+	log("RestartIn(%v secs)", waitn)
+	time.Sleep(waitn * second)
+	log("RestartIn(): restarting")
+
 	cmd, err := exec.LookPath(os.Args[0])
 	if err != nil {
-		log("exec %s: %s\n", os.Args, err)
+		warn("RestartIn(): exec %s: %s\n", os.Args, err)
 		return
 	}
 
 	f := []*os.File{os.Stdin, os.Stdout, os.Stderr}
 	_, err = os.StartProcess(cmd, os.Args, &os.ProcAttr{Files: f})
 	if err != nil {
-		log("%v", err)
+		warn("RestartIn(): %v", err)
 	}
-	log("Exiting.")
+
+	log("RestartIn(): exiting")
 	os.Exit(0)
 }
 
-//exit this proccess in waitn n nanoseconds
+//exit this process after given wait time in seconds
 func DieIn(waitn int64) {
-	log("Die in %v nanoseconds", waitn)
-	time.Sleep(waitn)
-	log("Exiting.")
+	log("DieIn(%v secs)", waitn)
+	time.Sleep(waitn * second)
+	log("DieIn(): exiting")
 	os.Exit(0)
-}
-
-//kill the supplied pid... uses the kill command, there must be a better way to do this
-//TODO: find a better way to do this
-func KillPid(pid int) {
-	log("Killing pid %v", pid)
-	errno := syscall.Kill(pid, syscall.SIGCHLD)
-	log("Returned errno: %v", errno)
-
 }

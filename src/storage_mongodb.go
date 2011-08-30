@@ -33,11 +33,6 @@ type MongoJobStore struct {
 	TasksCollection string
 }
 
-func NewMongoJobStore(dbhost string, dbstore string, cJobs string, cTasks string) *MongoJobStore {
-	log("NewMongoJobStore(%v,%v,%v,%v)", dbhost, dbstore, cJobs, cTasks)
-	return &MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: cJobs, TasksCollection: cTasks}
-}
-
 func (this *MongoJobStore) GetCollection(collectionName string) (c mgo.Collection, err os.Error) {
 	session, err := mgo.Mongo(this.Host)
 	if err != nil {
@@ -139,7 +134,7 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 
 	iter, err := jobsCollection.Find(m).Iter()
 	if err != nil {
-		log("MongoJobStore.FindJobs(%v):%v", m, err)
+		vlog("MongoJobStore.FindJobs(%v):%v", m, err)
 		return
 	}
 

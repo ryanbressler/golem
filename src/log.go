@@ -40,10 +40,6 @@ func vlog(format string, a ...interface{}) {
 	}
 }
 
-// info is a wrapper for log that appends INFO message
-func info(format string, a ...interface{}) {
-	log("INFO: "+format, a...)
-}
 // warn is a wrapper for log that appends WARN message
 func warn(format string, a ...interface{}) {
 	log("WARN: "+format, a...)
