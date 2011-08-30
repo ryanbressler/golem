@@ -22,11 +22,12 @@ package main
 import (
 	"http"
 	"json"
+	"url"
 )
 
 type ScribeJobController struct {
 	store  JobStore
-	target *http.URL
+	target *url.URL
 	apikey string
 }
 
