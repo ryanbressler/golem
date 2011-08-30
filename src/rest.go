@@ -22,7 +22,6 @@ package main
 import (
 	"http"
 	"json"
-	"mime/multipart"
 	"os"
 )
 
@@ -34,35 +33,25 @@ func getHeader(r *http.Request, headerName string, defaultValue string) string {
 	return defaultValue
 }
 
-func getMultipartForm(r *http.Request) (frm *multipart.Form, err os.Error) {
+func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
+	vlog("loadJson")
+
 	mpreader, err := r.MultipartReader()
 	if err != nil {
 		return
 	}
 
-	frm, err = mpreader.ReadForm(10000)
-	return
-}
-
-func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
-	vlog("loadJson")
-
-	vlog("loadJson: multipart")
-	frm, err := getMultipartForm(r)
+	frm, err := mpreader.ReadForm(10000)
 	if err != nil {
-		vlog("loadJson:%v", err)
 		return
 	}
 
-	vlog("loadJson: open jsonfile")
 	jsonfile, err := frm.File["jsonfile"][0].Open()
 	if err != nil {
-		vlog("loadJson:%v", err)
 		return
 	}
 	defer jsonfile.Close()
 
-	vlog("loadJson: decoding jsonfile")
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
 	return
 }
