@@ -23,6 +23,7 @@ GOFILES=\
 	storage.go\
 	storage_mongodb.go\
 	entities.go\
+	config.go\
 	main.go\
 	
 
