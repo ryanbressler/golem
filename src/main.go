@@ -25,7 +25,7 @@ import (
 	"github.com/codeforsystemsbiology/rest.go"
 )
 
-//parse args and start as master, scribe or worker
+//parse args and start as master, scribe, addama proxy or worker
 func main() {
 	var configurationFile string
 	var isMaster bool
@@ -55,6 +55,9 @@ func main() {
 	}
 }
 
+// starts master service based on the given configuration file
+// required parameters:  default.hostname, default.password
+// optional parameters:  master.buffersize
 func StartMaster(configFile ConfigurationFile) {
 	GlobalBufferSize(configFile)
 
@@ -68,6 +71,8 @@ func StartMaster(configFile ConfigurationFile) {
 	ListenAndServeTLSorNot(hostname, nil)
 }
 
+// starts scribe service based on the given configuration file
+// required parameters:  default.hostname, default.password, scribe.target, mgodb.server, mgodb.store, mgodb.jobcollection, mgodb.taskcollection
 func StartScribe(configFile ConfigurationFile) {
 	hostname := configFile.GetRequiredString("default", "hostname")
 	apikey := configFile.GetRequiredString("default", "password")
@@ -90,6 +95,8 @@ func StartScribe(configFile ConfigurationFile) {
 	ListenAndServeTLSorNot(hostname, nil)
 }
 
+// starts Addama proxy (http://addama.org) based on the given configuration file
+// required parameters:  default.hostname, default.password, addama.target, addama.connectionFile, addama.host, addama.service, addama.uri, addama.label
 func StartAddama(configFile ConfigurationFile) {
 	hostname := configFile.GetRequiredString("default", "hostname")
 
@@ -106,6 +113,10 @@ func StartAddama(configFile ConfigurationFile) {
 
 	ListenAndServeTLSorNot(hostname, nil)
 }
+
+// starts worker based on the given configuration file
+// required parameters:  worker.masterhost
+// optional parameters:  worker.processes
 func StartWorker(configFile ConfigurationFile) {
 	processes, err := configFile.GetInt("worker", "processes")
 	if err != nil {
@@ -118,6 +129,8 @@ func StartWorker(configFile ConfigurationFile) {
 	RunNode(processes, masterhost)
 }
 
+// starts http handlers for HTML content based on the given configuration file
+// optional parameters:  default.contentDirectory (location of html content to be served at https://example.com/ or https://example.com/html/index.html
 func StartHtmlHandler(configFile ConfigurationFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
 		info("serving HTML content from [%v]", contentDir)

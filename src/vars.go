@@ -34,6 +34,8 @@ var useTls bool = true
 var certpath string = ""
 var certorg string = "golem.googlecode.com"
 
+// Sets a global variable for verbosity in logs
+// optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
 func GlobalVerbose(configFile ConfigurationFile) {
 	verbose, err := configFile.GetBool("default", "verbose")
 	if err != nil {
@@ -42,6 +44,8 @@ func GlobalVerbose(configFile ConfigurationFile) {
 	info("verbose=[%v]", verbose)
 }
 
+// Sets global variable to enable TLS communications and other related variables (certificate path, organization)
+// optional parameters:  default.certpath, default.organization, default.tls
 func GlobalTls(configFile ConfigurationFile) {
 	certificatepath, err := configFile.GetString("default", "certpath")
 	if err != nil {
@@ -70,6 +74,8 @@ func GlobalTls(configFile ConfigurationFile) {
 	info("TLS=[%v]", useTls)
 }
 
+// Sets global variable to configure buffersize for master submission channels (stdout, stderr)
+// optional parameters:  master.buffersize
 func GlobalBufferSize(configFile ConfigurationFile) {
 	bufsize, err := configFile.GetInt("master", "buffersize")
 	if err != nil {
