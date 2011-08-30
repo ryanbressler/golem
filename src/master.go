@@ -22,12 +22,15 @@ package main
 import (
 	"http"
 	"websocket"
+	"sync"
 )
 
 type Master struct {
+	subMu       sync.RWMutex
 	subMap      map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
 	jobChan     chan *WorkerJob        //buffered channel for creating jobs
 	subidChan   chan int               //buffered channel used to keep track of submissions
+	nodeMu      sync.RWMutex
 	NodeHandles map[string]*NodeHandle
 }
 
@@ -39,6 +42,12 @@ func NewMaster() *Master {
 		NodeHandles: map[string]*NodeHandle{}}
 	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.Listen(ws) }))
 	return &m
+}
+
+func (m *Master) GetSub(subId string) *Submission{
+	m.subMu.RLock()
+	defer m.subMu.RUnlock()
+	return m.subMap[subId]
 }
 
 func (m *Master) Listen(ws *websocket.Conn) {

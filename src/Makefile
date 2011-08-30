@@ -11,7 +11,6 @@ GOFILES=\
 	controllers_proxy.go\
 	master.go\
 	scribe.go\
-	addama.go\
 	control.go\
 	jobkiller.go\
 	uniqueid.go\
@@ -24,6 +23,7 @@ GOFILES=\
 	entities.go\
 	config.go\
 	main.go\
+	addama.go\
 	
 
 include $(GOROOT)/src/Make.cmd

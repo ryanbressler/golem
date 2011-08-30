@@ -136,23 +136,23 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 		vlog("HandleWorkerMessage(): CHECKIN %v", nh.Hostname)
 	case COUT:
 		vlog("HandleWorkerMessage(): COUT %v", nh.Hostname)
-		nh.Master.subMap[msg.SubId].CoutFileChan <- msg.Body
+		nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body
 	case CERROR:
 		vlog("HandleWorkerMessage(): CERROR %v", nh.Hostname)
-		nh.Master.subMap[msg.SubId].CerrFileChan <- msg.Body
+		nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body
 	case JOBFINISHED:
 		vlog("HandleWorkerMessage(): JOBFINISHED %v", nh.Hostname)
 		running := <-nh.Running
 		nh.Running <- running - 1
 		vlog("HandleWorkerMessage(): %v job finished: %v running: %v", nh.Hostname, msg.Body, running)
-		nh.Master.subMap[msg.SubId].FinishedChan <- NewWorkerJob(msg.Body)
+		nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
 		log("HandleWorkerMessage(): %v finished: %v, running: %v", nh.Hostname, msg.Body, running)
 	case JOBERROR:
 		vlog("HandleWorkerMessage(): JOBERROR %v", nh.Hostname)
 		running := <-nh.Running
 		nh.Running <- running - 1
 		vlog("HandleWorkerMessage(): %v %v running:%v", nh.Hostname, msg.Body, running)
-		nh.Master.subMap[msg.SubId].ErrorChan <- NewWorkerJob(msg.Body)
+		nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
 		vlog("HandleWorkerMessage(): %v finished sent to Sub: %v running:%v", nh.Hostname, msg.Body, running)
 	}
 	vlog("HandleWorkerMessage(): %v msg handled", nh.Hostname)

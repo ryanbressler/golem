@@ -35,9 +35,11 @@ func (this MasterJobController) Index(rw http.ResponseWriter) {
 	items := make([]JobDetails, 0, 0)
 
 	vlog("MasterJobController.Index(): for loop")
+	this.master.subMu.RLock()
 	for _, s := range this.master.subMap {
 		items = append(items, s.SniffDetails())
 	}
+	this.master.subMu.RUnlock()
 	vlog("MasterJobController.Index(): for loop done")
 
 	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
@@ -63,8 +65,11 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	if jobId == "" {
 		jobId = UniqueId()
 	}
-
-	if _, isin := this.master.subMap[jobId]; isin {
+	
+	this.master.subMu.RLock()
+	_, isin := this.master.subMap[jobId]
+	this.master.subMu.RUnlock()	
+	if  isin {
 		vlog("MasterJobController.Create(): Exists: %v", jobId)
 		return
 	}
@@ -76,7 +81,9 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 
 	vlog("MasterJobController.Create(): creating: %v", jobId)
+	this.master.subMu.Lock()
 	this.master.subMap[jobId] = NewSubmission(jd, tasks, this.master.jobChan)
+	this.master.subMu.Unlock()
 	vlog("MasterJobController.Create(): created: %v", jobId)
 
 	if err := json.NewEncoder(rw).Encode(jd); err != nil {
@@ -86,7 +93,10 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 // GET /jobs/id
 func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
 	vlog("MasterJobController.Find(%v)", id)
+	this.master.subMu.RLock()
 	s, isin := this.master.subMap[id]
+	this.master.subMu.RUnlock()
+	
 	if isin == false {
 		vlog("MasterJobController.Find(%v): not found", id)
 		http.Error(rw, "job "+id+" not found", http.StatusNotFound)
@@ -112,7 +122,9 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 
 	jobId := parts[0]
 	vlog("MasterJobController.Act(%v): Finding", jobId)
+	this.master.subMu.RLock()
 	job, isin := this.master.subMap[jobId]
+	this.master.subMu.RUnlock()
 	if isin == false {
 		vlog("MasterJobController.Act(%v): Not Found", jobId)
 		http.Error(rw, "job "+jobId+" not found", http.StatusNotFound)
