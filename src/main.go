@@ -40,51 +40,84 @@ func main() {
 	flag.StringVar(&configurationFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
-	ConfigFile = NewConfigFile(configurationFile)
+	configFile := NewConfigFile(configurationFile)
 
-	setVerbose()
-	setTls()
-
-	if contentDir, _ := ConfigFile.GetString("default", "contentDirectory"); contentDir != "" {
-		log("serving content from [%v]", contentDir)
-		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
-	}
+	GlobalVerbose(configFile)
+	GlobalTls(configFile)
+	StartHtmlHandler(configFile)
 
 	if isMaster {
-		hostname := ConfigFile.GetRequiredString("default", "hostname")
-		password := ConfigFile.GetRequiredString("default", "password")
-
-		setBufferSize()
-		m := NewMaster()
-
-		rest.Resource("jobs", MasterJobController{m, password})
-		rest.Resource("nodes", MasterNodeController{m, password})
-		ListenAndServeTLSorNot(hostname, nil)
+		StartMaster(configFile)
 	} else if isScribe {
-		hostname := ConfigFile.GetRequiredString("default", "hostname")
-		password := ConfigFile.GetRequiredString("default", "password")
-
-		url, err := http.ParseRequestURL(ConfigFile.GetRequiredString("scribe", "target"))
-		if err != nil {
-			panic(err.String())
-		}
-
-		go LaunchScribe(NewMongoJobStore())
-
-		rest.Resource("jobs", ScribeJobController{NewMongoJobStore(), url, password})
-		rest.Resource("nodes", ProxyNodeController{url, password})
-		ListenAndServeTLSorNot(hostname, nil)
+		StartScribe(configFile)
 	} else if isAddama {
-		hostname := ConfigFile.GetRequiredString("default", "hostname")
-		password := ConfigFile.GetRequiredString("default", "password")
-
-		http.Handle("/", NewAddamaProxy(password))
-
-		ListenAndServeTLSorNot(hostname, nil)
+		StartAddama(configFile)
 	} else {
-		processes, masterhost := getWorkerProcesses()
-		RunNode(processes, masterhost)
+		StartWorker(configFile)
 	}
+}
+
+func StartMaster(configFile ConfigurationFile) {
+	GlobalBufferSize(configFile)
+
+	hostname := configFile.GetRequiredString("default", "hostname")
+	password := configFile.GetRequiredString("default", "password")
+
+	m := NewMaster()
+
+	rest.Resource("jobs", MasterJobController{m, password})
+	rest.Resource("nodes", MasterNodeController{m, password})
+	ListenAndServeTLSorNot(hostname, nil)
+}
+
+func StartScribe(configFile ConfigurationFile) {
+	hostname := configFile.GetRequiredString("default", "hostname")
+	apikey := configFile.GetRequiredString("default", "password")
+	target := configFile.GetRequiredString("scribe", "target")
+	dbhost := configFile.GetRequiredString("mgodb", "server")
+	dbstore := configFile.GetRequiredString("mgodb", "store")
+	collectionJobs := configFile.GetRequiredString("mgodb", "jobcollection")
+	collectionTasks := configFile.GetRequiredString("mgodb", "taskcollection")
+
+	url, err := http.ParseRequestURL(target)
+	if err != nil {
+		panic(err)
+	}
+
+	go LaunchScribe(NewMongoJobStore(dbhost, dbstore, collectionJobs, collectionTasks), target, apikey)
+
+	rest.Resource("jobs", ScribeJobController{NewMongoJobStore(dbhost, dbstore, collectionJobs, collectionTasks), url, apikey})
+	rest.Resource("nodes", ProxyNodeController{url, apikey})
+
+	ListenAndServeTLSorNot(hostname, nil)
+}
+
+func StartAddama(configFile ConfigurationFile) {
+	hostname := configFile.GetRequiredString("default", "hostname")
+
+	addamaConn := AddamaConnection{
+		target:         configFile.GetRequiredString("addama", "target"),
+		connectionFile: configFile.GetRequiredString("addama", "connectionFile"),
+		serviceHost:    configFile.GetRequiredString("addama", "host"),
+		serviceName:    configFile.GetRequiredString("addama", "service"),
+		uri:            configFile.GetRequiredString("addama", "uri"),
+		label:          configFile.GetRequiredString("addama", "label"),
+		apikey:         configFile.GetRequiredString("default", "password")}
+
+	http.Handle("/", NewAddamaProxy(addamaConn))
+
+	ListenAndServeTLSorNot(hostname, nil)
+}
+func StartWorker(configFile ConfigurationFile) {
+	processes, err := configFile.GetInt("worker", "processes")
+	if err != nil {
+		log("worker proceses error, setting to 3: %v", err)
+		processes = 3
+	}
+
+	masterhost := configFile.GetRequiredString("worker", "masterhost")
+
+	RunNode(processes, masterhost)
 }
 
 func NewConfigFile(filepath string) ConfigurationFile {
@@ -98,39 +131,11 @@ func NewConfigFile(filepath string) ConfigurationFile {
 	panic(fmt.Sprintf("configuration file not found [%v]", filepath))
 }
 
-func setVerbose() {
-	verbose, _ = ConfigFile.GetBool("default", "verbose")
-	if verbose {
-		log("running in verbose mode")
+func StartHtmlHandler(configFile ConfigurationFile) {
+	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
+		info("serving HTML content from [%v]", contentDir)
+		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
 	}
-}
-
-func setTls() {
-	useTls, err := ConfigFile.GetBool("default", "tls")
-	if err != nil {
-		log("useTls error, setting to 'true': %v", err)
-		useTls = true
-	}
-	log("secure mode enabled [%v]", useTls)
-}
-
-func setBufferSize() {
-	bufsize, err := ConfigFile.GetInt("master", "buffersize")
-	if err != nil {
-		vlog("defaulting buffer to 1000:%v", err)
-		return
-	}
-	iobuffersize = bufsize
-}
-
-func getWorkerProcesses() (processes int, masterhost string) {
-	processes, err := ConfigFile.GetInt("worker", "processes")
-	if err != nil {
-		log("worker proceses error, setting to 3: %v", err)
-		processes = 3
-	}
-	masterhost = ConfigFile.GetRequiredString("worker", "masterhost")
-	return
 }
 
 type ConfigurationFile struct {

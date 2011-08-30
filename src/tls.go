@@ -61,7 +61,6 @@ func wsDialToMaster(master string, useTls bool) (ws *websocket.Conn, err os.Erro
 func getTlsConfig() *tls.Config {
 	certs := []tls.Certificate{}
 
-	certpath, _ := ConfigFile.GetString("default", "certpath")
 	if certpath != "" {
 		certs = append(certs, GenerateX509KeyPair(certpath))
 	} else {
@@ -109,10 +108,6 @@ func GenerateTlsCert() tls.Certificate {
 	}
 
 	now := time.Seconds()
-	organization, err := ConfigFile.GetString("default", "organization")
-	if err != nil {
-		organization = "Golem"
-	}
 
 	randomSerialNum, err := rand.Int(rand.Reader, big.NewInt(9223372036854775807))
 	if err != nil {
@@ -124,7 +119,7 @@ func GenerateTlsCert() tls.Certificate {
 		PublicKeyAlgorithm: x509.RSA,
 		Subject: pkix.Name{
 			CommonName:   hostname,
-			Organization: []string{organization},
+			Organization: []string{certorg},
 		},
 		NotBefore:    time.SecondsToUTC(now - 300),
 		NotAfter:     time.SecondsToUTC(now + year),
