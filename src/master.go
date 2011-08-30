@@ -53,22 +53,28 @@ func (m *Master) GetSub(subId string) *Submission{
 func (m *Master) Listen(ws *websocket.Conn) {
 	log("Listen(%v): node connecting", ws.LocalAddr().String())
 	nh := NewNodeHandle(NewConnection(ws, false), m)
+	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh
+	m.nodeMu.Unlock()
 	go m.RemoveNodeOnDeath(nh)
 	nh.Monitor()
 }
 
 // sends a message to every connected worker
 func (m *Master) Broadcast(msg *WorkerMessage) {
+	m.nodeMu.RLock()
 	vlog("Broadcast(%v): to %v nodes", *msg, len(m.NodeHandles))
 	for _, nh := range m.NodeHandles {
 		nh.BroadcastChan <- msg
 	}
+	m.nodeMu.RUnlock()
 	vlog("Broadcast(): done")
 }
 
 // remove node handles from the map used to store them as they disconnect
 func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
 	<-nh.Con.DiedChan
+	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh, false
+	m.nodeMu.Unlock()
 }

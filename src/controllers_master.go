@@ -155,9 +155,11 @@ func (this MasterNodeController) Index(rw http.ResponseWriter) {
 	vlog("MasterNodeController.Index()")
 	items := make([]WorkerNode, 0, 0)
 	vlog("MasterNodeController.Index(): for loop")
+	this.master.nodeMu.RLock()
 	for _, n := range this.master.NodeHandles {
 		items = append(items, NewWorkerNode(n))
 	}
+	this.master.nodeMu.RUnlock()
 	vlog("MasterNodeController.Index(): for loop done")
 	workerNodes := WorkerNodeList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(workerNodes); err != nil {
@@ -167,7 +169,9 @@ func (this MasterNodeController) Index(rw http.ResponseWriter) {
 // GET /nodes/id
 func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
 	vlog("MasterNodeController.Find(%v)", nodeId)
+	this.master.nodeMu.RLock()
 	nh, isin := this.master.NodeHandles[nodeId]
+	this.master.nodeMu.RUnlock()
 	if isin == false {
 		vlog("MasterNodeController.Find(%v): not found", nodeId)
 		http.Error(rw, "node "+nodeId+" not found", http.StatusNotFound)
@@ -208,7 +212,10 @@ func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *
 			return
 		}
 
-		node, isin := this.master.NodeHandles[nodeId]
+		this.master.nodeMu.RLock()
+	node, isin := this.master.NodeHandles[nodeId]
+	this.master.nodeMu.RUnlock()
+	
 		if isin == false {
 			http.Error(rw, "node "+nodeId+" not found", http.StatusNotFound)
 			return
