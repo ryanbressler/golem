@@ -37,9 +37,11 @@ var certorg string = "golem.googlecode.com"
 // Sets a global variable for verbosity in logs
 // optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
 func GlobalVerbose(configFile ConfigurationFile) {
-	verbose, err := configFile.GetBool("default", "verbose")
+	v, err := configFile.GetBool("default", "verbose")
 	if err != nil {
 		warn("GlobalVerbose(): %v", err)
+	} else {
+		verbose = v
 	}
 	log("GlobalVerbose(): verbose=[%v]", verbose)
 }
