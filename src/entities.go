@@ -20,6 +20,7 @@
 package main
 
 import (
+	"json"
 	"time"
 )
 
@@ -130,4 +131,20 @@ type WorkerMessage struct {
 	SubId  string
 	Body   string
 	ErrMsg string
+}
+
+//Internal Job Representation used primarily as the body of job related messages
+type WorkerJob struct {
+	SubId  string
+	LineId int
+	JobId  int
+	Args   []string
+}
+
+// NewJob creates a job from a json string (usually a message body)
+func NewWorkerJob(jsonjob string) (job *WorkerJob) {
+	if err := json.Unmarshal([]byte(jsonjob), &job); err != nil {
+		warn("NewWorkerJob(%v): %v", jsonjob, err)
+	}
+	return
 }

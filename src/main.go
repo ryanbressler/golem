@@ -68,7 +68,7 @@ func StartMaster(configFile ConfigurationFile) {
 
 	rest.Resource("jobs", MasterJobController{m, password})
 	rest.Resource("nodes", MasterNodeController{m, password})
-	ListenAndServeTLSorNot(hostname, nil)
+	ListenAndServeTLSorNot(hostname)
 }
 
 // starts scribe service based on the given configuration file
@@ -87,12 +87,12 @@ func StartScribe(configFile ConfigurationFile) {
 		panic(err)
 	}
 
-	go LaunchScribe(NewMongoJobStore(dbhost, dbstore, collectionJobs, collectionTasks), target, apikey)
+	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
 
-	rest.Resource("jobs", ScribeJobController{NewMongoJobStore(dbhost, dbstore, collectionJobs, collectionTasks), url, apikey})
+	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url, apikey})
 	rest.Resource("nodes", ProxyNodeController{url, apikey})
 
-	ListenAndServeTLSorNot(hostname, nil)
+	ListenAndServeTLSorNot(hostname)
 }
 
 // starts Addama proxy (http://addama.org) based on the given configuration file
@@ -111,7 +111,7 @@ func StartAddama(configFile ConfigurationFile) {
 
 	http.Handle("/", NewAddamaProxy(addamaConn))
 
-	ListenAndServeTLSorNot(hostname, nil)
+	ListenAndServeTLSorNot(hostname)
 }
 
 // starts worker based on the given configuration file
@@ -120,12 +120,11 @@ func StartAddama(configFile ConfigurationFile) {
 func StartWorker(configFile ConfigurationFile) {
 	processes, err := configFile.GetInt("worker", "processes")
 	if err != nil {
-		log("worker proceses error, setting to 3: %v", err)
+		warn("StartWorker(): %v", err)
 		processes = 3
 	}
-
 	masterhost := configFile.GetRequiredString("worker", "masterhost")
-
+	log("StartWorker() [%v, %d]", masterhost, processes)
 	RunNode(processes, masterhost)
 }
 
@@ -133,7 +132,7 @@ func StartWorker(configFile ConfigurationFile) {
 // optional parameters:  default.contentDirectory (location of html content to be served at https://example.com/ or https://example.com/html/index.html
 func StartHtmlHandler(configFile ConfigurationFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
-		info("serving HTML content from [%v]", contentDir)
+		log("StartHtmlHandler(): serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
 		http.Handle("/", http.RedirectHandler("/html/index.html", http.StatusTemporaryRedirect))
 	}

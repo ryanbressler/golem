@@ -39,9 +39,9 @@ var certorg string = "golem.googlecode.com"
 func GlobalVerbose(configFile ConfigurationFile) {
 	verbose, err := configFile.GetBool("default", "verbose")
 	if err != nil {
-		warn("%v", err)
+		warn("GlobalVerbose(): %v", err)
 	}
-	info("verbose=[%v]", verbose)
+	log("GlobalVerbose(): verbose=[%v]", verbose)
 }
 
 // Sets global variable to enable TLS communications and other related variables (certificate path, organization)
@@ -49,29 +49,29 @@ func GlobalVerbose(configFile ConfigurationFile) {
 func GlobalTls(configFile ConfigurationFile) {
 	certificatepath, err := configFile.GetString("default", "certpath")
 	if err != nil {
-		warn("%v", err)
+		warn("GlobalTls(): %v", err)
 	} else {
 		certpath = certificatepath
 	}
-	info("certpath=[%v]", certpath)
+	log("GlobalTls(): certpath=[%v]", certpath)
 
 	certificateorg, err := configFile.GetString("default", "organization")
 	if err != nil {
-		warn("%v", err)
+		warn("GlobalTls(): %v", err)
 		if certificateorg, err = os.Hostname(); err != nil {
-			warn("%v", err)
+			warn("GlobalTls(): %v", err)
 			certificateorg = "golem.googlecode.com"
 		}
 	}
 	certorg = certificateorg
-	info("certorg=[%v]", certorg)
+	log("GlobalTls(): certorg=[%v]", certorg)
 
 	useTls, err := configFile.GetBool("default", "tls")
 	if err != nil {
-		warn("%v", err)
+		warn("GlobalTls(): %v", err)
 		useTls = true
 	}
-	info("TLS=[%v]", useTls)
+	log("GlobalTls(): TLS=[%v]", useTls)
 }
 
 // Sets global variable to configure buffersize for master submission channels (stdout, stderr)
@@ -79,10 +79,10 @@ func GlobalTls(configFile ConfigurationFile) {
 func GlobalBufferSize(configFile ConfigurationFile) {
 	bufsize, err := configFile.GetInt("master", "buffersize")
 	if err != nil {
-		warn("%v", err)
+		warn("GlobalTls(): %v", err)
 	} else {
 		iobuffersize = bufsize
 	}
 
-	info("buffersize=[%v]", iobuffersize)
+	log("GlobalBufferSize(): buffersize=[%v]", iobuffersize)
 }

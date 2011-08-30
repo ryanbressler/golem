@@ -60,6 +60,13 @@ func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *h
 		return
 	}
 
+	if parts[0] == "restart" {
+		go RestartIn(10)
+	}
+	if parts[0] == "die" {
+		go DieIn(10)
+	}
+
 	preq, err := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	if err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
