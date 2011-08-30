@@ -27,13 +27,24 @@ import (
 	"github.com/codeforsystemsbiology/httplib.go"
 )
 
-func NewAddamaProxy(apikey string) *AddamaProxy {
-	target := ConfigFile.GetRequiredString("addama", "target")
-	connectionFile := ConfigFile.GetRequiredString("addama", "connectionFile")
-	serviceHost := ConfigFile.GetRequiredString("addama", "host")
-	serviceName := ConfigFile.GetRequiredString("addama", "service")
-	uri := ConfigFile.GetRequiredString("addama", "uri")
-	label := ConfigFile.GetRequiredString("addama", "label")
+type AddamaConnection struct {
+	target         string
+	connectionFile string
+	serviceHost    string
+	serviceName    string
+	uri            string
+	label          string
+	apikey         string
+}
+
+func NewAddamaProxy(addamaConn AddamaConnection) *AddamaProxy {
+	target := addamaConn.target
+	connectionFile := addamaConn.connectionFile
+	serviceHost := addamaConn.serviceHost
+	serviceName := addamaConn.serviceName
+	uri := addamaConn.uri
+	label := addamaConn.label
+	apikey := addamaConn.apikey
 
 	registrar := NewRegistrar(connectionFile)
 

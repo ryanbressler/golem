@@ -34,9 +34,7 @@ type Scribe struct {
 	apikey        string
 }
 
-func LaunchScribe(store *MongoJobStore) {
-	target := ConfigFile.GetRequiredString("scribe", "target")
-	apikey := ConfigFile.GetRequiredString("default", "password")
+func LaunchScribe(store *MongoJobStore, target string, apikey string) {
 	s := Scribe{store: store, masterJobsUrl: target + "/jobs/", apikey: apikey}
 
 	for {

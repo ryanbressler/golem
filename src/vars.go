@@ -20,7 +20,7 @@
 package main
 
 import (
-	"crypto/sha256"
+	"os"
 )
 
 const (
@@ -30,6 +30,53 @@ const (
 
 var verbose = false
 var iobuffersize = 1000
-var ConfigFile ConfigurationFile
 var useTls bool = true
-var hash = sha256.New() // use the same hasher
+var certpath string = ""
+var certorg string = "golem.googlecode.com"
+
+func GlobalVerbose(configFile ConfigurationFile) {
+	verbose, err := configFile.GetBool("default", "verbose")
+	if err != nil {
+		warn("%v", err)
+	}
+	info("verbose=[%v]", verbose)
+}
+
+func GlobalTls(configFile ConfigurationFile) {
+	certificatepath, err := configFile.GetString("default", "certpath")
+	if err != nil {
+		warn("%v", err)
+	} else {
+		certpath = certificatepath
+	}
+	info("certpath=[%v]", certpath)
+
+	certificateorg, err := configFile.GetString("default", "organization")
+	if err != nil {
+		warn("%v", err)
+		if certificateorg, err = os.Hostname(); err != nil {
+			warn("%v", err)
+			certificateorg = "golem.googlecode.com"
+		}
+	}
+	certorg = certificateorg
+	info("certorg=[%v]", certorg)
+
+	useTls, err := configFile.GetBool("default", "tls")
+	if err != nil {
+		warn("%v", err)
+		useTls = true
+	}
+	info("TLS=[%v]", useTls)
+}
+
+func GlobalBufferSize(configFile ConfigurationFile) {
+	bufsize, err := configFile.GetInt("master", "buffersize")
+	if err != nil {
+		warn("%v", err)
+	} else {
+		iobuffersize = bufsize
+	}
+
+	info("buffersize=[%v]", iobuffersize)
+}
