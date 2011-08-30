@@ -22,6 +22,7 @@ package main
 import (
 	"flag"
 	"http"
+	"url"
 	"github.com/codeforsystemsbiology/rest.go"
 )
 
@@ -82,15 +83,15 @@ func StartScribe(configFile ConfigurationFile) {
 	collectionJobs := configFile.GetRequiredString("mgodb", "jobcollection")
 	collectionTasks := configFile.GetRequiredString("mgodb", "taskcollection")
 
-	url, err := http.ParseRequestURL(target)
+	targeturl, err := url.Parse(target)
 	if err != nil {
 		panic(err)
 	}
 
 	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
 
-	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url, apikey})
-	rest.Resource("nodes", ProxyNodeController{url, apikey})
+	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, targeturl, apikey})
+	rest.Resource("nodes", ProxyNodeController{targeturl, apikey})
 
 	ListenAndServeTLSorNot(hostname)
 }
