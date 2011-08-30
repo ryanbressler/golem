@@ -135,6 +135,7 @@ func StartHtmlHandler(configFile ConfigurationFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
 		info("serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
+		http.Handle("/", http.RedirectHandler("/html/index.html", http.StatusTemporaryRedirect))
 	}
 }
 
