@@ -1,0 +1,71 @@
+<html>
+<head>
+    <title>Job Results</title>
+
+    <link rel="stylesheet" type="text/css" href="https://informatics-apps.systemsbiology.net/ext-js-3.3.1/resources/css/ext-all.css">
+    <link rel="stylesheet" type="text/css" href="https://informatics-apps.systemsbiology.net/ext-js-3.3.1/examples/shared/examples.css"/>
+
+    <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/ext-js-3.3.1/adapter/ext/ext-base.js"></script>
+    <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/ext-js-3.3.1/ext-all.js"></script>
+
+    <script type="text/javascript" src="https://addama.googlecode.com/svn/tags/2.1/user-interfaces/src/main/html/addama/ui/dateFormatting.js"></script>
+    <script type="text/javascript" src="https://addama.googlecode.com/svn/tags/2.1/user-interfaces/src/main/html/addama/ui/console_handling.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/html/css/jobs.css"/>
+    <script type="text/javascript" src="/html/js/items.js"></script>
+    <script type="text/javascript" src="/html/js/jobs.js"></script>
+    <script type="text/javascript" src="/html/js/nodes.js"></script>
+
+    <script type="text/javascript">
+        Ext.onReady(function() {
+            var banner = {
+                region: "north",
+                height: 80,
+                html: '<img src="images/banner.png" alt="Golem"/>'
+            };
+
+            var jobsGrid = new JobsGrid({
+                url: "/jobs/",
+                gridPanelConfig: {
+                    title: "Jobs",
+                    region: "center",
+                    width: 1000,
+                    height: 500,
+                    frame: true,
+                    border: false,
+                    autoScroll: true,
+                    margins: "5 5 5 5",
+                    padding: "0 0 0 0"
+                }
+            });
+
+            var nodesGrid = new NodesGrid({
+                url: "/nodes/",
+                gridPanelConfig: {
+                    title: "Nodes",
+                    region: "south",
+                    width: 1000,
+                    height: 500,
+                    frame: true,
+                    border: false,
+                    autoScroll: true,
+                    margins: "5 5 5 5",
+                    padding: "0 0 0 0"
+                }
+            });
+
+            new Ext.Viewport({
+                layout: "border",
+                items: [
+                    banner,
+                    jobsGrid.grid,
+                    nodesGrid.grid
+                ],
+                renderTo: Ext.getBody()
+            });
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>
