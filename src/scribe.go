@@ -29,12 +29,12 @@ import (
 )
 
 type Scribe struct {
-	store         *MongoJobStore
+	store         JobStore
 	masterJobsUrl string
 	apikey        string
 }
 
-func LaunchScribe(store *MongoJobStore, target string, apikey string) {
+func LaunchScribe(store JobStore, target string, apikey string) {
 	s := Scribe{store: store, masterJobsUrl: target + "/jobs/", apikey: apikey}
 
 	for {

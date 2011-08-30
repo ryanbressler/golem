@@ -25,7 +25,7 @@ import (
 )
 
 type ScribeJobController struct {
-	store  *MongoJobStore
+	store  JobStore
 	target *http.URL
 	apikey string
 }
