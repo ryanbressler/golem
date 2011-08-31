@@ -26,9 +26,8 @@ import (
 
 func UniqueId() string {
 	subId := make([]byte, 16)
-	_, err := rand.Read(subId)
-	if err != nil {
-		log("Error generating rand subId: %v", err)
+	if _, err := rand.Read(subId); err != nil {
+		warn("UniqueId(): %v", err)
 	}
 	return fmt.Sprintf("%x", subId)
 }

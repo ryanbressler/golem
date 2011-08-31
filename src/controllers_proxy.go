@@ -20,178 +20,62 @@
 package main
 
 import (
-	"fmt"
 	"http"
-	"io"
-	"json"
-	"strconv"
 	"strings"
-	"os"
 )
 
-type ProxyJobController struct {
-	proxy  *http.ReverseProxy
-	apikey string
-}
-
-func NewProxyJobController() ProxyJobController {
-	target := ConfigFile.GetRequiredString("scribe", "target")
-	apikey := ConfigFile.GetRequiredString("default", "password")
-	url, err := http.ParseRequestURL(target)
-	if err != nil {
-		panic(err)
-	}
-
-	return ProxyJobController{http.NewSingleHostReverseProxy(url), apikey}
-}
-
-func (c ProxyJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := Proxy("GET", "/jobs/", c.apikey, c.proxy, nil)
-	if err != nil {
-		return
-	}
-
-	js := JobDetailsList{}
-	if err = json.Unmarshal(val, js); err != nil {
-		return
-	}
-
-	for _, s := range js.Items {
-		items = append(items, s)
-	}
-
-	return
-}
-func (c ProxyJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
-	val, err := Proxy("GET", "/jobs/"+jobId, c.apikey, c.proxy, nil)
-	if err != nil {
-		return
-	}
-	item = JobDetails{}
-	err = json.Unmarshal(val, item)
-	return
-}
-func (c ProxyJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
-	val, err := Proxy("POST", "/jobs/"+jobId, c.apikey, c.proxy, r.Body)
-	if err != nil {
-		return
-	}
-
-	jd := JobDetails{}
-	err = json.Unmarshal(val, jd)
-	if err != nil {
-		return
-	}
-
-	jobId = jd.JobId
-	return
-}
-func (c ProxyJobController) Stop(jobId string) os.Error {
-	_, err := Proxy("POST", "/jobs/"+jobId+"/stop", c.apikey, c.proxy, nil)
-	return err
-}
-func (c ProxyJobController) Kill(jobId string) os.Error {
-	_, err := Proxy("POST", "/jobs/"+jobId+"/kill", c.apikey, c.proxy, nil)
-	return err
-}
-
 type ProxyNodeController struct {
-	proxy  *http.ReverseProxy
+	target *http.URL
 	apikey string
 }
 
-func NewProxyNodeController() ProxyNodeController {
-	target := ConfigFile.GetRequiredString("scribe", "target")
-	apikey := ConfigFile.GetRequiredString("default", "password")
-	url, err := http.ParseRequestURL(target)
+// GET /nodes
+func (this ProxyNodeController) Index(rw http.ResponseWriter) {
+	preq, err := http.NewRequest("GET", "/nodes/", strings.NewReader(""))
 	if err != nil {
-		panic(err)
+		http.Error(rw, err.String(), http.StatusBadRequest)
+		return
 	}
 
-	return ProxyNodeController{http.NewSingleHostReverseProxy(url), apikey}
+	vlog("ProxyNodeController.Index():%v", this.target)
+	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy.ServeHTTP(rw, preq)
 }
-
-func (c ProxyNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	val, err := Proxy("GET", "/nodes/", c.apikey, c.proxy, nil)
+// GET /nodes/id
+func (this ProxyNodeController) Find(rw http.ResponseWriter, nodeId string) {
+	preq, err := http.NewRequest("GET", "/nodes/"+nodeId, strings.NewReader(""))
 	if err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
-	lst := WorkerNodeList{}
-	if err = json.Unmarshal(val, &lst); err != nil {
-		return
-	}
-
-	for _, item := range lst.Items {
-		items = append(items, item)
-	}
-	return
+	vlog("ProxyNodeController.Find(%v):%v", nodeId, this.target)
+	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy.ServeHTTP(rw, preq)
 }
-func (c ProxyNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	val, err := Proxy("GET", "/nodes/"+nodeId, c.apikey, c.proxy, nil)
+// POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
+func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
+		return
+	}
+
+	if parts[0] == "restart" {
+		go RestartIn(10)
+	}
+	if parts[0] == "die" {
+		go DieIn(10)
+	}
+
+	preq, err := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	if err != nil {
-		return
-	}
-	item = WorkerNode{}
-	err = json.Unmarshal(val, item)
-	return
-}
-func (c ProxyNodeController) RestartAll() os.Error {
-	_, err := Proxy("POST", "/nodes/restart", c.apikey, c.proxy, nil)
-	return err
-}
-func (c ProxyNodeController) Resize(nodeId string, numberOfThreads int) (err os.Error) {
-	_, err = Proxy("POST", "/nodes/"+nodeId+"/resize/"+strconv.Itoa(numberOfThreads), c.apikey, c.proxy, nil)
-	return
-}
-func (c ProxyNodeController) KillAll() os.Error {
-	_, err := Proxy("POST", "/nodes/kill", c.apikey, c.proxy, nil)
-	return err
-}
-
-// proxy support
-type JsonResponseWriter struct {
-	Content    chan []byte
-	StatusCode chan int
-}
-
-func (w JsonResponseWriter) Header() http.Header {
-	return http.Header{}
-}
-func (w JsonResponseWriter) Write(b []byte) (int, os.Error) {
-	w.Content <- b
-	return 0, os.EOF
-}
-func (w JsonResponseWriter) WriteHeader(i int) {
-	w.StatusCode <- i
-	return
-}
-
-func Proxy(method string, uri string, apikey string, proxy *http.ReverseProxy, reader io.Reader) (val []byte, err os.Error) {
-	vlog("Proxy(%v %v)", method, uri)
-	if reader == nil {
-		reader = strings.NewReader("")
-	}
-
-	r, err := http.NewRequest(method, uri, reader)
-	if err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
-	r.Header.Set("x-golem-apikey", apikey)
+	preq.Header.Set("x-golem-apikey", this.apikey)
 
-	content := make(chan []byte, 1)
-	statuscode := make(chan int, 1)
-	proxy.ServeHTTP(JsonResponseWriter{Content: content, StatusCode: statuscode}, r)
-
-	code := <-statuscode
-	if http.StatusOK != code {
-		// TODO : Figure out why this hangs...
-		vlog("Proxy(%v %v) [%d]", method, uri, code)
-		err = os.NewError(fmt.Sprintf("Inappropriate response [%v]", code))
-		return
-	}
-
-	val = <-content
-	return
+	vlog("ProxyNodeController.Act():%v", this.target)
+	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy.ServeHTTP(rw, preq)
 }

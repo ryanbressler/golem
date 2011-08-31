@@ -26,24 +26,23 @@ import (
 
 type Master struct {
 	subMap      map[string]*Submission //buffered channel for creating jobs TODO: verify thread safety... should be okay since we only set once
-	jobChan     chan *Job              //buffered channel for creating jobs
-	subidChan   chan int               //buffered channel for use as an incrementer to keep track of submissions
+	jobChan     chan *WorkerJob        //buffered channel for creating jobs
+	subidChan   chan int               //buffered channel used to keep track of submissions
 	NodeHandles map[string]*NodeHandle
 }
 
-//create a master node and initalize its channels
+//create a master node and initialize its channels
 func NewMaster() *Master {
 	m := Master{
 		subMap:      map[string]*Submission{},
-		jobChan:     make(chan *Job, 0),
+		jobChan:     make(chan *WorkerJob, 0),
 		NodeHandles: map[string]*NodeHandle{}}
 	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.Listen(ws) }))
 	return &m
 }
 
 func (m *Master) Listen(ws *websocket.Conn) {
-	log("Node connecting from %v.", ws.LocalAddr().String())
-
+	log("Listen(%v): node connecting", ws.LocalAddr().String())
 	nh := NewNodeHandle(NewConnection(ws, false), m)
 	m.NodeHandles[nh.NodeId] = nh
 	go m.RemoveNodeOnDeath(nh)
@@ -52,15 +51,14 @@ func (m *Master) Listen(ws *websocket.Conn) {
 
 // sends a message to every connected worker
 func (m *Master) Broadcast(msg *WorkerMessage) {
-	log("Broadcasting message %v to %v nodes.", *msg, len(m.NodeHandles))
+	vlog("Broadcast(%v): to %v nodes", *msg, len(m.NodeHandles))
 	for _, nh := range m.NodeHandles {
 		nh.BroadcastChan <- msg
 	}
-	vlog("Broadcasting done.")
-
+	vlog("Broadcast(): done")
 }
 
-//goroutine to remove nodehandles from the map used to store them as they disconect
+// remove node handles from the map used to store them as they disconnect
 func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
 	<-nh.Con.DiedChan
 	m.NodeHandles[nh.NodeId] = nh, false

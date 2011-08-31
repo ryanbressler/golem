@@ -21,48 +21,51 @@ package main
 
 import (
 	"http"
-	"os"
+	"json"
+	"strconv"
 )
 
 type MasterJobController struct {
 	master *Master
+	apikey string
 }
+// GET /jobs
+func (this MasterJobController) Index(rw http.ResponseWriter) {
+	vlog("MasterJobController.Index()")
+	items := make([]JobDetails, 0, 0)
 
-func (c MasterJobController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("MasterJobController.RetrieveAll")
-
-	for _, s := range c.master.subMap {
+	vlog("MasterJobController.Index(): for loop")
+	for _, s := range this.master.subMap {
 		items = append(items, s.SniffDetails())
 	}
+	vlog("MasterJobController.Index(): for loop done")
 
-	return
+	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
+	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
-func (c MasterJobController) Retrieve(jobId string) (item interface{}, err os.Error) {
-	log("Retrieve:%v", jobId)
-
-	s, isin := c.master.subMap[jobId]
-	if isin == false {
-		err = os.NewError("job " + jobId + " not found")
+// POST /jobs
+func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) {
+	vlog("MasterJobController.Create()")
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return
 	}
 
-	item = s.SniffDetails()
-	return
-}
-func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error) {
 	tasks := make([]Task, 0, 100)
-	if err = loadJson(r, &tasks); err != nil {
-		vlog("MasterJobController.NewJob: %v", err)
+	if err := loadJson(r, &tasks); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
-	jobId = getHeader(r, "x-golem-job-preassigned-id", "")
+	jobId := getHeader(r, "x-golem-job-preassigned-id", "")
 	if jobId == "" {
 		jobId = UniqueId()
 	}
 
-	if _, isin := c.master.subMap[jobId]; isin {
-		vlog("NewJob: Exists: %v", jobId)
+	if _, isin := this.master.subMap[jobId]; isin {
+		vlog("MasterJobController.Create(): Exists: %v", jobId)
 		return
 	}
 
@@ -72,85 +75,133 @@ func (c MasterJobController) NewJob(r *http.Request) (jobId string, err os.Error
 
 	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 
-	c.master.subMap[jobId] = NewSubmission(jd, tasks, c.master.jobChan)
-	log("NewJob: %v", jd.JobId)
+	vlog("MasterJobController.Create(): creating: %v", jobId)
+	this.master.subMap[jobId] = NewSubmission(jd, tasks, this.master.jobChan)
+	vlog("MasterJobController.Create(): created: %v", jobId)
 
-	return
-}
-func (c MasterJobController) Stop(jobId string) os.Error {
-	log("Stop:%v", jobId)
-
-	job, isin := c.master.subMap[jobId]
-	if isin {
-		if job.Stop() {
-			return nil
-		}
-		return os.NewError("unable to stop")
+	if err := json.NewEncoder(rw).Encode(jd); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
-	return os.NewError("job not found")
 }
-func (c MasterJobController) Kill(jobId string) os.Error {
-	log("Kill:%v", jobId)
-
-	job, isin := c.master.subMap[jobId]
-	if isin {
-		c.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
-		if job.Stop() {
-			return nil
-		}
-		return os.NewError("unable to stop/kill")
+// GET /jobs/id
+func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
+	vlog("MasterJobController.Find(%v)", id)
+	s, isin := this.master.subMap[id]
+	if isin == false {
+		vlog("MasterJobController.Find(%v): not found", id)
+		http.Error(rw, "job "+id+" not found", http.StatusNotFound)
+		return
 	}
-	return os.NewError("job not found")
+	vlog("MasterJobController.Find(%v): found", id)
+	if err := json.NewEncoder(rw).Encode(s.SniffDetails()); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
+}
+// POST /jobs/id/stop or POST /jobs/id/kill
+func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+	vlog("MasterJobController.Act(%v)", r.URL.Path)
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
+		return
+	}
+
+	if len(parts) < 2 {
+		http.Error(rw, "POST /jobs/id/stop or POST /jobs/id/kill", http.StatusBadRequest)
+		return
+	}
+
+	jobId := parts[0]
+	vlog("MasterJobController.Act(%v): Finding", jobId)
+	job, isin := this.master.subMap[jobId]
+	if isin == false {
+		vlog("MasterJobController.Act(%v): Not Found", jobId)
+		http.Error(rw, "job "+jobId+" not found", http.StatusNotFound)
+		return
+	}
+
+	if parts[1] == "stop" {
+		vlog("MasterJobController.Act(%v): Stopping", jobId)
+		if job.Stop() == false {
+			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
+		}
+	} else if parts[1] == "kill" {
+		vlog("MasterJobController.Act(%v): Killing", jobId)
+		if job.Stop() == false {
+			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
+		}
+		this.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
+	}
+	vlog("MasterJobController.Act(): Returning")
 }
 
 type MasterNodeController struct {
 	master *Master
+	apikey string
 }
-
-func (c MasterNodeController) RetrieveAll() (items []interface{}, err os.Error) {
-	log("MasterJobController.RetrieveAll")
-
-	for _, n := range c.master.NodeHandles {
+// GET /nodes
+func (this MasterNodeController) Index(rw http.ResponseWriter) {
+	vlog("MasterNodeController.Index()")
+	items := make([]WorkerNode, 0, 0)
+	vlog("MasterNodeController.Index(): for loop")
+	for _, n := range this.master.NodeHandles {
 		items = append(items, NewWorkerNode(n))
 	}
-	return
+	vlog("MasterNodeController.Index(): for loop done")
+	workerNodes := WorkerNodeList{Items: items, NumberOfItems: len(items)}
+	if err := json.NewEncoder(rw).Encode(workerNodes); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
-func (c MasterNodeController) Retrieve(nodeId string) (item interface{}, err os.Error) {
-	log("Retrieve:%v", nodeId)
-	nh, isin := c.master.NodeHandles[nodeId]
+// GET /nodes/id
+func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
+	vlog("MasterNodeController.Find(%v)", nodeId)
+	nh, isin := this.master.NodeHandles[nodeId]
 	if isin == false {
-		err = os.NewError("node " + nodeId + " not found")
+		vlog("MasterNodeController.Find(%v): not found", nodeId)
+		http.Error(rw, "node "+nodeId+" not found", http.StatusNotFound)
 		return
 	}
-	item = NewWorkerNode(nh)
-	return
+
+	vlog("MasterNodeController.Find(%v): found", nodeId)
+	if err := json.NewEncoder(rw).Encode(NewWorkerNode(nh)); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
-func (c MasterNodeController) RestartAll() os.Error {
-	log("Restart")
+// POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
+func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+	vlog("MasterNodeController.Act(%v):%v", r.URL.Path, parts)
 
-	c.master.Broadcast(&WorkerMessage{Type: RESTART})
-	log("Restarting in 10 seconds.")
-	go RestartIn(3000000000)
-
-	return nil
-}
-func (c MasterNodeController) Resize(nodeId string, numberOfThreads int) os.Error {
-	log("MasterNodeController.Resize(%v,%d)", nodeId, numberOfThreads)
-
-	node, isin := c.master.NodeHandles[nodeId]
-	if isin {
-		node.ReSize(numberOfThreads)
-		return nil
+	if CheckApiKey(this.apikey, r) == false {
+		http.Error(rw, "api key required in header", http.StatusForbidden)
+		return
 	}
 
-	return os.NewError("node not found")
-}
-func (c MasterNodeController) KillAll() os.Error {
-	log("Kill")
+	if parts[0] == "restart" {
+		this.master.Broadcast(&WorkerMessage{Type: RESTART})
+		go RestartIn(10)
+		return
+	}
 
-	c.master.Broadcast(&WorkerMessage{Type: DIE})
-	log("dying in 10 seconds.")
-	go DieIn(3000000000)
+	if parts[0] == "die" {
+		this.master.Broadcast(&WorkerMessage{Type: DIE})
+		go DieIn(10)
+		return
+	}
 
-	return nil
+	if parts[1] == "resize" {
+		nodeId := parts[0]
+		numberOfThreads, err := strconv.Atoi(parts[2])
+		if err != nil {
+			http.Error(rw, err.String(), http.StatusBadRequest)
+			return
+		}
+
+		node, isin := this.master.NodeHandles[nodeId]
+		if isin == false {
+			http.Error(rw, "node "+nodeId+" not found", http.StatusNotFound)
+			return
+		}
+
+		node.ReSize(numberOfThreads)
+	}
 }

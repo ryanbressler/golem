@@ -34,9 +34,7 @@ type Scribe struct {
 	apikey        string
 }
 
-func LaunchScribe(store JobStore) {
-	target := ConfigFile.GetRequiredString("scribe", "target")
-	apikey := ConfigFile.GetRequiredString("default", "password")
+func LaunchScribe(store JobStore, target string, apikey string) {
 	s := Scribe{store: store, masterJobsUrl: target + "/jobs/", apikey: apikey}
 
 	for {
@@ -71,7 +69,7 @@ func (this *Scribe) GetJobs() []JobDetails {
 }
 
 func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
-	log("Scribe.PostJob(%v)", jd.JobId)
+	vlog("Scribe.PostJob(%v)", jd.JobId)
 
 	tasks, err := this.store.Tasks(jd.JobId)
 	if err != nil {

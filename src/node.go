@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-func pipeToChan(r io.Reader, msgType int, Id string, ch chan WorkerMessage) {
+func PipeToChan(r io.Reader, msgType int, Id string, ch chan WorkerMessage) {
 	bp := bufio.NewReader(r)
 
 	for {
@@ -35,24 +35,23 @@ func pipeToChan(r io.Reader, msgType int, Id string, ch chan WorkerMessage) {
 		if err != nil {
 			return
 		} else {
-			ch <- WorkerMessage{Type: msgType, SubId: Id, Body: line} //string(buffer[0:n])
+			ch <- WorkerMessage{Type: msgType, SubId: Id, Body: line}
 		}
 	}
 
 }
 
-
-func startJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *JobKiller) {
-	log("Starting job from json: %v", jsonjob)
+func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *JobKiller) {
+	vlog("StartJob(%v)", jsonjob)
 	con := *cn
 
-	job := NewJob(jsonjob)
+	job := NewWorkerJob(jsonjob)
 	jobcmd := job.Args[0]
 	//make sure the path to the exec is fully qualified
 	exepath, err := exec.LookPath(jobcmd)
 	if err != nil {
 		con.OutChan <- WorkerMessage{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
-		log("exec %s: %s\n", jobcmd, err)
+		log("StartJob(): exec %s: %s\n", jobcmd, err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 		return
 	}
@@ -67,21 +66,20 @@ func startJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 
 	outpipe, err := cmd.StdoutPipe()
 	if err != nil {
-		log("startJob.StdoutPipe:%v", err)
+		warn("StartJob(): %v", err)
 		return
 	}
 	errpipe, err := cmd.StderrPipe()
 	if err != nil {
-		log("startJob.StderrPipe:%v", err)
+		warn("StartJob(): %v", err)
 		return
 	}
 
-	go pipeToChan(outpipe, COUT, job.SubId, con.OutChan)
-	go pipeToChan(errpipe, CERROR, job.SubId, con.OutChan)
+	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan)
+	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan)
 
-	err = cmd.Start()
-	if err != nil {
-		log("startJob.Start:%v", err)
+	if err = cmd.Start(); err != nil {
+		warn("StartJob(): %v", err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
 		return
 	}
@@ -92,38 +90,31 @@ func startJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		jk.Donechan <- kb
 	}()
 
-	//wait for the job to finish
-	err = cmd.Wait()
-	if err != nil {
-		log("joberror:%v", err)
+	if err = cmd.Wait(); err != nil {
+		warn("StartJob(): %v", err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
 		return
 	}
 
-	log("Finishing job %v", job.JobId)
+	log("StartJob(): finishing job %v", job.JobId)
 	replyc <- &WorkerMessage{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
 }
 
 func CheckIn(c *Connection) {
 	con := *c
 	for {
-		time.Sleep(60000000000)
+		time.Sleep(60 * second)
 		con.OutChan <- WorkerMessage{Type: CHECKIN}
-
 	}
 }
 
-
 func RunNode(processes int, master string) {
 	running := 0
-	jk := NewJobKiller()
-	log("Running as %v process node owned by %v", processes, master)
 
-	ws, err := wsDialToMaster(master, useTls)
-	if err != nil {
-		log("Error connecting to master:%v", err)
-		panic(err)
-	}
+	jk := NewJobKiller()
+	vlog("RunNode(): Running as %d process node owned by %v", processes, master)
+
+	ws := OpenWebSocketToMaster(master)
 
 	mcon := *NewConnection(ws, true)
 	mcon.OutChan <- WorkerMessage{Type: HELLO, Body: fmt.Sprintf("%v", processes)}
@@ -131,27 +122,28 @@ func RunNode(processes int, master string) {
 	replyc := make(chan *WorkerMessage)
 
 	for {
-		log("Waiting for done or msg.")
+		vlog("RunNode(): Waiting for done or msg.")
 		select {
 		case rv := <-replyc:
-			log("Got 'done' signal: %v", *rv)
+			vlog("RunNode(): Got 'done' signal: %v", *rv)
 			mcon.OutChan <- *rv
 			running--
 
 		case msg := <-mcon.InChan:
-			log("Got master msg")
+			vlog("RunNode(): Got master msg")
 			switch msg.Type {
 			case START:
-				go startJob(&mcon, replyc, msg.Body, jk)
+				log("RunNode(): START")
+				go StartJob(&mcon, replyc, msg.Body, jk)
 				running++
 			case KILL:
-				log("Got KILL message for subit : %v", msg.SubId)
+				log("RunNode(): KILL: %v", msg.SubId)
 				jk.Killchan <- msg.SubId
 			case RESTART:
-				log("Got restart message: %v", msg)
-				RestartIn(8000000000)
+				log("RunNode(): RESTART: %v", msg.SubId)
+				RestartIn(8)
 			case DIE:
-				log("Got die message: %v", msg)
+				log("RunNode(): DIE: %v", msg.SubId)
 				DieIn(0)
 			}
 		}
