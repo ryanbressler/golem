@@ -22,6 +22,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"io"
 	"time"
 )
 
@@ -143,23 +144,34 @@ func (s Submission) WriteIo() {
 	dtls := s.SniffDetails()
 	vlog("Submission.WriteIo(%v)", dtls.JobId)
 
-	outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
-	if err != nil {
-		warn("WriteIo: %v", err)
-	}
-	defer outf.Close()
-
-	errf, err := os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
-	if err != nil {
-		warn("WriteIo: %v", err)
-	}
-	defer errf.Close()
-
+	var outf io.WriteCloser
+	
+	var errf io.WriteCloser
 	for {
 		select {
 		case msg := <-s.CoutFileChan:
+			if outf == nil {
+				
+				outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
+				if err != nil {
+					warn("WriteIo: %v", err)
+				}
+
+				defer outf.Close()
+			}
+			
 			fmt.Fprint(outf, msg)
 		case errmsg := <-s.CerrFileChan:
+			if errf == nil {
+				
+				errf, err := os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
+				if err != nil {
+					warn("WriteIo: %v", err)
+				}
+
+				defer errf.Close()
+			}
+
 			fmt.Fprint(errf, errmsg)
 		}
 	}
