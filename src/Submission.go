@@ -111,10 +111,10 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 			//send three messages to stop chan to stop all things plus one
-			s.stopChan<-1
-			s.stopChan<-1
-			s.stopChan<-1
-			vlog("MonitorWorkTasks clean up done for %v",dtls.JobId)
+			s.stopChan <- 1
+			s.stopChan <- 1
+			s.stopChan <- 1
+			vlog("MonitorWorkTasks clean up done for %v", dtls.JobId)
 			return
 		}
 
@@ -179,16 +179,15 @@ func (s Submission) WriteIo() {
 			}
 
 			fmt.Fprint(errf, errmsg)
-		case <-time.After(1*second):
+		case <-time.After(1 * second):
 			vlog("WriteIO checking for done value")
 			select {
 			case <-s.stopChan:
-				vlog("WriteIO for %v returning",dtls.JobId)
+				vlog("WriteIO for %v returning", dtls.JobId)
 				return
 			default:
 			}
-				
-		
+
 		}
 	}
 }

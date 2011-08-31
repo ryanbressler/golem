@@ -44,7 +44,7 @@ func NewMaster() *Master {
 	return m
 }
 
-func (m *Master) GetSub(subId string) *Submission{
+func (m *Master) GetSub(subId string) *Submission {
 	m.subMu.RLock()
 	defer m.subMu.RUnlock()
 	return m.subMap[subId]
