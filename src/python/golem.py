@@ -31,7 +31,7 @@ except ImportError:
     print "Error importing ssl."
 
 
-usage = """Usage: golem.py hostname [-p password] command and args
+usage = """Usage: golem.py hostname [-p password] [-L label] [-u email] command and args
 where command and args can be:
 run n job_executable exeutable args : run job_executable n times with the supplied args
 runlist listofjobs.txt              : run each line (n n job_executable exeutable args) of the file 
@@ -94,9 +94,7 @@ def encode_multipart_formdata(data, filebody):
 
 def doGet(url, loud=True):
     """
-    posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
-    should be a string of the body of the file (json in our case) and password should be the password
-    to include in the header
+    posts a GET request to url
     """
     u = urlparse.urlparse(url)
     if u.scheme == "http":
@@ -123,7 +121,7 @@ def doGet(url, loud=True):
     return resp, output
     #conn.close()
 
-def doPost(url, paramMap, jsondata,password, loud=True):
+def doPost(url, paramMap, jsondata,password, label, email, loud=True):
     """
     posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
     should be a string of the body of the file (json in our case) and password should be the password
@@ -136,7 +134,10 @@ def doPost(url, paramMap, jsondata,password, loud=True):
     headers = { "Content-type": content_type,
         'content-length':str(len(body)),
         "Accept": "text/plain",
-        "x-golem-apikey":password }
+        "x-golem-apikey":password,
+		"x-golem-job-label": label,
+		"x-golem-job-owner": email
+    }
 
 
     if loud: print "scheme: %s host: %s port: %s"%(u.scheme, u.hostname, u.port)
@@ -182,7 +183,7 @@ def canonizeMaster(master, loud = True):
     return canonicalMaster
 
 
-def runOneLine(count, args, pwd, url, loud = True):
+def runOneLine(count, args, pwd, url, label, email, loud = True):
     """
     Runs a single command on a specified Golem cluster.
     Parameters:
@@ -190,6 +191,8 @@ def runOneLine(count, args, pwd, url, loud = True):
         args - Argument list to the command, including the command itself and all parameters.
         pwd - password to the Golem server.
         url - URL to the Golem server.
+        label - optional header to label job
+        email - optional email to indicate ownership
         loud - whether or not to print status messages on stdout. Defaults to True.
     Returns:
         A 2-tuple of the Golem server's response number and the body of the response.
@@ -200,7 +203,7 @@ def runOneLine(count, args, pwd, url, loud = True):
     jobs = json.dumps(jobs)
     data = {'command': "run"}
     if loud : print "Submitting run request to %s." % url
-    return doPost(url, data, jobs, pwd, loud)
+    return doPost(url, data, jobs, pwd, label, email, loud)
 
 
 def generateJobList(fo):
@@ -211,7 +214,7 @@ def generateJobList(fo):
         yield {"Count": int(values[0]), "Args": values[1:]}
 
 
-def runBatch(jobs, pwd, url, loud=True):
+def runBatch(jobs, pwd, url, label, email, loud=True):
     """
     Runs a Python list of jobs on the specified Golem cluster.
     Parameters:
@@ -220,6 +223,8 @@ def runBatch(jobs, pwd, url, loud=True):
             "Args" - list of strings representing the command line to run, including executable
         pwd - password for the Golem server
         url - URL to reach the Golem server, including protocol and port
+        label - optional header to label job
+        email - optional email to indicate ownership
         loud - whether to print status messages on stdout. Defaults to True.
     Returns:
         A 2-tuple of the Golem server's response number and the body of the response.
@@ -229,16 +234,18 @@ def runBatch(jobs, pwd, url, loud=True):
     jobs = json.dumps([job for job in jobs])
     data = {'command': "runlist"}
     if loud: print "Submitting run request to %s." % url
-    return doPost(url, data, jobs, pwd, loud)
+    return doPost(url, data, jobs, pwd, label, email, loud)
 
 
-def runList(fo, pwd, url, loud=True):
+def runList(fo, pwd, url, label, email, loud=True):
     """
     Interprets an open file as a runlist, then executes it on the specified Golem cluster.
     Parameters:
         fo - Readable open file-like-object representing a runlist.
         pwd - password for the Golem server
         url - URL to reach the Golem server, including protocol and port
+        label - optional header to label job
+        email - optional email to indicate ownership
         loud - whether to print status messages on stdout. Defaults to True.
     Returns:
         A 2-tuple of the Golem server's response number and the body of the response.
@@ -246,10 +253,10 @@ def runList(fo, pwd, url, loud=True):
         Any failure of the HTTP channel will go uncaught.
     """
     jobs = generateJobList(fo)
-    return runBatch(jobs, pwd, url, loud)
+    return runBatch(jobs, pwd, url, label, email, loud)
 
 
-def runOnEach(jobs, pwd, url, loud=True):
+def runOnEach(jobs, pwd, url, label, email, loud=True):
     """
     Runs a single job on each machine in a Golem cluster.
     Parameters:
@@ -258,6 +265,8 @@ def runOnEach(jobs, pwd, url, loud=True):
             "Args" - list of strings representing the command line to run, including executable
         pwd - the password for the Golem server
         url - URL to reach the Golem server, including protocol and port
+        label - optional header to label job
+        email - optional email to indicate ownership
         loud - whether to print status messages on stdout. Defaults to True.
     Returns:
         A 2-tuple of the Golem server's response number and the body of the response.
@@ -267,7 +276,7 @@ def runOnEach(jobs, pwd, url, loud=True):
     jobs = json.dumps(jobs)
     data = {'command': "runoneach"}
     print "Submitting run request to %s." % url
-    return doPost(url, data, jobs, pwd)
+    return doPost(url, data, jobs, pwd, label, email, loud)
 
 
 def getJobList(url, loud=True):
@@ -296,7 +305,7 @@ def stopJob(jobId, pwd, url, loud = True):
     Throws:
         Any failure of the HTTP channel will go uncaught.
     """
-    return doPost(url + jobId + "/stop", {}, "", pwd, loud)
+    return doPost(url + jobId + "/stop", {}, "", pwd, "", "", loud)
 
 
 def killJob(jobId, pwd, url, loud=True):
@@ -312,7 +321,7 @@ def killJob(jobId, pwd, url, loud=True):
     Throws:
         Any failure of the HTTP channel will go uncaught.
     """
-    return doPost(url + jobId + "/kill", {}, "", pwd, loud)
+    return doPost(url + jobId + "/kill", {}, "", pwd, "", "", loud)
 
 
 def getJobStatus(jobId, url, loud=True):
@@ -357,11 +366,21 @@ def main():
     master = sys.argv[1]
     commandIndex = 2
     pwd = ""
-    if sys.argv[2] == "-p":
-        pwd = sys.argv[3]   
-        commandIndex = 4
-    
-    
+    label = ""
+    email = ""
+
+    if sys.argv[commandIndex] == "-p":
+        pwd = sys.argv[commandIndex+1]
+        commandIndex = commandIndex+2
+
+    if sys.argv[commandIndex] == "-L":
+        label = sys.argv[commandIndex+1]
+        commandIndex = commandIndex+2
+
+    if sys.argv[commandIndex] == "-u":
+        email = sys.argv[commandIndex+1]
+        commandIndex = commandIndex+2
+
     cmd = sys.argv[commandIndex].lower()
 
     master = canonizeMaster(master)
@@ -369,12 +388,12 @@ def main():
     url = master+"/jobs/"
 
     if cmd == "run":
-        runOneLine(int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2:], pwd, url)
+        runOneLine(int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2:], pwd, url, label, email)
     elif cmd == "runlist":
-        runList(open(sys.argv[commandIndex + 1]), pwd, url)
+        runList(open(sys.argv[commandIndex + 1]), pwd, url, label, email)
     elif cmd == "runoneach":
         jobs = [{"Args": sys.argv[commandIndex + 1:]}]
-        runOnEach(jobs, pwd, url)
+        runOnEach(jobs, pwd, url, label, email)
     elif cmd == "jobs" or cmd == "list":
         getJobList(url)
     elif cmd == "stop":
@@ -403,7 +422,7 @@ def main():
             doPost(master+"/nodes/die",{},"",pwd)
         else:
             print "Canceled"
-    
+
 
 if __name__ == "__main__":
     main()
