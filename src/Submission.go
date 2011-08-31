@@ -147,14 +147,14 @@ func (s Submission) WriteIo() {
 	vlog("Submission.WriteIo(%v)", dtls.JobId)
 
 	var outf io.WriteCloser = nil
-	
+
 	var errf io.WriteCloser = nil
 	var err os.Error = nil
 	for {
 		select {
 		case msg := <-s.CoutFileChan:
 			if outf == nil {
-				
+
 				outf, err = os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
 				if err != nil {
 					warn("WriteIo: %v", err)
@@ -162,11 +162,11 @@ func (s Submission) WriteIo() {
 
 				defer outf.Close()
 			}
-			
+
 			fmt.Fprint(outf, msg)
 		case errmsg := <-s.CerrFileChan:
 			if errf == nil {
-				
+
 				errf, err = os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
 				if err != nil {
 					warn("WriteIo: %v", err)
