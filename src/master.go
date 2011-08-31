@@ -36,12 +36,12 @@ type Master struct {
 
 //create a master node and initialize its channels
 func NewMaster() *Master {
-	m := Master{
+	m := &Master{
 		subMap:      map[string]*Submission{},
 		jobChan:     make(chan *WorkerJob, 0),
 		NodeHandles: map[string]*NodeHandle{}}
 	http.Handle("/master/", websocket.Handler(func(ws *websocket.Conn) { m.Listen(ws) }))
-	return &m
+	return m
 }
 
 func (m *Master) GetSub(subId string) *Submission{
