@@ -65,11 +65,11 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	if jobId == "" {
 		jobId = UniqueId()
 	}
-	
+
 	this.master.subMu.RLock()
 	_, isin := this.master.subMap[jobId]
-	this.master.subMu.RUnlock()	
-	if  isin {
+	this.master.subMu.RUnlock()
+	if isin {
 		vlog("MasterJobController.Create(): Exists: %v", jobId)
 		return
 	}
@@ -96,7 +96,7 @@ func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
 	this.master.subMu.RLock()
 	s, isin := this.master.subMap[id]
 	this.master.subMu.RUnlock()
-	
+
 	if isin == false {
 		vlog("MasterJobController.Find(%v): not found", id)
 		http.Error(rw, "job "+id+" not found", http.StatusNotFound)
@@ -213,9 +213,9 @@ func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *
 		}
 
 		this.master.nodeMu.RLock()
-	node, isin := this.master.NodeHandles[nodeId]
-	this.master.nodeMu.RUnlock()
-	
+		node, isin := this.master.NodeHandles[nodeId]
+		this.master.nodeMu.RUnlock()
+
 		if isin == false {
 			http.Error(rw, "node "+nodeId+" not found", http.StatusNotFound)
 			return
