@@ -110,6 +110,8 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.Running = false
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
+			close(s.CoutFileChan)
+			close(s.CerrFileChan)
 			return
 		}
 
@@ -144,15 +146,16 @@ func (s Submission) WriteIo() {
 	dtls := s.SniffDetails()
 	vlog("Submission.WriteIo(%v)", dtls.JobId)
 
-	var outf io.WriteCloser
+	var outf io.WriteCloser = nil
 	
-	var errf io.WriteCloser
+	var errf io.WriteCloser = nil
+	var err os.Error = nil
 	for {
 		select {
 		case msg := <-s.CoutFileChan:
 			if outf == nil {
 				
-				outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
+				outf, err = os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
 				if err != nil {
 					warn("WriteIo: %v", err)
 				}
@@ -164,7 +167,7 @@ func (s Submission) WriteIo() {
 		case errmsg := <-s.CerrFileChan:
 			if errf == nil {
 				
-				errf, err := os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
+				errf, err = os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
 				if err != nil {
 					warn("WriteIo: %v", err)
 				}
