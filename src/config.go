@@ -20,25 +20,28 @@
 package main
 
 import (
-	"json"
+	"fmt"
+	"goconf.googlecode.com/hg"
 )
 
-//Internal Job Representation used primairly as the body of job related messages
-type Job struct {
-	SubId  string
-	LineId int
-	JobId  int
-	Args   []string
+type ConfigurationFile struct {
+	*conf.ConfigFile
 }
 
-//NewJob creates a job struct from a json string (usually a message body)
-func NewJob(jsonjob string) *Job {
-	var job Job
-
-	err := json.Unmarshal([]byte(jsonjob), &job)
+func (this *ConfigurationFile) GetRequiredString(section string, key string) (value string) {
+	value, err := this.GetString(section, key)
 	if err != nil {
-		log("error parseing job json: %v", err)
+		panic(err)
 	}
-	return &job
-
+	return
+}
+func NewConfigurationFile(filepath string) ConfigurationFile {
+	if filepath != "" {
+		c, err := conf.ReadConfigFile(filepath)
+		if err != nil {
+			panic(err)
+		}
+		return ConfigurationFile{c}
+	}
+	panic(fmt.Sprintf("configuration file not found [%v]", filepath))
 }

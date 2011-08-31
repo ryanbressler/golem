@@ -58,22 +58,22 @@
 }
 
 .details .x-btn-text {
-    background-image: url(https://informatics-apps.systemsbiology.net/addama/ui/ext-js-3.3.1/examples/grid/details.gif);
+    background-image: url(https://informatics-apps.systemsbiology.net/ext-js-3.3.1/examples/grid/details.gif);
 }
 
 .x-resizable-pinned .x-resizable-handle-south {
-    background: url(https://informatics-apps.systemsbiology.net/addama/ui/ext-js-3.3.1/resources/images/default/sizer/s-handle-dark.gif);
+    background: url(https://informatics-apps.systemsbiology.net/ext-js-3.3.1/resources/images/default/sizer/s-handle-dark.gif);
     background-position: top;
 }
 
 .delete {
-    background-image: url(https://informatics-apps.systemsbiology.net/addama/ui/ext-js-3.3.1/examples/shared/icons/fam/cross.gif) !important;
+    background-image: url(https://informatics-apps.systemsbiology.net/ext-js-3.3.1/examples/shared/icons/fam/cross.gif) !important;
 }
 
 .stop {
-    background-image: url(https://informatics-apps.systemsbiology.net/addama/ui/ext-js-3.3.1/examples/shared/icons/fam/delete.gif) !important;
+    background-image: url(https://informatics-apps.systemsbiology.net/ext-js-3.3.1/examples/shared/icons/fam/delete.gif) !important;
 }
 
 .refresh {
-    background-image: url(https://informatics-apps.systemsbiology.net/addama/ui/ext-js-3.3.1/resources/images/default/grid/refresh.gif) !important;
+    background-image: url(https://informatics-apps.systemsbiology.net/ext-js-3.3.1/resources/images/default/grid/refresh.gif) !important;
 }

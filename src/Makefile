@@ -4,15 +4,14 @@ TARG=golem
 GOFILES=\
 	vars.go\
 	log.go\
-	Job.go\
 	Connection.go\
 	Submission.go\
-	REST+JSON.go\
 	controllers_master.go\
 	controllers_scribe.go\
 	controllers_proxy.go\
 	master.go\
 	scribe.go\
+	addama.go\
 	control.go\
 	jobkiller.go\
 	uniqueid.go\
@@ -23,6 +22,7 @@ GOFILES=\
 	storage.go\
 	storage_mongodb.go\
 	entities.go\
+	config.go\
 	main.go\
 	
 

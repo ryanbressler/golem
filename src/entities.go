@@ -20,6 +20,7 @@
 package main
 
 import (
+	"json"
 	"time"
 )
 
@@ -95,13 +96,13 @@ const (
 	START //sent from master to start job, body is json job
 	KILL  //sent from master to stop jobs, SubId indicates what jobs to stop.
 
-	COUT   //cout from worker, body is line of cout
-	CERROR //cout from worker, body is line of cerror
+	COUT   //standard out line from worker
+	CERROR //standard err line from worker
 
 	JOBFINISHED //sent from worker on job finish, body is json job SubId set
 	JOBERROR    //sent from worker on job error, body is json job, SubId set
 
-	RESTART //Sent by master to nodes telling them to resart and reconnec themselves.
+	RESTART //Sent by master to nodes telling them to restart and reconnect themselves.
 	DIE     //tell nodes to shutdown.
 )
 
@@ -111,17 +112,18 @@ type WorkerNodeList struct {
 }
 
 type WorkerNode struct {
-	NodeId   string
-	Uri      string
-	Hostname string
-	MaxJobs  int
-	Running  int
+	NodeId      string
+	Uri         string
+	Hostname    string
+	MaxJobs     int
+	RunningJobs int
+	Running     bool
 }
 
 func NewWorkerNode(nh *NodeHandle) WorkerNode {
 	maxJobs, running := nh.Stats()
 	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
-		MaxJobs: maxJobs, Running: running}
+		MaxJobs: maxJobs, RunningJobs: running, Running: (running > 0)}
 }
 
 type WorkerMessage struct {
@@ -129,4 +131,20 @@ type WorkerMessage struct {
 	SubId  string
 	Body   string
 	ErrMsg string
+}
+
+//Internal Job Representation used primarily as the body of job related messages
+type WorkerJob struct {
+	SubId  string
+	LineId int
+	JobId  int
+	Args   []string
+}
+
+// NewJob creates a job from a json string (usually a message body)
+func NewWorkerJob(jsonjob string) (job *WorkerJob) {
+	if err := json.Unmarshal([]byte(jsonjob), &job); err != nil {
+		warn("NewWorkerJob(%v): %v", jsonjob, err)
+	}
+	return
 }

@@ -20,40 +20,10 @@
 package main
 
 import (
-	"strings"
 	"http"
 	"json"
-	"mime/multipart"
 	"os"
 )
-
-func splitRestUrl(path string) []string {
-	spliturl := strings.Split(path, "/", -1)
-	pathParts := make([]string, 0, 2)
-	for _, part := range spliturl {
-		if part != "" {
-			pathParts = append(pathParts, part)
-		}
-	}
-	return pathParts
-}
-
-//parser for rest jobs request
-func parseJobUri(path string) (jobid string, verb string) {
-	pathParts := splitRestUrl(path)
-	nparts := len(pathParts)
-	jobid = ""
-	verb = ""
-	switch {
-	case nparts == 2:
-		jobid = pathParts[1]
-	case nparts == 3:
-		jobid = pathParts[1]
-		verb = pathParts[2]
-	}
-	vlog("Parsed job request id:\"%v\" verb:\"%v\"", jobid, verb)
-	return
-}
 
 func getHeader(r *http.Request, headerName string, defaultValue string) string {
 	val := r.Header.Get(headerName)
@@ -63,79 +33,36 @@ func getHeader(r *http.Request, headerName string, defaultValue string) string {
 	return defaultValue
 }
 
-func getMultipartForm(r *http.Request) (frm *multipart.Form, err os.Error) {
+func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
+	vlog("loadJson")
+
 	mpreader, err := r.MultipartReader()
 	if err != nil {
 		return
 	}
 
-	frm, err = mpreader.ReadForm(10000)
-	return
-}
-
-func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
-	vlog("loadJson")
-
-	vlog("loadJson: multipart")
-	frm, err := getMultipartForm(r)
+	frm, err := mpreader.ReadForm(10000)
 	if err != nil {
-		vlog("loadJson:%v", err)
 		return
 	}
 
-	vlog("loadJson: open jsonfile")
 	jsonfile, err := frm.File["jsonfile"][0].Open()
 	if err != nil {
-		vlog("loadJson:%v", err)
 		return
 	}
 	defer jsonfile.Close()
 
-	vlog("loadJson: decoding jsonfile")
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
 	return
 }
 
-// TODO : Deal with URI, proper not found
-func WriteItemAsJson(baseUri string, itemId string, r Retriever, w http.ResponseWriter) {
-	item, err := r.Retrieve(itemId)
-	if err != nil {
-		vlog("WriteItemAsJson(%v/%v):%v", baseUri, itemId, err)
-		w.WriteHeader(http.StatusNotFound)
-		return
+func CheckApiKey(apikey string, r *http.Request) bool {
+	if apikey != "" {
+		headerkey := r.Header.Get("x-golem-apikey")
+		if headerkey == "" {
+			return false
+		}
+		return headerkey == apikey
 	}
-
-	vlog("WriteItemAsJson(%v/%v):item=%v", baseUri, itemId, item)
-
-	val, err := json.Marshal(item)
-	if err != nil {
-		vlog("WriteItemAsJson(%v/%v):%v", baseUri, itemId, err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Write(val)
-}
-
-// TODO : Deal with URI, proper not found
-func WriteItemsAsJson(baseUri string, r Retriever, w http.ResponseWriter) {
-	items, err := r.RetrieveAll()
-	if err != nil {
-		vlog("WriteItemsAsJson(%v):%v", baseUri, err)
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	itemsHandle := ItemsHandle{Items: items, NumberOfItems: len(items)}
-	vlog("WriteItemsAsJson(%v):%v", baseUri, itemsHandle)
-
-	// json.NewEncoder
-	val, err := json.Marshal(itemsHandle)
-	if err != nil {
-		vlog("WriteItemsAsJson(%v):%v", baseUri, err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Write(val)
+	return true
 }

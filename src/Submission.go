@@ -32,26 +32,26 @@ type Submission struct {
 
 	CoutFileChan chan string
 	CerrFileChan chan string
-	ErrorChan    chan *Job
-	FinishedChan chan *Job
+	ErrorChan    chan *WorkerJob
+	FinishedChan chan *WorkerJob
 	stopChan     chan int
 }
 
-func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *Job) *Submission {
+func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submission {
 	s := Submission{
 		Details:      make(chan JobDetails, 1),
 		Tasks:        tasks,
 		CoutFileChan: make(chan string, iobuffersize),
 		CerrFileChan: make(chan string, iobuffersize),
-		ErrorChan:    make(chan *Job, 1),
-		FinishedChan: make(chan *Job, 1),
+		ErrorChan:    make(chan *WorkerJob, 1),
+		FinishedChan: make(chan *WorkerJob, 1),
 		stopChan:     make(chan int, 0)}
 
 	s.Details <- jd
 
 	go s.MonitorWorkTasks()
-	go s.writeIo()
-	go s.submitJobs(jobChan)
+	go s.WriteIo()
+	go s.SubmitJobs(jobChan)
 
 	return &s
 }
@@ -69,7 +69,7 @@ func (s *Submission) Stop() bool {
 
 			log("Submission.Stop(): %v", dtls.JobId)
 		case <-time.After(250000000):
-			log("timeout stopping: %v", dtls.JobId)
+			log("Submission.Stop(): timeout stopping: %v", dtls.JobId)
 		}
 	}
 
@@ -115,8 +115,8 @@ func (s Submission) MonitorWorkTasks() {
 	}
 }
 
-func (s Submission) submitJobs(jobChan chan *Job) {
-	vlog("submitJobs")
+func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
+	vlog("SubmitJobs()")
 
 	dtls := <-s.Details
 	dtls.Scheduled = true
@@ -126,32 +126,32 @@ func (s Submission) submitJobs(jobChan chan *Job) {
 
 	taskId := 0
 	for lineId, vals := range s.Tasks {
-		vlog("submitJobs:[%d,%v]", lineId, vals)
+		vlog("SubmitJobs():[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
-			case jobChan <- &Job{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
+			case jobChan <- &WorkerJob{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
 				taskId++
 			case <-s.stopChan:
 				return //TODO: add indication that we stopped
 			}
 		}
 	}
-	log("[%d] tasks submitted for [%v]", taskId, dtls.JobId)
+	log("SubmitJobs(): [%d] tasks submitted for [%v]", taskId, dtls.JobId)
 }
 
-func (s Submission) writeIo() {
+func (s Submission) WriteIo() {
 	dtls := s.SniffDetails()
-	vlog("Submission.writeIo(%v)", dtls.JobId)
+	vlog("Submission.WriteIo(%v)", dtls.JobId)
 
 	outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
 	if err != nil {
-		log("writeIo: %v", err)
+		warn("WriteIo: %v", err)
 	}
 	defer outf.Close()
 
 	errf, err := os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
 	if err != nil {
-		log("writeIo: %v", err)
+		warn("WriteIo: %v", err)
 	}
 	defer errf.Close()
 

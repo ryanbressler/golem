@@ -21,20 +21,22 @@ package main
 
 import (
 	"fmt"
+	"syscall"
 )
 
 
-//killable links a SubId and JobId which uniquelly describe a job with a pid that can be used to kill it
+// links a SubId and JobId with a pid that can be used to kill it
 type Killable struct {
 	Pid   int
 	SubId string
 	JobId int
 }
 
-// kills the killable via KillPid (linux kill).
+// kills via the stored process id
 func (k *Killable) Kill() {
-	log("killing %v", k)
-	KillPid(k.Pid)
+	log("Killable.Kill(%v):", k.Pid)
+	errno := syscall.Kill(k.Pid, syscall.SIGCHLD)
+	log("Killable.Kill(%v):%v", k.Pid, errno)
 }
 
 //A job killer is created to monitor and kill jobs
@@ -43,35 +45,34 @@ type JobKiller struct {
 	Donechan     chan *Killable //used to indicate that a job is done and should no longer be killable
 	Registerchan chan *Killable //used to register a job as a killable
 
-	killables map[string]*Killable //internal stcuture to keep track of killables by subid+jobId (as strings)
+	killables map[string]*Killable //internal structure to keep track of killables by subid+jobId (as strings)
 }
 
-//creates a Job Killer and starts its goroutine KillJobs
+//creates a Job Killer and starts its routine KillJobs
 func NewJobKiller() (jk *JobKiller) {
 	jk = &JobKiller{Killchan: make(chan string, 3), Donechan: make(chan *Killable, 3), Registerchan: make(chan *Killable, 3), killables: map[string]*Killable{}}
-	go jk.killJobs()
+	go jk.KillJobs()
 	return
 }
 
 // should be run as a go routine, monitors job killers channel.  maintains the internal map of killables and locates jobs that need to be killed.
-func (jk *JobKiller) killJobs() {
+func (jk *JobKiller) KillJobs() {
 	for {
 		select {
 		case SubId := <-jk.Killchan:
-			log("looking for  killables with subid %v", SubId)
+			vlog("JobKiller.KillJobs: looking for killables with subid: %v", SubId)
 			for _, kb := range jk.killables {
 				if kb.SubId == SubId {
 					kb.Kill()
 				}
 			}
-			vlog("done looking for  killables with subid %v", SubId)
+			vlog("JobKiller.KillJobs: done looking for killables with subid: %v", SubId)
 		case kb := <-jk.Registerchan:
-			vlog("regestering killable %v", kb)
+			vlog("JobKiller.KillJobs: registering killable: %v", kb)
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb
 		case kb := <-jk.Donechan:
-			vlog("removing killable %v", kb)
+			vlog("JobKiller.KillJobs: removing killable: %v", kb)
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb, false
-
 		}
 	}
 }

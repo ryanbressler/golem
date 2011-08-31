@@ -20,7 +20,7 @@
 package main
 
 import (
-	"crypto/sha256"
+	"os"
 )
 
 const (
@@ -30,6 +30,59 @@ const (
 
 var verbose = false
 var iobuffersize = 1000
-var ConfigFile ConfigurationFile
 var useTls bool = true
-var hash = sha256.New() // use the same hasher
+var certpath string = ""
+var certorg string = "golem.googlecode.com"
+
+// Sets a global variable for verbosity in logs
+// optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
+func GlobalVerbose(configFile ConfigurationFile) {
+	verbose, err := configFile.GetBool("default", "verbose")
+	if err != nil {
+		warn("GlobalVerbose(): %v", err)
+	}
+	log("GlobalVerbose(): verbose=[%v]", verbose)
+}
+
+// Sets global variable to enable TLS communications and other related variables (certificate path, organization)
+// optional parameters:  default.certpath, default.organization, default.tls
+func GlobalTls(configFile ConfigurationFile) {
+	certificatepath, err := configFile.GetString("default", "certpath")
+	if err != nil {
+		warn("GlobalTls(): %v", err)
+	} else {
+		certpath = certificatepath
+	}
+	log("GlobalTls(): certpath=[%v]", certpath)
+
+	certificateorg, err := configFile.GetString("default", "organization")
+	if err != nil {
+		warn("GlobalTls(): %v", err)
+		if certificateorg, err = os.Hostname(); err != nil {
+			warn("GlobalTls(): %v", err)
+			certificateorg = "golem.googlecode.com"
+		}
+	}
+	certorg = certificateorg
+	log("GlobalTls(): certorg=[%v]", certorg)
+
+	useTls, err := configFile.GetBool("default", "tls")
+	if err != nil {
+		warn("GlobalTls(): %v", err)
+		useTls = true
+	}
+	log("GlobalTls(): TLS=[%v]", useTls)
+}
+
+// Sets global variable to configure buffersize for master submission channels (stdout, stderr)
+// optional parameters:  master.buffersize
+func GlobalBufferSize(configFile ConfigurationFile) {
+	bufsize, err := configFile.GetInt("master", "buffersize")
+	if err != nil {
+		warn("GlobalTls(): %v", err)
+	} else {
+		iobuffersize = bufsize
+	}
+
+	log("GlobalBufferSize(): buffersize=[%v]", iobuffersize)
+}
