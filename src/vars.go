@@ -41,7 +41,7 @@ func GlobalVerbose(configFile ConfigurationFile) {
 	if err != nil {
 		warn("GlobalVerbose(): %v", err)
 	} else {
-	    verbose = v
+		verbose = v
 	}
 	log("GlobalVerbose(): verbose=[%v]", verbose)
 }
