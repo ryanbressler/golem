@@ -46,7 +46,7 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 		CerrFileChan: make(chan string, iobuffersize),
 		ErrorChan:    make(chan *WorkerJob, 1),
 		FinishedChan: make(chan *WorkerJob, 1),
-		stopChan:     make(chan int, 0)}
+		stopChan:     make(chan int, 3)}
 
 	s.Details <- jd
 
@@ -110,6 +110,11 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.Running = false
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
+			//send three messages to stop chan to stop all things plus one
+			s.stopChan <- 1
+			s.stopChan <- 1
+			s.stopChan <- 1
+			vlog("MonitorWorkTasks clean up done for %v", dtls.JobId)
 			return
 		}
 
@@ -144,27 +149,28 @@ func (s Submission) WriteIo() {
 	dtls := s.SniffDetails()
 	vlog("Submission.WriteIo(%v)", dtls.JobId)
 
-	var outf io.WriteCloser
-	
-	var errf io.WriteCloser
+	var outf io.WriteCloser = nil
+
+	var errf io.WriteCloser = nil
+	var err os.Error = nil
 	for {
 		select {
 		case msg := <-s.CoutFileChan:
 			if outf == nil {
-				
-				outf, err := os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
+
+				outf, err = os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId))
 				if err != nil {
 					warn("WriteIo: %v", err)
 				}
 
 				defer outf.Close()
 			}
-			
+
 			fmt.Fprint(outf, msg)
 		case errmsg := <-s.CerrFileChan:
 			if errf == nil {
-				
-				errf, err := os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
+
+				errf, err = os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId))
 				if err != nil {
 					warn("WriteIo: %v", err)
 				}
@@ -173,6 +179,15 @@ func (s Submission) WriteIo() {
 			}
 
 			fmt.Fprint(errf, errmsg)
+		case <-time.After(1 * second):
+			vlog("WriteIO checking for done value")
+			select {
+			case <-s.stopChan:
+				vlog("WriteIO for %v returning", dtls.JobId)
+				return
+			default:
+			}
+
 		}
 	}
 }
