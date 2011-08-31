@@ -121,7 +121,7 @@ def doGet(url, loud=True):
     return resp, output
     #conn.close()
 
-def doPost(url, paramMap, jsondata,password, label, email, loud=True):
+def doPost(url, paramMap, jsondata,password, label="", email="", loud=True):
     """
     posts a multipart form to url, paramMap should be a dictionary of the form fields, json data
     should be a string of the body of the file (json in our case) and password should be the password
@@ -183,7 +183,7 @@ def canonizeMaster(master, loud = True):
     return canonicalMaster
 
 
-def runOneLine(count, args, pwd, url, label, email, loud = True):
+def runOneLine(count, args, pwd, url, label="", email="", loud = True):
     """
     Runs a single command on a specified Golem cluster.
     Parameters:
@@ -214,7 +214,7 @@ def generateJobList(fo):
         yield {"Count": int(values[0]), "Args": values[1:]}
 
 
-def runBatch(jobs, pwd, url, label, email, loud=True):
+def runBatch(jobs, pwd, url, label="", email="", loud=True):
     """
     Runs a Python list of jobs on the specified Golem cluster.
     Parameters:
@@ -237,7 +237,7 @@ def runBatch(jobs, pwd, url, label, email, loud=True):
     return doPost(url, data, jobs, pwd, label, email, loud)
 
 
-def runList(fo, pwd, url, label, email, loud=True):
+def runList(fo, pwd, url, label="", email="", loud=True):
     """
     Interprets an open file as a runlist, then executes it on the specified Golem cluster.
     Parameters:
@@ -256,7 +256,7 @@ def runList(fo, pwd, url, label, email, loud=True):
     return runBatch(jobs, pwd, url, label, email, loud)
 
 
-def runOnEach(jobs, pwd, url, label, email, loud=True):
+def runOnEach(jobs, pwd, url, label="", email="", loud=True):
     """
     Runs a single job on each machine in a Golem cluster.
     Parameters:
