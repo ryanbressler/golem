@@ -22,10 +22,11 @@ package main
 import (
 	"http"
 	"strings"
+	"url"
 )
 
 type ProxyNodeController struct {
-	target *http.URL
+	target *url.URL
 	apikey string
 }
 

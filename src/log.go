@@ -29,14 +29,16 @@ import (
 //log("hello")
 func log(format string, a ...interface{}) {
 	t := time.LocalTime()
-	format = t.String() + ": " + format + "\n"
+	format = t.String() + " log: " + format + "\n"
 	fmt.Printf(format, a...)
 }
 
 //vlog is a wrapper for log that only prints in verbose mode
 func vlog(format string, a ...interface{}) {
 	if verbose {
-		log(format, a...)
+		t := time.LocalTime()
+		format = t.String() + " vlog: " + format + "\n"
+		fmt.Printf(format, a...)
 	}
 }
 
