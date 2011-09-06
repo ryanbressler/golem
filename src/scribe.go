@@ -89,6 +89,16 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	r.Header.Set("x-golem-job-preassigned-id", jd.JobId)
 	r.Header.Set("x-golem-apikey", this.apikey)
 
+	if jd.Owner != "" {
+		r.Header.Set("x-golem-job-owner", jd.Owner)
+	}
+	if jd.Label != "" {
+		r.Header.Set("x-golem-job-label", jd.Label)
+	}
+	if jd.Type != "" {
+		r.Header.Set("x-golem-job-type", jd.Type)
+	}
+
 	go func() {
 		jsonFileWriter, _ := multipartWriter.CreateFormFile("jsonfile", "data.json")
 		json.NewEncoder(jsonFileWriter).Encode(tasks)
