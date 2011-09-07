@@ -55,12 +55,12 @@ func (con Connection) SendMsgs() {
 
 		msgjson, err := json.Marshal(msg)
 		if err != nil {
-			warn("SendMsgs(): %v", err)
+			warn("SendMsgs() [json.Marshal]: %v", err)
 			return
 		}
 
 		if _, err := con.Socket.Write(msgjson); err != nil {
-			warn("SendMsgs(): %v", err)
+			warn("SendMsgs() [Socket.Write]: %v", err)
 		}
 	}
 }
