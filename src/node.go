@@ -52,7 +52,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 	exepath, err := exec.LookPath(jobcmd)
 	if err != nil {
 		con.OutChan <- WorkerMessage{Type: CERROR, SubId: job.SubId, Body: fmt.Sprintf("Error finding %s: %s\n", jobcmd, err)}
-		log("StartJob(): exec %s: %s\n", jobcmd, err)
+		logger.Printf("exec %s: %s\n", jobcmd, err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob}
 		return
 	}
@@ -67,12 +67,12 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 
 	outpipe, err := cmd.StdoutPipe()
 	if err != nil {
-		warn("StartJob(): %v", err)
+		logger.Warn(err)
 		return
 	}
 	errpipe, err := cmd.StderrPipe()
 	if err != nil {
-		warn("StartJob(): %v", err)
+		logger.Warn(err)
 		return
 	}
 
@@ -80,7 +80,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan)
 
 	if err = cmd.Start(); err != nil {
-		warn("StartJob(): %v", err)
+		logger.Warn(err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
 		return
 	}
@@ -92,12 +92,12 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 	}()
 
 	if err = cmd.Wait(); err != nil {
-		warn("StartJob(): %v", err)
+		logger.Warn(err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
 		return
 	}
 
-	log("StartJob(): finishing job %v", job.JobId)
+	logger.Printf("finishing job %v", job.JobId)
 	replyc <- &WorkerMessage{Type: JOBFINISHED, SubId: job.SubId, Body: jsonjob}
 }
 
@@ -128,25 +128,25 @@ func RunNode(processes int, master string) {
 		vlog("RunNode(): Waiting for done or msg.")
 		select {
 		case rv := <-replyc:
-			vlog("RunNode(): Got 'done' signal: %v", *rv)
+			vlog("Got 'done' signal")
 			mcon.OutChan <- *rv
 			running--
 
 		case msg := <-mcon.InChan:
-			vlog("RunNode(): Got master msg")
+			vlog("Got master msg")
 			switch msg.Type {
 			case START:
-				log("RunNode(): START")
+				logger.Printf("START")
 				go StartJob(&mcon, replyc, msg.Body, jk)
 				running++
 			case KILL:
-				log("RunNode(): KILL: %v", msg.SubId)
+				logger.Printf("KILL: %v", msg.SubId)
 				jk.Killchan <- msg.SubId
 			case RESTART:
-				log("RunNode(): RESTART: %v", msg.SubId)
+				logger.Printf("RESTART: %v", msg.SubId)
 				RestartIn(8)
 			case DIE:
-				log("RunNode(): DIE: %v", msg.SubId)
+				logger.Printf("DIE: %v", msg.SubId)
 				DieIn(0)
 			}
 		}

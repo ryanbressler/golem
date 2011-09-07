@@ -55,15 +55,15 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	if msg.Type == HELLO {
 		val, err := strconv.Atoi(msg.Body)
 		if err != nil {
-			warn("NewNodeHandle(): %v", err)
+			logger.Warn(err)
 			return nil
 		}
 		nh.MaxJobs <- val
 	} else {
-		vlog("NewNodeHandle(): %v didn't say hello as first message.", nh.Hostname)
+		vlog("%v didn't say hello as first message.", nh.Hostname)
 		return nil
 	}
-	vlog("NewNodeHandle(): %v says hello and asks for %v jobs.", nh.Hostname, msg.Body)
+	vlog("%v says hello and asks for %v jobs.", nh.Hostname, msg.Body)
 	return &nh
 }
 
@@ -88,7 +88,7 @@ func (nh *NodeHandle) SendJob(j *WorkerJob) {
 	vlog("SendJob(%v): %v", job, nh.Hostname)
 	jobjson, err := json.Marshal(job)
 	if err != nil {
-		warn("SendJob(): %v", err)
+		logger.Warn(err)
 	}
 	msg := WorkerMessage{Type: START, Body: string(jobjson)}
 	nh.Con.OutChan <- msg
@@ -131,31 +131,31 @@ func (nh *NodeHandle) Monitor() {
 
 //handle worker messages and updates the value in nh.Running if appropriate
 func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
-	vlog("HandleWorkerMessage(): msg from %v", nh.Hostname)
+	vlog("msg from %v", nh.Hostname)
 	switch msg.Type {
 	default:
 	case CHECKIN:
-		vlog("HandleWorkerMessage(): CHECKIN %v", nh.Hostname)
+		vlog("CHECKIN %v", nh.Hostname)
 	case COUT:
-		vlog("HandleWorkerMessage(): COUT %v", nh.Hostname)
+		vlog("COUT %v", nh.Hostname)
 		nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body
 	case CERROR:
-		vlog("HandleWorkerMessage(): CERROR %v", nh.Hostname)
+		vlog("CERROR %v", nh.Hostname)
 		nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body
 	case JOBFINISHED:
-		vlog("HandleWorkerMessage(): JOBFINISHED %v", nh.Hostname)
+		vlog("JOBFINISHED %v", nh.Hostname)
 		running := <-nh.Running
 		nh.Running <- running - 1
-		vlog("HandleWorkerMessage(): %v job finished: %v running: %v", nh.Hostname, msg.Body, running)
+		vlog("JOBFINISHED %v job finished: %v running: %v", nh.Hostname, msg.Body, running)
 		nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
-		log("HandleWorkerMessage(): %v finished: %v, running: %v", nh.Hostname, msg.Body, running)
+		logger.Printf("JOBFINISHED %v finished: %v, running: %v", nh.Hostname, msg.Body, running)
 	case JOBERROR:
-		vlog("HandleWorkerMessage(): JOBERROR %v", nh.Hostname)
+		vlog("JOBERROR %v", nh.Hostname)
 		running := <-nh.Running
 		nh.Running <- running - 1
-		vlog("HandleWorkerMessage(): %v %v running:%v", nh.Hostname, msg.Body, running)
+		vlog("JOBERROR %v %v running:%v", nh.Hostname, msg.Body, running)
 		nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
-		vlog("HandleWorkerMessage(): %v finished sent to Sub: %v running:%v", nh.Hostname, msg.Body, running)
+		vlog("JOBERROR %v finished sent to Sub: %v running:%v", nh.Hostname, msg.Body, running)
 	}
-	vlog("HandleWorkerMessage(): %v msg handled", nh.Hostname)
+	vlog("%v msg handled", nh.Hostname)
 }

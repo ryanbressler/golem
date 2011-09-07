@@ -34,9 +34,9 @@ type Killable struct {
 
 // kills via the stored process id
 func (k *Killable) Kill() {
-	log("Killable.Kill(%v):", k.Pid)
+	logger.Printf("kill process id: %v", k.Pid)
 	errno := syscall.Kill(k.Pid, syscall.SIGCHLD)
-	log("Killable.Kill(%v):%v", k.Pid, errno)
+	logger.Printf("kill results: %v: %v", k.Pid, errno)
 }
 
 //A job killer is created to monitor and kill jobs
@@ -60,18 +60,18 @@ func (jk *JobKiller) KillJobs() {
 	for {
 		select {
 		case SubId := <-jk.Killchan:
-			vlog("JobKiller.KillJobs() killing: %v", SubId)
+			vlog("killing: %v", SubId)
 			for _, kb := range jk.killables {
 				if kb.SubId == SubId {
 					kb.Kill()
 				}
 			}
-			vlog("JobKiller.KillJobs() done killing: %v", SubId)
+			vlog("done killing: %v", SubId)
 		case kb := <-jk.Registerchan:
-			vlog("JobKiller.KillJobs() registering: %v", kb)
+			vlog("registering: %v", kb)
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb
 		case kb := <-jk.Donechan:
-			vlog("JobKiller.KillJobs() removing: %v", kb)
+			vlog("removing: %v", kb)
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb, false
 		}
 	}

@@ -39,7 +39,7 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	vlog("OpenWebSocketToMaster(%v)", master)
 	origin, err := os.Hostname()
 	if err != nil {
-		warn("OpenWebSocketToMaster(%v) Origin: %v", master, err)
+		logger.Warn(err)
 	}
 
 	prot := "ws"
@@ -49,7 +49,7 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 
 	url := fmt.Sprintf("%v://%v/master/", prot, master)
 	if ws, err = websocket.Dial(url, "", origin); err != nil {
-		warn("OpenWebSocketToMaster(%v) Dial: %v", master, err)
+		logger.Warn(err)
 	}
 	return
 }
@@ -70,15 +70,15 @@ func GetTlsConfig() *tls.Config {
 
 // replacement for ListenAndServeTLS that loads our custom configuration usage is identical to http.ListenAndServe
 func ConfigListenAndServeTLS(hostname string) (err os.Error) {
-	log("ConfigListenAndServeTLS(%v)", hostname)
+	logger.Printf("ConfigListenAndServeTLS(%v)", hostname)
 	listener, err := tls.Listen("tcp", hostname, GetTlsConfig())
 	if err != nil {
-		warn("ConfigListenAndServeTLS(%v) Listen: %v", hostname, err)
+		logger.Warn(err)
 		return
 	}
 
 	if err := http.Serve(listener, nil); err != nil {
-		warn("ConfigListenAndServeTLS(%v) Serve: %v", hostname, err)
+		logger.Warn(err)
 	}
 	return
 }
@@ -89,8 +89,8 @@ func GenerateX509KeyPair(certpath string) tls.Certificate {
 
 	cert, err := tls.LoadX509KeyPair(certf, keyf)
 	if err != nil {
-		warn("GenerateX509KeyPair(%v): %v", certf, keyf)
-		panic(err)
+		logger.Printf("GenerateX509KeyPair(%v): %v", certf, keyf)
+		logger.Panic(err)
 	}
 	return cert
 }
@@ -143,11 +143,11 @@ func ListenAndServeTLSorNot(hostname string) (err os.Error) {
 	vlog("ListenAndServeTLSorNot(%v)", hostname)
 	if useTls {
 		if err = ConfigListenAndServeTLS(hostname); err != nil {
-			warn("ListenAndServeTLSorNot(%v) ConfigListenAndServeTLS: %v", hostname, err)
+			logger.Warn(err)
 		}
 	} else {
 		if err = http.ListenAndServe(hostname, nil); err != nil {
-			warn("ListenAndServeTLSorNot(%v) ListenAndServe: %v", hostname, err)
+			logger.Warn(err)
 		}
 	}
 	return

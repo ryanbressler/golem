@@ -27,30 +27,31 @@ import (
 
 // restarts process using the original commands after wait time in nanoseconds, then die
 func RestartIn(waitn int64) {
-	log("RestartIn(%v secs)", waitn)
+	logger.Printf("RestartIn(%v secs)", waitn)
 	time.Sleep(waitn * second)
-	log("RestartIn(): restarting")
+	logger.Printf("RestartIn(): restarting")
 
 	cmd, err := exec.LookPath(os.Args[0])
 	if err != nil {
-		warn("RestartIn(): exec %s: %s\n", os.Args, err)
+		logger.Printf("RestartIn(): exec %s", os.Args)
+		logger.Warn(err)
 		return
 	}
 
 	f := []*os.File{os.Stdin, os.Stdout, os.Stderr}
 	_, err = os.StartProcess(cmd, os.Args, &os.ProcAttr{Files: f})
 	if err != nil {
-		warn("RestartIn(): %v", err)
+		logger.Warn(err)
 	}
 
-	log("RestartIn(): exiting")
+	logger.Printf("RestartIn(): exiting")
 	os.Exit(0)
 }
 
 //exit this process after given wait time in seconds
 func DieIn(waitn int64) {
-	log("DieIn(%v secs)", waitn)
+	logger.Printf("DieIn(%v secs)", waitn)
 	time.Sleep(waitn * second)
-	log("DieIn(): exiting")
+	logger.Printf("DieIn(): exiting")
 	os.Exit(0)
 }

@@ -59,9 +59,9 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 }
 
 func (s *Submission) Stop() bool {
-	vlog("Submission.Stop()")
+	vlog("Stop()")
 	dtls := s.SniffDetails()
-	vlog("Submission.Stop(): %v", dtls.JobId)
+	vlog("Stop(): %v", dtls.JobId)
 
 	if dtls.Running {
 		select {
@@ -71,9 +71,9 @@ func (s *Submission) Stop() bool {
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
-			log("Submission.Stop(): %v", dtls.JobId)
+			logger.Printf("Stop(): %v", dtls.JobId)
 		case <-time.After(250000000):
-			log("Submission.Stop(): timeout stopping: %v", dtls.JobId)
+			logger.Printf("Stop(): timeout stopping: %v", dtls.JobId)
 		}
 	}
 
@@ -81,14 +81,14 @@ func (s *Submission) Stop() bool {
 }
 
 func (this *Submission) SniffDetails() JobDetails {
-	vlog("Submission.SniffDetails()")
+	vlog("SniffDetails()")
 	dtls := <-this.Details
 	this.Details <- dtls
 	return dtls
 }
 
 func (s Submission) MonitorWorkTasks() {
-	vlog("Submission.MonitorWorkTasks()")
+	vlog("MonitorWorkTasks()")
 	for {
 		select {
 		case <-s.ErrorChan:
@@ -97,7 +97,7 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
-			vlog("Submission.MonitorWorkTasks() [ERROR,%v,%v]", dtls.JobId, dtls.Progress.Errored)
+			vlog("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
 
 		case <-s.FinishedChan:
 			dtls := <-s.Details
@@ -105,12 +105,12 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
-			vlog("Submission.MonitorWorkTasks() [FINISHED,%v,%v]", dtls.JobId, dtls.Progress.Finished)
+			vlog("FINISHED [%v,%v]", dtls.JobId, dtls.Progress.Finished)
 		}
 
 		dtls := s.SniffDetails()
 		if dtls.Progress.isComplete() {
-			vlog("Submission.MonitorWorkTasks() [COMPLETED,%v]", dtls.JobId)
+			vlog("COMPLETED [%v]", dtls.JobId)
 			dtls = <-s.Details
 			dtls.Running = false
 			dtls.LastModified = time.LocalTime().String()
@@ -119,14 +119,14 @@ func (s Submission) MonitorWorkTasks() {
 			s.stopChan <- 1
 			s.stopChan <- 1
 			s.stopChan <- 1
-			vlog("Submission.MonitorWorkTasks() [COMPLETED,%v]: DONE", dtls.JobId)
+			vlog("COMPLETED [%v]: DONE", dtls.JobId)
 			return
 		}
 	}
 }
 
 func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
-	vlog("Submission.SubmitJobs()")
+	vlog("SubmitJobs()")
 
 	dtls := <-s.Details
 	dtls.Scheduled = true
@@ -136,7 +136,7 @@ func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
 
 	taskId := 0
 	for lineId, vals := range s.Tasks {
-		vlog("Submission.SubmitJobs():[%d,%v]", lineId, vals)
+		vlog("[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
 			case jobChan <- &WorkerJob{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
@@ -146,12 +146,12 @@ func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
 			}
 		}
 	}
-	log("Submission.SubmitJobs(): [%d] tasks submitted for [%v]", taskId, dtls.JobId)
+	logger.Printf("tasks submitted [%d, %v]", taskId, dtls.JobId)
 }
 
 func (s Submission) WriteIo() {
 	dtls := s.SniffDetails()
-	vlog("Submission.WriteIo(%v)", dtls.JobId)
+	vlog("WriteIo(%v)", dtls.JobId)
 
 	var stdOutFile io.WriteCloser = nil
 	var stdErrFile io.WriteCloser = nil
@@ -162,7 +162,7 @@ func (s Submission) WriteIo() {
 		case msg := <-s.CoutFileChan:
 			if stdOutFile == nil {
 				if stdOutFile, err = os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId)); err != nil {
-					warn("Submission.WriteIo(%v.out.txt): %v", dtls.JobId, err)
+					logger.Warn(err)
 				}
 				if stdOutFile != nil {
 					defer stdOutFile.Close()
@@ -173,7 +173,7 @@ func (s Submission) WriteIo() {
 		case errmsg := <-s.CerrFileChan:
 			if stdErrFile == nil {
 				if stdErrFile, err = os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId)); err != nil {
-					warn("Submission.WriteIo(%v.err.txt): %v", dtls.JobId, err)
+					logger.Warn(err)
 				}
 				if stdErrFile != nil {
 					defer stdErrFile.Close()
@@ -182,10 +182,10 @@ func (s Submission) WriteIo() {
 
 			fmt.Fprint(stdErrFile, errmsg)
 		case <-time.After(1 * second):
-			vlog("Submission.WriteIO(%v): checking for done", dtls.JobId)
+			vlog("checking for done: %v", dtls.JobId)
 			select {
 			case <-s.stopChan:
-				vlog("Submission.WriteIO(%v): stopChan", dtls.JobId)
+				vlog("stop chan: %v", dtls.JobId)
 				return
 			default:
 			}

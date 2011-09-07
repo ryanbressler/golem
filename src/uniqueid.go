@@ -28,7 +28,7 @@ func UniqueId() string {
 	vlog("UniqueId()")
 	subId := make([]byte, 16)
 	if _, err := rand.Read(subId); err != nil {
-		warn("UniqueId(): %v", err)
+		logger.Warn(err)
 	}
 	return fmt.Sprintf("%x", subId)
 }
