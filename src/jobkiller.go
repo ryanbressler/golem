@@ -60,18 +60,18 @@ func (jk *JobKiller) KillJobs() {
 	for {
 		select {
 		case SubId := <-jk.Killchan:
-			vlog("JobKiller.KillJobs: looking for killables with subid: %v", SubId)
+			vlog("JobKiller.KillJobs() killing: %v", SubId)
 			for _, kb := range jk.killables {
 				if kb.SubId == SubId {
 					kb.Kill()
 				}
 			}
-			vlog("JobKiller.KillJobs: done looking for killables with subid: %v", SubId)
+			vlog("JobKiller.KillJobs() done killing: %v", SubId)
 		case kb := <-jk.Registerchan:
-			vlog("JobKiller.KillJobs: registering killable: %v", kb)
+			vlog("JobKiller.KillJobs() registering: %v", kb)
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb
 		case kb := <-jk.Donechan:
-			vlog("JobKiller.KillJobs: removing killable: %v", kb)
+			vlog("JobKiller.KillJobs() removing: %v", kb)
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb, false
 		}
 	}

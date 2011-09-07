@@ -32,6 +32,7 @@ type ScribeJobController struct {
 
 // GET /jobs
 func (this ScribeJobController) Index(rw http.ResponseWriter) {
+	vlog("ScribeJobController.Index()")
 	items, err := this.store.All()
 	if err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -45,21 +46,22 @@ func (this ScribeJobController) Index(rw http.ResponseWriter) {
 }
 // POST /jobs
 func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) {
+	vlog("ScribeJobController.Create()")
 	if CheckApiKey(this.apikey, r) == false {
 		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return
 	}
 
 	tasks := make([]Task, 0, 100)
-	if err := loadJson(r, &tasks); err != nil {
+	if err := LoadTasksFromJson(r, &tasks); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
 	jobId := UniqueId()
-	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
-	label := getHeader(r, "x-golem-job-label", jobId)
-	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
+	owner := GetHeader(r, "x-golem-job-owner", "Anonymous")
+	label := GetHeader(r, "x-golem-job-label", jobId)
+	jobtype := GetHeader(r, "x-golem-job-type", "Unspecified")
 
 	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 	if err := this.store.Create(job, tasks); err != nil {
@@ -72,6 +74,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 }
 // GET /jobs/id
 func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
+	vlog("ScribeJobController.Find(%v)", id)
 	jd, err := this.store.Get(id)
 	if err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -83,6 +86,7 @@ func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
 }
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
+	vlog("ScribeNodeController.Act(%v):%v", r.URL.Path, parts)
 	if CheckApiKey(this.apikey, r) == false {
 		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return

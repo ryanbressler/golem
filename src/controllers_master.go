@@ -56,12 +56,12 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	}
 
 	tasks := make([]Task, 0, 100)
-	if err := loadJson(r, &tasks); err != nil {
+	if err := LoadTasksFromJson(r, &tasks); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
 	}
 
-	jobId := getHeader(r, "x-golem-job-preassigned-id", "")
+	jobId := GetHeader(r, "x-golem-job-preassigned-id", "")
 	if jobId == "" {
 		jobId = UniqueId()
 	}
@@ -74,9 +74,9 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	owner := getHeader(r, "x-golem-job-owner", "Anonymous")
-	label := getHeader(r, "x-golem-job-label", jobId)
-	jobtype := getHeader(r, "x-golem-job-type", "Unspecified")
+	owner := GetHeader(r, "x-golem-job-owner", "Anonymous")
+	label := GetHeader(r, "x-golem-job-label", jobId)
+	jobtype := GetHeader(r, "x-golem-job-type", "Unspecified")
 
 	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
 

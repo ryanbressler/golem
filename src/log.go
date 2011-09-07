@@ -24,23 +24,23 @@ import (
 	"fmt"
 )
 
-//log is a wrapper for fmt.Printf that prepends the time
-//log("error is %v, n is %v", err, n)
-//log("hello")
+// wrapper for fmt.Printf that prepends the time
+// log("error is %v, n is %v", err, n)
+// log("hello")
 func log(format string, a ...interface{}) {
 	t := time.LocalTime()
 	format = t.String() + ": " + format + "\n"
 	fmt.Printf(format, a...)
 }
 
-//vlog is a wrapper for log that only prints in verbose mode
+// wrapper for log that only prints if verbose=true in config file
 func vlog(format string, a ...interface{}) {
 	if verbose {
 		log(format, a...)
 	}
 }
 
-// warn is a wrapper for log that appends WARN message
+// wrapper for log that appends WARN message
 func warn(format string, a ...interface{}) {
 	log("WARN: "+format, a...)
 }

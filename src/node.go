@@ -27,7 +27,8 @@ import (
 	"time"
 )
 
-func PipeToChan(r io.Reader, msgType int, Id string, ch chan WorkerMessage) {
+func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
+	vlog("PipeToChan(%d,%v)", msgType, id)
 	bp := bufio.NewReader(r)
 
 	for {
@@ -35,7 +36,7 @@ func PipeToChan(r io.Reader, msgType int, Id string, ch chan WorkerMessage) {
 		if err != nil {
 			return
 		} else {
-			ch <- WorkerMessage{Type: msgType, SubId: Id, Body: line}
+			ch <- WorkerMessage{Type: msgType, SubId: id, Body: line}
 		}
 	}
 
@@ -101,9 +102,11 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 }
 
 func CheckIn(c *Connection) {
+	vlog("CheckIn(%v)", c.isWorker)
 	con := *c
 	for {
 		time.Sleep(60 * second)
+		vlog("CheckIn(%v) after sleep", c.isWorker)
 		con.OutChan <- WorkerMessage{Type: CHECKIN}
 	}
 }
