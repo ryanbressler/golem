@@ -27,7 +27,7 @@ import (
 
 func vlog(format string, a ...interface{}) {
 	if verbose {
-		logger.Output(2, fmt.Sprintf("[DEBUG] "+format, a...))
+		logger.Output(2, fmt.Sprintf(format, a...))
 	}
 }
 
