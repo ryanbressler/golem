@@ -25,6 +25,7 @@ import (
 )
 
 func UniqueId() string {
+	vlog("UniqueId()")
 	subId := make([]byte, 16)
 	if _, err := rand.Read(subId); err != nil {
 		warn("UniqueId(): %v", err)

@@ -25,7 +25,8 @@ import (
 	"os"
 )
 
-func getHeader(r *http.Request, headerName string, defaultValue string) string {
+func GetHeader(r *http.Request, headerName string, defaultValue string) string {
+	vlog("GetHeader(%v,%v,%v)", r.URL.Path, headerName, defaultValue)
 	val := r.Header.Get(headerName)
 	if val != "" {
 		return val
@@ -33,30 +34,37 @@ func getHeader(r *http.Request, headerName string, defaultValue string) string {
 	return defaultValue
 }
 
-func loadJson(r *http.Request, tasks *[]Task) (err os.Error) {
-	vlog("loadJson")
+func LoadTasksFromJson(r *http.Request, tasks *[]Task) (err os.Error) {
+	vlog("LoadTasksFromJson(%v)", r.URL.Path)
 
 	mpreader, err := r.MultipartReader()
 	if err != nil {
+		warn("LoadTasksFromJson(%v) MultipartReader: %v", r.URL.Path, err)
 		return
 	}
 
 	frm, err := mpreader.ReadForm(10000)
 	if err != nil {
+		warn("LoadTasksFromJson(%v) ReadForm: %v", r.URL.Path, err)
 		return
 	}
 
 	jsonfile, err := frm.File["jsonfile"][0].Open()
 	if err != nil {
+		warn("LoadTasksFromJson(%v) Open: %v", r.URL.Path, err)
 		return
 	}
 	defer jsonfile.Close()
 
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
+	if err != nil {
+		warn("LoadTasksFromJson(%v) Decode: %v", r.URL.Path, err)
+	}
 	return
 }
 
 func CheckApiKey(apikey string, r *http.Request) bool {
+	vlog("CheckApiKey(%v %v)", r.Method, r.URL.Path)
 	if apikey != "" {
 		headerkey := r.Header.Get("x-golem-apikey")
 		if headerkey == "" {

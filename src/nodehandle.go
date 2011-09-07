@@ -36,6 +36,7 @@ type NodeHandle struct {
 }
 
 func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
+	vlog("NewNodeHandle(%v)", n.isWorker)
 	con := *n
 	id := UniqueId()
 	nh := NodeHandle{NodeId: id,
@@ -67,6 +68,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 }
 
 func (nh *NodeHandle) Stats() (processes int, running int) {
+	vlog("Stats()")
 	running = <-nh.Running
 	nh.Running <- running
 	processes = <-nh.MaxJobs
@@ -74,9 +76,10 @@ func (nh *NodeHandle) Stats() (processes int, running int) {
 	return
 }
 
-func (nh *NodeHandle) ReSize(NewMaxJobs int) {
+func (nh *NodeHandle) ReSize(newMaxJobs int) {
+	vlog("ReSize(%d)", newMaxJobs)
 	<-nh.MaxJobs
-	nh.MaxJobs <- NewMaxJobs
+	nh.MaxJobs <- newMaxJobs
 }
 
 // turns job into JSON and send to connections outbox. Seems to sleep or deadlock if left alone to long so the worker checks-in every 60 seconds.
@@ -92,12 +95,11 @@ func (nh *NodeHandle) SendJob(j *WorkerJob) {
 }
 
 func (nh *NodeHandle) Monitor() {
+	vlog("Monitor(): [%v]", nh.Hostname)
 	//control loop
 	for {
-		running := <-nh.Running
-		nh.Running <- running
-		processes := <-nh.MaxJobs
-		nh.MaxJobs <- processes
+		processes, running := nh.Stats()
+		vlog("Monitor(): [%v %d %d]", nh.Hostname, processes, running)
 
 		switch {
 		case running < processes:

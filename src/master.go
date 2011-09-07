@@ -45,6 +45,7 @@ func NewMaster() *Master {
 }
 
 func (m *Master) GetSub(subId string) *Submission {
+	vlog("GetSub(%v)", subId)
 	m.subMu.RLock()
 	defer m.subMu.RUnlock()
 	return m.subMap[subId]
@@ -73,6 +74,7 @@ func (m *Master) Broadcast(msg *WorkerMessage) {
 
 // remove node handles from the map used to store them as they disconnect
 func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
+	vlog("RemoveNodeOnDeath(%v)", nh.NodeId)
 	<-nh.Con.DiedChan
 	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh, false

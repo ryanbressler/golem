@@ -36,9 +36,10 @@ import (
 
 //connect a web socket to the master as a worker
 func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
+	vlog("OpenWebSocketToMaster(%v)", master)
 	origin, err := os.Hostname()
 	if err != nil {
-		warn("OpenWebSocketToMaster(): %v", err)
+		warn("OpenWebSocketToMaster(%v) Origin: %v", master, err)
 	}
 
 	prot := "ws"
@@ -48,13 +49,14 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 
 	url := fmt.Sprintf("%v://%v/master/", prot, master)
 	if ws, err = websocket.Dial(url, "", origin); err != nil {
-		panic(err)
+		warn("OpenWebSocketToMaster(%v) Dial: %v", master, err)
 	}
 	return
 }
 
 //returns our custom tls configuration
-func getTlsConfig() *tls.Config {
+func GetTlsConfig() *tls.Config {
+	vlog("GetTlsConfig()")
 	certs := []tls.Certificate{}
 
 	if certpath != "" {
@@ -66,16 +68,17 @@ func getTlsConfig() *tls.Config {
 	return &tls.Config{Certificates: certs, AuthenticateClient: true}
 }
 
-//a replacment for ListenAndServeTLS that loads our custom confiuration usage is identical to http.ListenAndServe
+// replacement for ListenAndServeTLS that loads our custom configuration usage is identical to http.ListenAndServe
 func ConfigListenAndServeTLS(hostname string) (err os.Error) {
-	listener, err := tls.Listen("tcp", hostname, getTlsConfig())
+	log("ConfigListenAndServeTLS(%v)", hostname)
+	listener, err := tls.Listen("tcp", hostname, GetTlsConfig())
 	if err != nil {
-		warn("ConfigListenAndServeTLS(): %v", err)
+		warn("ConfigListenAndServeTLS(%v) Listen: %v", hostname, err)
 		return
 	}
 
 	if err := http.Serve(listener, nil); err != nil {
-		warn("ConfigListenAndServeTLS(): %v", err)
+		warn("ConfigListenAndServeTLS(%v) Serve: %v", hostname, err)
 	}
 	return
 }
@@ -136,17 +139,16 @@ func GenerateTlsCert() tls.Certificate {
 }
 
 // setup master, usage is identical to http.ListenAndServe but this relies on global useTls being set
-func ListenAndServeTLSorNot(hostname string) os.Error {
+func ListenAndServeTLSorNot(hostname string) (err os.Error) {
+	vlog("ListenAndServeTLSorNot(%v)", hostname)
 	if useTls {
-		if err := ConfigListenAndServeTLS(hostname); err != nil {
-			warn("ListenAndServeTLSorNot(): %v", err)
-			return err
+		if err = ConfigListenAndServeTLS(hostname); err != nil {
+			warn("ListenAndServeTLSorNot(%v) ConfigListenAndServeTLS: %v", hostname, err)
 		}
 	} else {
-		if err := http.ListenAndServe(hostname, nil); err != nil {
-			warn("ListenAndServeTLSorNot(): %v", err)
-			return err
+		if err = http.ListenAndServe(hostname, nil); err != nil {
+			warn("ListenAndServeTLSorNot(%v) ListenAndServe: %v", hostname, err)
 		}
 	}
-	return nil
+	return
 }
