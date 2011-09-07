@@ -55,12 +55,12 @@ func (con Connection) SendMsgs() {
 
 		msgjson, err := json.Marshal(msg)
 		if err != nil {
-			warn("SendMsgs() [json.Marshal]: %v", err)
+			logger.Warn(err)
 			return
 		}
 
 		if _, err := con.Socket.Write(msgjson); err != nil {
-			warn("SendMsgs() [Socket.Write]: %v", err)
+			logger.Warn(err)
 		}
 	}
 }
@@ -72,7 +72,7 @@ func (con Connection) GetMsgs() {
 		var msg WorkerMessage
 		err := decoder.Decode(&msg)
 		if err != nil {
-			warn("GetMsgs(): %v", err)
+			logger.Warn(err)
 		}
 
 		switch {

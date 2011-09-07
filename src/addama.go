@@ -52,7 +52,7 @@ func NewAddamaProxy(addamaConn AddamaConnection) *AddamaProxy {
 	service := fmt.Sprintf(" { uri: '%v', url: '%v', label: '%v' } ", serviceUri, serviceHost, label)
 	header := registrar.Register("/addama/registry/services/"+serviceName, "service", service)
 	registrykey := header.Get("x-addama-registry-key")
-	log("registrykey:%v", registrykey)
+	logger.Printf("registrykey:%v", registrykey)
 
 	mapping := fmt.Sprintf(" { uri: '%v', label: '%v', service: '%v' } ", uri, label, serviceUri)
 	registrar.Register("/addama/registry/mappings"+uri, "mapping", mapping)
@@ -103,7 +103,7 @@ type AddamaProxy struct {
 }
 
 func (this *AddamaProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log("AddamaProxy.ServeHTTP(%v %v)", r.Method, r.URL.Path)
+	logger.Printf("AddamaProxy.ServeHTTP(%v %v)", r.Method, r.URL.Path)
 
 	if this.registrykey != r.Header.Get("x-addama-registry-key") {
 		http.Error(w, "Registry key does not match", http.StatusForbidden)

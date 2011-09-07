@@ -25,8 +25,12 @@ import (
 	"github.com/codeforsystemsbiology/rest.go"
 )
 
+var logger *VerboseLogger
+
 //parse args and start as master, scribe, addama proxy or worker
 func main() {
+	logger = NewVerboseLogger()
+
 	var configurationFile string
 	var isMaster bool
 	var isScribe bool
@@ -120,11 +124,11 @@ func StartAddama(configFile ConfigurationFile) {
 func StartWorker(configFile ConfigurationFile) {
 	processes, err := configFile.GetInt("worker", "processes")
 	if err != nil {
-		warn("StartWorker(): %v", err)
+		logger.Warn(err)
 		processes = 3
 	}
 	masterhost := configFile.GetRequiredString("worker", "masterhost")
-	log("StartWorker() [%v, %d]", masterhost, processes)
+	logger.Printf("StartWorker() [%v, %d]", masterhost, processes)
 	RunNode(processes, masterhost)
 }
 
@@ -132,7 +136,7 @@ func StartWorker(configFile ConfigurationFile) {
 // optional parameters:  default.contentDirectory (location of html content to be served at https://example.com/ or https://example.com/html/index.html
 func StartHtmlHandler(configFile ConfigurationFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
-		log("StartHtmlHandler(): serving HTML content from [%v]", contentDir)
+		logger.Printf("StartHtmlHandler(): serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
 		http.Handle("/", http.RedirectHandler("/html/index.html", http.StatusTemporaryRedirect))
 	}

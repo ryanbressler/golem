@@ -52,7 +52,7 @@ func (m *Master) GetSub(subId string) *Submission {
 }
 
 func (m *Master) Listen(ws *websocket.Conn) {
-	log("Listen(%v): node connecting", ws.LocalAddr().String())
+	logger.Printf("Listen(%v): node connecting", ws.LocalAddr().String())
 	nh := NewNodeHandle(NewConnection(ws, false), m)
 	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh

@@ -39,26 +39,26 @@ func LoadTasksFromJson(r *http.Request, tasks *[]Task) (err os.Error) {
 
 	mpreader, err := r.MultipartReader()
 	if err != nil {
-		warn("LoadTasksFromJson(%v) MultipartReader: %v", r.URL.Path, err)
+		logger.Warn(err)
 		return
 	}
 
 	frm, err := mpreader.ReadForm(10000)
 	if err != nil {
-		warn("LoadTasksFromJson(%v) ReadForm: %v", r.URL.Path, err)
+		logger.Warn(err)
 		return
 	}
 
 	jsonfile, err := frm.File["jsonfile"][0].Open()
 	if err != nil {
-		warn("LoadTasksFromJson(%v) Open: %v", r.URL.Path, err)
+		logger.Warn(err)
 		return
 	}
 	defer jsonfile.Close()
 
 	err = json.NewDecoder(jsonfile).Decode(&tasks)
 	if err != nil {
-		warn("LoadTasksFromJson(%v) Decode: %v", r.URL.Path, err)
+		logger.Warn(err)
 	}
 	return
 }

@@ -47,22 +47,22 @@ func (this *MongoJobStore) GetCollection(collectionName string) (c mgo.Collectio
 }
 
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) os.Error {
-	vlog("MongoJobStore.Create(%v)", item)
+	logger.Debug("Create(%v)", item)
 	jobsCollection, err := this.GetCollection(this.JobsCollection)
 	if err != nil {
-		warn("MongoJobStore.Create() Jobs: %v", err)
+		logger.Warn(err)
 		return err
 	}
 
 	err = jobsCollection.Insert(item)
 	if err != nil {
-		warn("MongoJobStore.Create() Insert: %v", err)
+		logger.Warn(err)
 		return err
 	}
 
 	tasksCollection, err := this.GetCollection(this.TasksCollection)
 	if err != nil {
-		warn("MongoJobStore.Create() Tasks: %v", err)
+		logger.Warn(err)
 		return err
 	}
 
@@ -82,16 +82,16 @@ func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
-	vlog("MongoJobStore.Get(%v)", jobId)
+	logger.Debug("Get(%v)", jobId)
 	jobsCollection, err := this.GetCollection(this.JobsCollection)
 	if err != nil {
-		warn("MongoJobStore.Get(%v) GetCollection: %v", jobId, err)
+		logger.Warn(err)
 		return
 	}
 
 	err = jobsCollection.Find(bson.M{"jobid": jobId}).One(&item)
 	if err != nil {
-		warn("MongoJobStore.Get(%v) One: %v", jobId, err)
+		logger.Warn(err)
 		return
 	}
 	return
@@ -100,14 +100,14 @@ func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 	tasksCollection, err := this.GetCollection(this.TasksCollection)
 	if err != nil {
-		warn("MongoJobStore.Tasks(%v) GetCollection: %v", jobId, err)
+		logger.Warn(err)
 		return
 	}
 
 	item := TaskHolder{}
 	err = tasksCollection.Find(bson.M{"jobid": jobId}).One(&item)
 	if err != nil {
-		warn("MongoJobStore.Tasks(%v) One: %v", jobId, err)
+		logger.Warn(err)
 		return
 	}
 
@@ -116,21 +116,21 @@ func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
 }
 
 func (this *MongoJobStore) Update(item JobDetails) os.Error {
-	vlog("MongoJobStore.Update(%v)", item)
+	logger.Debug("Update(%v)", item)
 	if item.JobId == "" {
 		return os.NewError("No Job Id Found")
 	}
 
 	jobsCollection, err := this.GetCollection(this.JobsCollection)
 	if err != nil {
-		warn("MongoJobStore.Update() GetCollection: %v", err)
+		logger.Warn(err)
 		return err
 	}
 
 	existing := JobDetails{}
 	err = jobsCollection.Find(bson.M{"jobid": item.JobId}).One(&existing)
 	if err != nil {
-		warn("MongoJobStore.Update() One: %v", err)
+		logger.Warn(err)
 		return err
 	}
 
@@ -140,28 +140,28 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 	existing.Running = item.Running
 	existing.Scheduled = item.Scheduled
 
-	vlog("MongoJobStore.Update(%v): %v", item, existing)
+	logger.Debug("Update(%v): %v", item, existing)
 	return jobsCollection.Update(bson.M{"jobid": item.JobId}, existing)
 }
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
-	vlog("MongoJobStore.FindJobs(%v)", m)
+	logger.Debug("FindJobs(%v)", m)
 	jobsCollection, err := this.GetCollection(this.JobsCollection)
 	if err != nil {
-		warn("MongoJobStore.FindJobs(%v) GetCollection: %v", m, err)
+		logger.Warn(err)
 		return
 	}
 
 	iter, err := jobsCollection.Find(m).Iter()
 	if err != nil {
-		warn("MongoJobStore.FindJobs(%v) Iter: %v", m, err)
+		logger.Warn(err)
 		return
 	}
 
 	for {
 		jd := JobDetails{}
 		if nexterr := iter.Next(&jd); nexterr != nil {
-			warn("MongoJobStore.FindJobs(%v) Next: %v", m, nexterr)
+			logger.Warn(nexterr)
 			break
 		}
 		items = append(items, jd)

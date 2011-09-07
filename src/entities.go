@@ -145,8 +145,9 @@ type WorkerJob struct {
 
 // NewJob creates a job from a json string (usually a message body)
 func NewWorkerJob(jsonjob string) (job *WorkerJob) {
+	logger.Debug("NewWorkerJob(%v)", jsonjob)
 	if err := json.Unmarshal([]byte(jsonjob), &job); err != nil {
-		warn("NewWorkerJob(%v): %v", jsonjob, err)
+		logger.Warn(err)
 	}
 	return
 }
