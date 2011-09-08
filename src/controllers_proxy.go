@@ -37,7 +37,7 @@ func (this ProxyNodeController) Index(rw http.ResponseWriter) {
 		return
 	}
 
-	vlog("ProxyNodeController.Index():%v", this.target)
+	logger.Debug("proxying /nodes to %v", this.target)
 	proxy := http.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }
@@ -49,7 +49,7 @@ func (this ProxyNodeController) Find(rw http.ResponseWriter, nodeId string) {
 		return
 	}
 
-	vlog("ProxyNodeController.Find(%v):%v", nodeId, this.target)
+	logger.Debug("proxying /nodes/%v to %v", nodeId, this.target)
 	proxy := http.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }
@@ -75,7 +75,7 @@ func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *h
 
 	preq.Header.Set("x-golem-apikey", this.apikey)
 
-	vlog("ProxyNodeController.Act():%v", this.target)
+	logger.Debug("proxying %v to %v", r.URL.Path, this.target)
 	proxy := http.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }

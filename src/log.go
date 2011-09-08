@@ -25,12 +25,6 @@ import (
 	"os"
 )
 
-func vlog(format string, a ...interface{}) {
-	if verbose {
-		logger.Output(2, fmt.Sprintf(format, a...))
-	}
-}
-
 // constructs a new verbose logger that wraps a standard out logger
 func NewVerboseLogger() *VerboseLogger {
 	return &VerboseLogger{log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)}

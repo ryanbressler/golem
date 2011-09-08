@@ -36,7 +36,7 @@ type NodeHandle struct {
 }
 
 func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
-	vlog("NewNodeHandle(%v)", n.isWorker)
+	logger.Debug("NewNodeHandle(%v)", n.isWorker)
 	con := *n
 	id := UniqueId()
 	nh := NodeHandle{NodeId: id,
@@ -60,15 +60,15 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 		}
 		nh.MaxJobs <- val
 	} else {
-		vlog("%v didn't say hello as first message.", nh.Hostname)
+		logger.Debug("%v didn't say hello as first message.", nh.Hostname)
 		return nil
 	}
-	vlog("%v says hello and asks for %v jobs.", nh.Hostname, msg.Body)
+	logger.Debug("%v says hello and asks for %v jobs.", nh.Hostname, msg.Body)
 	return &nh
 }
 
 func (nh *NodeHandle) Stats() (processes int, running int) {
-	vlog("Stats()")
+	logger.Debug("Stats()")
 	running = <-nh.Running
 	nh.Running <- running
 	processes = <-nh.MaxJobs
@@ -77,7 +77,7 @@ func (nh *NodeHandle) Stats() (processes int, running int) {
 }
 
 func (nh *NodeHandle) ReSize(newMaxJobs int) {
-	vlog("ReSize(%d)", newMaxJobs)
+	logger.Debug("ReSize(%d)", newMaxJobs)
 	<-nh.MaxJobs
 	nh.MaxJobs <- newMaxJobs
 }
@@ -85,7 +85,7 @@ func (nh *NodeHandle) ReSize(newMaxJobs int) {
 // turns job into JSON and send to connections outbox. Seems to sleep or deadlock if left alone to long so the worker checks-in every 60 seconds.
 func (nh *NodeHandle) SendJob(j *WorkerJob) {
 	job := *j
-	vlog("SendJob(%v): %v", job, nh.Hostname)
+	logger.Debug("SendJob(%v): %v", job, nh.Hostname)
 	jobjson, err := json.Marshal(job)
 	if err != nil {
 		logger.Warn(err)
@@ -95,32 +95,32 @@ func (nh *NodeHandle) SendJob(j *WorkerJob) {
 }
 
 func (nh *NodeHandle) Monitor() {
-	vlog("Monitor(): [%v]", nh.Hostname)
+	logger.Debug("Monitor(): [%v]", nh.Hostname)
 	//control loop
 	for {
 		processes, running := nh.Stats()
-		vlog("Monitor(): [%v %d %d]", nh.Hostname, processes, running)
+		logger.Debug("[%v %d %d]", nh.Hostname, processes, running)
 
 		switch {
 		case running < processes:
-			vlog("Monitor(): %v running %v. Waiting for job or message.", nh.Hostname, running)
+			logger.Debug("waiting for job or message [%v, %d]", nh.Hostname, running)
 			select {
 			case bcMsg := <-nh.BroadcastChan:
-				vlog("Monitor(): %v broadcasting message %v", nh.Hostname, *bcMsg)
+				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
 				running := <-nh.Running
 				nh.Running <- running + 1
-				vlog("Monitor(): %v assigned job, %v running", nh.Hostname, running)
+				logger.Debug("assigning [%v, %d]", nh.Hostname, running)
 			case msg := <-nh.Con.InChan:
 				nh.HandleWorkerMessage(&msg)
 			}
 		default:
-			vlog("Monitor(): %v running %v. Waiting for message.", nh.Hostname, running)
+			logger.Debug("waiting for message [%v, %v]", nh.Hostname, running)
 			select {
 			case bcMsg := <-nh.BroadcastChan:
-				vlog("Monitor(): %v broadcast message %v", nh.Hostname, *bcMsg)
+				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case msg := <-nh.Con.InChan:
 				nh.HandleWorkerMessage(&msg)
@@ -131,31 +131,31 @@ func (nh *NodeHandle) Monitor() {
 
 //handle worker messages and updates the value in nh.Running if appropriate
 func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
-	vlog("msg from %v", nh.Hostname)
+	logger.Debug("message from: %v", nh.Hostname)
 	switch msg.Type {
 	default:
 	case CHECKIN:
-		vlog("CHECKIN %v", nh.Hostname)
+		logger.Debug("CHECKIN [%v]", nh.Hostname)
 	case COUT:
-		vlog("COUT %v", nh.Hostname)
+		logger.Debug("COUT [%v]", nh.Hostname)
 		nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body
 	case CERROR:
-		vlog("CERROR %v", nh.Hostname)
+		logger.Debug("CERROR [%v]", nh.Hostname)
 		nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body
 	case JOBFINISHED:
-		vlog("JOBFINISHED %v", nh.Hostname)
+		logger.Debug("JOBFINISHED [%v]", nh.Hostname)
 		running := <-nh.Running
 		nh.Running <- running - 1
-		vlog("JOBFINISHED %v job finished: %v running: %v", nh.Hostname, msg.Body, running)
+		logger.Debug("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
-		logger.Printf("JOBFINISHED %v finished: %v, running: %v", nh.Hostname, msg.Body, running)
+		logger.Printf("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 	case JOBERROR:
-		vlog("JOBERROR %v", nh.Hostname)
+		logger.Debug("JOBERROR %v", nh.Hostname)
 		running := <-nh.Running
 		nh.Running <- running - 1
-		vlog("JOBERROR %v %v running:%v", nh.Hostname, msg.Body, running)
+		logger.Debug("JOBERROR running [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
-		vlog("JOBERROR %v finished sent to Sub: %v running:%v", nh.Hostname, msg.Body, running)
+		logger.Debug("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
 	}
-	vlog("%v msg handled", nh.Hostname)
+	logger.Debug("message handled: %v", nh.Hostname)
 }

@@ -32,7 +32,7 @@ type ScribeJobController struct {
 
 // GET /jobs
 func (this ScribeJobController) Index(rw http.ResponseWriter) {
-	vlog("ScribeJobController.Index()")
+	logger.Debug("Index()")
 	items, err := this.store.All()
 	if err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -46,7 +46,7 @@ func (this ScribeJobController) Index(rw http.ResponseWriter) {
 }
 // POST /jobs
 func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) {
-	vlog("ScribeJobController.Create()")
+	logger.Debug("Create()")
 	if CheckApiKey(this.apikey, r) == false {
 		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return
@@ -74,7 +74,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 }
 // GET /jobs/id
 func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
-	vlog("ScribeJobController.Find(%v)", id)
+	logger.Debug("Find(%v)", id)
 	jd, err := this.store.Get(id)
 	if err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
@@ -86,7 +86,7 @@ func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
 }
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
-	vlog("ScribeNodeController.Act(%v):%v", r.URL.Path, parts)
+	logger.Debug("Act(%v):%v", r.URL.Path, parts)
 	if CheckApiKey(this.apikey, r) == false {
 		http.Error(rw, "api key required in header", http.StatusForbidden)
 		return

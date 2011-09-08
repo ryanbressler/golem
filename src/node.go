@@ -28,7 +28,7 @@ import (
 )
 
 func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
-	vlog("PipeToChan(%d,%v)", msgType, id)
+	logger.Debug("PipeToChan(%d,%v)", msgType, id)
 	bp := bufio.NewReader(r)
 
 	for {
@@ -43,7 +43,7 @@ func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
 }
 
 func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *JobKiller) {
-	vlog("StartJob(%v)", jsonjob)
+	logger.Debug("StartJob(%v)", jsonjob)
 	con := *cn
 
 	job := NewWorkerJob(jsonjob)
@@ -102,11 +102,11 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 }
 
 func CheckIn(c *Connection) {
-	vlog("CheckIn(%v)", c.isWorker)
+	logger.Debug("CheckIn(%v)", c.isWorker)
 	con := *c
 	for {
 		time.Sleep(60 * second)
-		vlog("CheckIn(%v) after sleep", c.isWorker)
+		logger.Debug("CheckIn(%v) after sleep", c.isWorker)
 		con.OutChan <- WorkerMessage{Type: CHECKIN}
 	}
 }
@@ -115,7 +115,7 @@ func RunNode(processes int, master string) {
 	running := 0
 
 	jk := NewJobKiller()
-	vlog("RunNode(): Running as %d process node owned by %v", processes, master)
+	logger.Debug("Running as %d process node owned by %v", processes, master)
 
 	ws := OpenWebSocketToMaster(master)
 
@@ -125,15 +125,15 @@ func RunNode(processes int, master string) {
 	replyc := make(chan *WorkerMessage)
 
 	for {
-		vlog("RunNode(): Waiting for done or msg.")
+		logger.Debug("Waiting for done or msg.")
 		select {
 		case rv := <-replyc:
-			vlog("Got 'done' signal")
+			logger.Debug("Got 'done' signal")
 			mcon.OutChan <- *rv
 			running--
 
 		case msg := <-mcon.InChan:
-			vlog("Got master msg")
+			logger.Debug("Got master msg")
 			switch msg.Type {
 			case START:
 				logger.Printf("START")

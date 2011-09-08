@@ -34,7 +34,7 @@ type MongoJobStore struct {
 }
 
 func (this *MongoJobStore) GetCollection(collectionName string) (c mgo.Collection, err os.Error) {
-	vlog("GetCollection(%v)", collectionName)
+	logger.Debug("GetCollection(%v)", collectionName)
 	session, err := mgo.Mongo(this.Host)
 	if err != nil {
 		return

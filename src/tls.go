@@ -36,7 +36,7 @@ import (
 
 //connect a web socket to the master as a worker
 func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
-	vlog("OpenWebSocketToMaster(%v)", master)
+	logger.Debug("OpenWebSocketToMaster(%v)", master)
 	origin, err := os.Hostname()
 	if err != nil {
 		logger.Warn(err)
@@ -56,7 +56,7 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 
 //returns our custom tls configuration
 func GetTlsConfig() *tls.Config {
-	vlog("GetTlsConfig()")
+	logger.Debug("GetTlsConfig")
 	certs := []tls.Certificate{}
 
 	if certpath != "" {
@@ -140,7 +140,7 @@ func GenerateTlsCert() tls.Certificate {
 
 // setup master, usage is identical to http.ListenAndServe but this relies on global useTls being set
 func ListenAndServeTLSorNot(hostname string) (err os.Error) {
-	vlog("ListenAndServeTLSorNot(%v)", hostname)
+	logger.Debug("ListenAndServeTLSorNot(%v)", hostname)
 	if useTls {
 		if err = ConfigListenAndServeTLS(hostname); err != nil {
 			logger.Warn(err)

@@ -26,7 +26,7 @@ import (
 )
 
 func GetHeader(r *http.Request, headerName string, defaultValue string) string {
-	vlog("GetHeader(%v,%v,%v)", r.URL.Path, headerName, defaultValue)
+	logger.Debug("GetHeader(%v,%v,%v)", r.URL.Path, headerName, defaultValue)
 	val := r.Header.Get(headerName)
 	if val != "" {
 		return val
@@ -35,7 +35,7 @@ func GetHeader(r *http.Request, headerName string, defaultValue string) string {
 }
 
 func LoadTasksFromJson(r *http.Request, tasks *[]Task) (err os.Error) {
-	vlog("LoadTasksFromJson(%v)", r.URL.Path)
+	logger.Debug("LoadTasksFromJson(%v)", r.URL.Path)
 
 	mpreader, err := r.MultipartReader()
 	if err != nil {
@@ -64,7 +64,7 @@ func LoadTasksFromJson(r *http.Request, tasks *[]Task) (err os.Error) {
 }
 
 func CheckApiKey(apikey string, r *http.Request) bool {
-	vlog("CheckApiKey(%v %v)", r.Method, r.URL.Path)
+	logger.Debug("CheckApiKey(%v %v)", r.Method, r.URL.Path)
 	if apikey != "" {
 		headerkey := r.Header.Get("x-golem-apikey")
 		if headerkey == "" {
