@@ -25,7 +25,7 @@ import (
 )
 
 func UniqueId() string {
-	vlog("UniqueId()")
+	logger.Debug("UniqueId")
 	subId := make([]byte, 16)
 	if _, err := rand.Read(subId); err != nil {
 		logger.Warn(err)

@@ -45,7 +45,7 @@ func NewMaster() *Master {
 }
 
 func (m *Master) GetSub(subId string) *Submission {
-	vlog("GetSub(%v)", subId)
+	logger.Debug("GetSub(%v)", subId)
 	m.subMu.RLock()
 	defer m.subMu.RUnlock()
 	return m.subMap[subId]
@@ -64,17 +64,17 @@ func (m *Master) Listen(ws *websocket.Conn) {
 // sends a message to every connected worker
 func (m *Master) Broadcast(msg *WorkerMessage) {
 	m.nodeMu.RLock()
-	vlog("Broadcast(%v): to %v nodes", *msg, len(m.NodeHandles))
+	logger.Debug("Broadcast(%v): to %v nodes", *msg, len(m.NodeHandles))
 	for _, nh := range m.NodeHandles {
 		nh.BroadcastChan <- msg
 	}
 	m.nodeMu.RUnlock()
-	vlog("Broadcast(): done")
+	logger.Debug("Broadcast(): done")
 }
 
 // remove node handles from the map used to store them as they disconnect
 func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
-	vlog("RemoveNodeOnDeath(%v)", nh.NodeId)
+	logger.Debug("RemoveNodeOnDeath(%v)", nh.NodeId)
 	<-nh.Con.DiedChan
 	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh, false

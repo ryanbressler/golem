@@ -44,20 +44,20 @@ func LaunchScribe(store JobStore, target string, apikey string) {
 }
 
 func (this *Scribe) PollJobs() {
-	vlog("Scribe.PollJobs")
+	logger.Debug("PollJobs")
 	for _, jd := range this.GetJobs() {
 		this.store.Update(jd)
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
-	vlog("Scribe.PollJobs:unsheduled:%d", len(unscheduled))
+	logger.Debug("unsheduled=%d", len(unscheduled))
 	for _, u := range unscheduled {
 		this.PostJob(u)
 	}
 }
 
 func (this *Scribe) GetJobs() []JobDetails {
-	vlog("Scribe.GetJobs()")
+	logger.Debug("GetJobs()")
 	resp, err := http.Get(this.masterJobsUrl)
 	if err != nil {
 		return nil
@@ -69,7 +69,7 @@ func (this *Scribe) GetJobs() []JobDetails {
 }
 
 func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
-	vlog("Scribe.PostJob(%v)", jd.JobId)
+	logger.Debug("PostJob(%v)", jd.JobId)
 
 	tasks, err := this.store.Tasks(jd.JobId)
 	if err != nil {

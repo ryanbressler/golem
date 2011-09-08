@@ -66,7 +66,7 @@ func NewRegistrar(connectionFilePath string) *Registrar {
 	connectionFile := ConfigurationFile{c}
 	host, _ := connectionFile.GetString("Connection", "host")
 	apikey, _ := connectionFile.GetString("Connection", "apikey")
-	vlog("NewRegistrar(%v):%v,%v", connectionFilePath, host, apikey)
+	logger.Debug("NewRegistrar(%v):%v,%v", connectionFilePath, host, apikey)
 	return &Registrar{host: "https://" + host, apikey: apikey}
 }
 
@@ -76,7 +76,7 @@ type Registrar struct {
 }
 
 func (this *Registrar) Register(uri string, registrationType string, registration string) http.Header {
-	vlog("Register(%v%v, %v, %v)", this.host, uri, registrationType, registration)
+	logger.Debug("Register(%v%v, %v, %v)", this.host, uri, registrationType, registration)
 
 	requestBuilder := httplib.Post(this.host + uri)
 	requestBuilder.Header("x-addama-apikey", this.apikey)
@@ -90,7 +90,7 @@ func (this *Registrar) Register(uri string, registrationType string, registratio
 		panic(fmt.Sprintf("unable to properly register:%v", resp))
 	}
 
-	vlog("Register(%v%v): %d", this.host, uri, resp.StatusCode)
+	logger.Debug("Register(%v%v): %d", this.host, uri, resp.StatusCode)
 
 	return resp.Header
 }

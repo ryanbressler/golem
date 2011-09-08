@@ -39,7 +39,7 @@ type Submission struct {
 }
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submission {
-	vlog("NewSubmission(%v)", jd)
+	logger.Debug("NewSubmission(%v)", jd)
 	s := Submission{
 		Details:      make(chan JobDetails, 1),
 		Tasks:        tasks,
@@ -59,9 +59,9 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 }
 
 func (s *Submission) Stop() bool {
-	vlog("Stop()")
+	logger.Debug("Stop()")
 	dtls := s.SniffDetails()
-	vlog("Stop(): %v", dtls.JobId)
+	logger.Debug("Stop(): %v", dtls.JobId)
 
 	if dtls.Running {
 		select {
@@ -81,14 +81,14 @@ func (s *Submission) Stop() bool {
 }
 
 func (this *Submission) SniffDetails() JobDetails {
-	vlog("SniffDetails()")
+	logger.Debug("SniffDetails()")
 	dtls := <-this.Details
 	this.Details <- dtls
 	return dtls
 }
 
 func (s Submission) MonitorWorkTasks() {
-	vlog("MonitorWorkTasks()")
+	logger.Debug("MonitorWorkTasks()")
 	for {
 		select {
 		case <-s.ErrorChan:
@@ -97,7 +97,7 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
-			vlog("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
+			logger.Debug("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
 
 		case <-s.FinishedChan:
 			dtls := <-s.Details
@@ -105,12 +105,12 @@ func (s Submission) MonitorWorkTasks() {
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 
-			vlog("FINISHED [%v,%v]", dtls.JobId, dtls.Progress.Finished)
+			logger.Debug("FINISHED [%v,%v]", dtls.JobId, dtls.Progress.Finished)
 		}
 
 		dtls := s.SniffDetails()
 		if dtls.Progress.isComplete() {
-			vlog("COMPLETED [%v]", dtls.JobId)
+			logger.Debug("COMPLETED [%v]", dtls.JobId)
 			dtls = <-s.Details
 			dtls.Running = false
 			dtls.LastModified = time.LocalTime().String()
@@ -119,14 +119,14 @@ func (s Submission) MonitorWorkTasks() {
 			s.stopChan <- 1
 			s.stopChan <- 1
 			s.stopChan <- 1
-			vlog("COMPLETED [%v]: DONE", dtls.JobId)
+			logger.Debug("COMPLETED [%v]: DONE", dtls.JobId)
 			return
 		}
 	}
 }
 
 func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
-	vlog("SubmitJobs()")
+	logger.Debug("SubmitJobs()")
 
 	dtls := <-s.Details
 	dtls.Scheduled = true
@@ -136,7 +136,7 @@ func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
 
 	taskId := 0
 	for lineId, vals := range s.Tasks {
-		vlog("[%d,%v]", lineId, vals)
+		logger.Debug("[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
 			case jobChan <- &WorkerJob{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
@@ -151,7 +151,7 @@ func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
 
 func (s Submission) WriteIo() {
 	dtls := s.SniffDetails()
-	vlog("WriteIo(%v)", dtls.JobId)
+	logger.Debug("WriteIo(%v)", dtls.JobId)
 
 	var stdOutFile io.WriteCloser = nil
 	var stdErrFile io.WriteCloser = nil
@@ -182,10 +182,10 @@ func (s Submission) WriteIo() {
 
 			fmt.Fprint(stdErrFile, errmsg)
 		case <-time.After(1 * second):
-			vlog("checking for done: %v", dtls.JobId)
+			logger.Debug("checking for done: %v", dtls.JobId)
 			select {
 			case <-s.stopChan:
-				vlog("stop chan: %v", dtls.JobId)
+				logger.Debug("stop chan: %v", dtls.JobId)
 				return
 			default:
 			}

@@ -121,9 +121,9 @@ type WorkerNode struct {
 }
 
 func NewWorkerNode(nh *NodeHandle) WorkerNode {
-	vlog("NewWorkerNode()")
+	logger.Debug("NewWorkerNode()")
 	maxJobs, running := nh.Stats()
-	vlog("NewWorkerNode():%d,%d", maxJobs, running)
+	logger.Debug("creating new worker: %d,%d", maxJobs, running)
 	return WorkerNode{NodeId: nh.NodeId, Uri: nh.Uri, Hostname: nh.Hostname,
 		MaxJobs: maxJobs, RunningJobs: running, Running: (running > 0)}
 }
