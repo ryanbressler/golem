@@ -24,7 +24,6 @@ import (
 	"syscall"
 )
 
-
 // links a SubId and JobId with a pid that can be used to kill it
 type Killable struct {
 	Pid   int
