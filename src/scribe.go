@@ -63,8 +63,10 @@ func (this *Scribe) GetJobs() []JobDetails {
 		return nil
 	}
 
+	rb := resp.Body
+	defer rb.Close()
 	lst := JobDetailsList{Items: make([]JobDetails, 0, 0)}
-	json.NewDecoder(resp.Body).Decode(&lst)
+	json.NewDecoder(rb).Decode(&lst)
 	return lst.Items
 }
 
