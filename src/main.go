@@ -22,6 +22,7 @@ package main
 import (
 	"flag"
 	"http"
+	"url"
 	"github.com/codeforsystemsbiology/rest.go"
 )
 
@@ -86,7 +87,7 @@ func StartScribe(configFile ConfigurationFile) {
 	collectionJobs := configFile.GetRequiredString("mgodb", "jobcollection")
 	collectionTasks := configFile.GetRequiredString("mgodb", "taskcollection")
 
-	url, err := http.ParseRequestURL(target)
+	url, err := url.Parse(target)
 	if err != nil {
 		panic(err)
 	}
