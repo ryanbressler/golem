@@ -1,0 +1,7 @@
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 3
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 2
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 4
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 5
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 6
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 7
+1 /Users/rbressle/Code/golem/src/samplejobs/stdio.py 8
