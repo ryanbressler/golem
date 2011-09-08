@@ -25,6 +25,7 @@ import (
 	"strings"
 	"goconf.googlecode.com/hg"
 	"github.com/codeforsystemsbiology/httplib.go"
+	"url"
 )
 
 type AddamaConnection struct {
@@ -57,8 +58,8 @@ func NewAddamaProxy(addamaConn AddamaConnection) *AddamaProxy {
 	mapping := fmt.Sprintf(" { uri: '%v', label: '%v', service: '%v' } ", uri, label, serviceUri)
 	registrar.Register("/addama/registry/mappings"+uri, "mapping", mapping)
 
-	url, _ := http.ParseRequestURL(target)
-	return &AddamaProxy{target: url, registrykey: registrykey, apikey: apikey, baseuri: uri}
+	targetUrl, _ := url.Parse(target)
+	return &AddamaProxy{target: targetUrl, registrykey: registrykey, apikey: apikey, baseuri: uri}
 }
 
 func NewRegistrar(connectionFilePath string) *Registrar {
@@ -96,7 +97,7 @@ func (this *Registrar) Register(uri string, registrationType string, registratio
 }
 
 type AddamaProxy struct {
-	target      *http.URL
+	target      *url.URL
 	registrykey string
 	apikey      string
 	baseuri     string
