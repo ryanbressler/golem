@@ -106,6 +106,12 @@ const (
 	DIE     //tell nodes to shutdown.
 )
 
+type HelloMsgBody struct {
+	JobCapacity int
+	RunningJobs int
+	UniqueId    string
+}
+
 type WorkerNodeList struct {
 	Items         []WorkerNode
 	NumberOfItems int
