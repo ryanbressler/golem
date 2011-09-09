@@ -78,9 +78,9 @@ func (con Connection) GetMsgs() {
 		switch {
 		case err == os.EOF:
 			con.Socket.Close()
-			if con.isWorker {
+			/*if con.isWorker {
 				DieIn(10)
-			}
+			}*/
 			con.DiedChan <- 1
 			return //TODO: recover
 		case err == bufio.ErrBufferFull:
