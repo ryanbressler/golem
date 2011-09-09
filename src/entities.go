@@ -114,6 +114,11 @@ type HelloMsgBody struct {
 	UniqueId    string
 }
 
+func NewHelloMsgBody(data string) (rv HelloMsgBody, err os.Error) {
+	err = json.Unmarshal([]byte(data), rv)
+	return
+}
+
 type WorkerNodeList struct {
 	Items         []WorkerNode
 	NumberOfItems int

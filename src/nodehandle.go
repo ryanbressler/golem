@@ -21,7 +21,6 @@ package main
 
 import (
 	"json"
-	"strconv"
 )
 
 type NodeHandle struct {
@@ -53,12 +52,22 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	msg := <-nh.Con.InChan
 
 	if msg.Type == HELLO {
-		val, err := strconv.Atoi(msg.Body)
+		val, err := NewHelloMsgBody(msg.Body)
 		if err != nil {
 			logger.Warn(err)
 			return nil
 		}
-		nh.MaxJobs <- val
+		nh.MaxJobs <- val.JobCapacity
+		if val.UniqueId != "" {
+			nh.NodeId = val.UniqueId
+			nh.Uri = "/nodes/" + val.UniqueId
+			<-nh.Running
+			nh.Running <- val.RunningJobs
+		}
+		if val.RunningJobs != 0 {
+			<-nh.Running
+			nh.Running <- val.RunningJobs
+		}
 	} else {
 		logger.Debug("%v didn't say hello as first message.", nh.Hostname)
 		return nil

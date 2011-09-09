@@ -129,6 +129,9 @@ func RunNode(processes int, master string) {
 	for {
 		logger.Debug("Waiting for done or msg.")
 		select {
+		case <-mcon.DiedChan:
+			//TODO:reconnect here
+
 		case rv := <-replyc:
 			logger.Debug("Got 'done' signal")
 			mcon.OutChan <- *rv
