@@ -22,6 +22,7 @@ package main
 import (
 	"http"
 	"json"
+	"strconv"
 	"url"
 )
 
@@ -113,7 +114,19 @@ type ScribeClusterController struct {
 func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
 	logger.Debug("Index()")
 
-	clusterStatList := ClusterStatList{}
+	var numberOfSecondsSince int64 = 0
+	value, err := strconv.Atoi(params.Get("numberOfSecondsSince"))
+	if err == nil {
+		numberOfSecondsSince = int64(value)
+	}
+
+	items, err := this.store.ClusterStats(numberOfSecondsSince)
+	if err != nil {
+		http.Error(rw, err.String(), http.StatusInternalServerError)
+		return
+	}
+
+	clusterStatList := ClusterStatList{Items: items, NumberOfItems: len(items)}
 	// TODO: lookup in storage
 	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)

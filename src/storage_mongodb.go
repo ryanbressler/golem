@@ -20,6 +20,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 	"launchpad.net/mgo"
@@ -27,10 +28,11 @@ import (
 )
 
 type MongoJobStore struct {
-	Host            string
-	Store           string
-	JobsCollection  string
-	TasksCollection string
+	Host                   string
+	Store                  string
+	JobsCollection         string
+	TasksCollection        string
+	ClusterStatsCollection string
 }
 
 func (this *MongoJobStore) GetCollection(collectionName string) (c mgo.Collection, err os.Error) {
@@ -165,6 +167,48 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 			break
 		}
 		items = append(items, jd)
+	}
+	return
+}
+
+func (this *MongoJobStore) ClusterSnapshot(snapshot ClusterStat) (err os.Error) {
+	collection, err := this.GetCollection(this.ClusterStatsCollection)
+	if err == nil {
+		err = collection.Insert(snapshot)
+	}
+
+	if err != nil {
+		logger.Warn(err)
+	}
+
+	return
+}
+
+func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []ClusterStat, err os.Error) {
+	m := make(map[string]string)
+	if numberOfSecondsSince > 0 {
+		m["SnapshotAt"] = fmt.Sprintf("$gt:%d", time.Seconds()-numberOfSecondsSince)
+	}
+
+	collection, err := this.GetCollection(this.ClusterStatsCollection)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	iter, err := collection.Find(m).Iter()
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	for {
+		cs := ClusterStat{}
+		if nexterr := iter.Next(&cs); nexterr != nil {
+			logger.Warn(nexterr)
+			break
+		}
+		items = append(items, cs)
 	}
 	return
 }

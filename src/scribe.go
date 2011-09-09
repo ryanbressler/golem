@@ -43,11 +43,15 @@ func LaunchScribe(store JobStore, target string, apikey string) {
 			time.Sleep(10 * second)
 		}
 	}()
+}
+
+func MonitorClusterStats(store JobStore, target string, numberOfSeconds int64) {
+	s := Scribe{store: store, masterUrl: target}
 
 	go func() {
 		for {
 			s.PollClusterStats()
-			time.Sleep(60 * second) // todo: move to configuration file
+			time.Sleep(numberOfSeconds * second)
 		}
 	}()
 }
