@@ -151,3 +151,18 @@ func NewWorkerJob(jsonjob string) (job *WorkerJob) {
 	}
 	return
 }
+
+// cluster stats
+type ClusterStatList struct {
+	Items         []ClusterStat
+	NumberOfItems int
+}
+
+type ClusterStat struct {
+	SnapshotId       int
+	SnapshotAt       string
+	JobsRunning      int
+	JobsPending      int
+	WorkersRunning   int
+	WorkersAvailable int
+}
