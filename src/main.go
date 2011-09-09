@@ -112,12 +112,23 @@ func StartScribe(configFile ConfigurationFile) {
 	LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
 
 	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url, apikey})
-	rest.Resource("nodes", ProxyNodeController{url, apikey})
-	rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url})
-
 	rest.ResourceContentType("jobs", "application/json")
+
+	rest.Resource("nodes", ProxyNodeController{url, apikey})
 	rest.ResourceContentType("nodes", "application/json")
-	rest.ResourceContentType("cluster", "application/json")
+
+	if collectionClusterStats, _ := configFile.GetString("mgodb", "clusterstatscollection"); collectionClusterStats != "" {
+		numberOfSeconds, oops := configFile.GetInt("scribe", "clusterStatsPollingInSeconds")
+		if oops != nil {
+			numberOfSeconds = 10
+		}
+
+		logger.Print("cluster stats storage enabled")
+		MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, target, int64(numberOfSeconds))
+
+		rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, url})
+		rest.ResourceContentType("cluster", "application/json")
+	}
 
 	ListenAndServeTLSorNot(hostname)
 }

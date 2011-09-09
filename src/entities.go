@@ -159,10 +159,15 @@ type ClusterStatList struct {
 }
 
 type ClusterStat struct {
-	SnapshotId       int
-	SnapshotAt       string
+	SnapshotAt       int64
 	JobsRunning      int
 	JobsPending      int
 	WorkersRunning   int
 	WorkersAvailable int
+}
+
+func NewClusterStat(running int, pending int, workers int, available int) ClusterStat {
+	return ClusterStat{SnapshotAt: time.Seconds(),
+		JobsRunning: running, JobsPending: pending,
+		WorkersRunning: workers, WorkersAvailable: available}
 }

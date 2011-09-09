@@ -37,4 +37,6 @@ type JobStore interface {
 	Tasks(jobId string) (tasks []Task, err os.Error)
 
 	Update(item JobDetails) (err os.Error)
+
+	ClusterStats(numberOfSecondsSince int64) (items []ClusterStat, err os.Error)
 }
