@@ -21,9 +21,9 @@ package main
 
 import (
 	"http"
-	"io"
 	"json"
 	"strconv"
+	"url"
 )
 
 type MasterJobController struct {
@@ -231,24 +231,12 @@ type MasterClusterController struct {
 }
 
 // GET /cluster
-func (this MasterClusterController) Index(rw http.ResponseWriter) {
-	logger.Debug("Index()")
-	io.WriteString(rw, "{ Items: [{ Uri: '/cluster/stats', Label: 'Cluster Statistics'}], NumberOfItems: 1 }")
-}
+func (this MasterClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
+	logger.Debug("Index():[%v,%v]", params, header)
 
-// GET /cluster/stats
-func (this MasterClusterController) Find(rw http.ResponseWriter, id string) {
-	logger.Debug("Find(%v)", id)
-
-	if id == "stats" {
-		clusterStatList := ClusterStatList{}
-		// TODO : populate from master
-		if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
-			http.Error(rw, err.String(), http.StatusBadRequest)
-		}
-		return
-	}
-
-	http.Error(rw, "node not found", http.StatusNotImplemented)
-	return
+    clusterStatList := ClusterStatList{}
+    // TODO : populate from master
+    if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+        http.Error(rw, err.String(), http.StatusBadRequest)
+    }
 }
