@@ -28,23 +28,10 @@ const (
 	year   = 60 * 60 * 24 * 365
 )
 
-var verbose = false
 var iobuffersize = 1000
 var useTls bool = true
 var certpath string = ""
 var certorg string = "golem.googlecode.com"
-
-// Sets a global variable for verbosity in logs
-// optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
-func GlobalVerbose(configFile ConfigurationFile) {
-	v, err := configFile.GetBool("default", "verbose")
-	if err != nil {
-		logger.Warn(err)
-	} else {
-		verbose = v
-	}
-	logger.Printf("verbose=[%v]", verbose)
-}
 
 // Sets global variable to enable TLS communications and other related variables (certificate path, organization)
 // optional parameters:  default.certpath, default.organization, default.tls

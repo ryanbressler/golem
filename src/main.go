@@ -24,14 +24,13 @@ import (
 	"http"
 	"url"
 	"github.com/codeforsystemsbiology/rest.go"
+	"github.com/codeforsystemsbiology/verboselogger.go"
 )
 
-var logger *VerboseLogger
+var logger *log4go.VerboseLogger
 
 //parse args and start as master, scribe, addama proxy or worker
 func main() {
-	logger = NewVerboseLogger()
-
 	var configurationFile string
 	var isMaster bool
 	var isScribe bool
@@ -45,7 +44,7 @@ func main() {
 
 	configFile := NewConfigurationFile(configurationFile)
 
-	GlobalVerbose(configFile)
+    GlobalLogger(configFile)
 	GlobalTls(configFile)
 	StartHtmlHandler(configFile)
 
@@ -58,6 +57,18 @@ func main() {
 	} else {
 		StartWorker(configFile)
 	}
+}
+
+// sets global logger based on verbosity level in configuration
+// optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
+func GlobalLogger(configFile ConfigurationFile) {
+    verbose, err := configFile.GetBool("default", "verbose")
+    logger = log4go.NewVerboseLogger(verbose, nil, "")
+    if err != nil {
+        logger.Warn(err)
+        verbose = true
+    }
+    logger.Printf("verbose set [%v]", verbose)
 }
 
 // starts master service based on the given configuration file
