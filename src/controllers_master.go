@@ -21,6 +21,7 @@ package main
 
 import (
 	"http"
+	"io"
 	"json"
 	"strconv"
 )
@@ -223,4 +224,31 @@ func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *
 
 		node.ReSize(numberOfThreads)
 	}
+}
+
+type MasterClusterController struct {
+	master *Master
+}
+
+// GET /cluster
+func (this MasterClusterController) Index(rw http.ResponseWriter) {
+	logger.Debug("Index()")
+	io.WriteString(rw, "{ Items: [{ Uri: '/cluster/stats', Label: 'Cluster Statistics'}], NumberOfItems: 1 }")
+}
+
+// GET /cluster/stats
+func (this MasterClusterController) Find(rw http.ResponseWriter, id string) {
+	logger.Debug("Find(%v)", id)
+
+	if id == "stats" {
+		clusterStatList := ClusterStatList{}
+		// TODO : populate from master
+		if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+			http.Error(rw, err.String(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	http.Error(rw, "node not found", http.StatusNotImplemented)
+	return
 }

@@ -29,18 +29,27 @@ import (
 )
 
 type Scribe struct {
-	store         JobStore
-	masterJobsUrl string
-	apikey        string
+	store     JobStore
+	masterUrl string
+	apikey    string
 }
 
 func LaunchScribe(store JobStore, target string, apikey string) {
-	s := Scribe{store: store, masterJobsUrl: target + "/jobs/", apikey: apikey}
+	s := Scribe{store: store, masterUrl: target, apikey: apikey}
 
-	for {
-		s.PollJobs()
-		time.Sleep(10 * second)
-	}
+	go func() {
+		for {
+			s.PollJobs()
+			time.Sleep(10 * second)
+		}
+	}()
+
+	go func() {
+		for {
+			s.PollClusterStats()
+			time.Sleep(60 * second) // todo: move to configuration file
+		}
+	}()
 }
 
 func (this *Scribe) PollJobs() {
@@ -56,9 +65,14 @@ func (this *Scribe) PollJobs() {
 	}
 }
 
+func (this *Scribe) PollClusterStats() {
+	logger.Debug("PollClusterStats")
+
+}
+
 func (this *Scribe) GetJobs() []JobDetails {
 	logger.Debug("GetJobs()")
-	resp, err := http.Get(this.masterJobsUrl)
+	resp, err := http.Get(this.masterUrl + "/jobs")
 	if err != nil {
 		return nil
 	}
@@ -66,6 +80,20 @@ func (this *Scribe) GetJobs() []JobDetails {
 	rb := resp.Body
 	defer rb.Close()
 	lst := JobDetailsList{Items: make([]JobDetails, 0, 0)}
+	json.NewDecoder(rb).Decode(&lst)
+	return lst.Items
+}
+
+func (this *Scribe) GetClusterStats() []ClusterStat {
+	logger.Debug("GetClusterStats()")
+	resp, err := http.Get(this.masterUrl + "/cluster")
+	if err != nil {
+		return nil
+	}
+
+	rb := resp.Body
+	defer rb.Close()
+	lst := ClusterStatList{Items: make([]ClusterStat, 0, 0)}
 	json.NewDecoder(rb).Decode(&lst)
 	return lst.Items
 }
@@ -80,7 +108,7 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	preader, pwriter := io.Pipe()
 
-	r, err := http.NewRequest("POST", this.masterJobsUrl, preader)
+	r, err := http.NewRequest("POST", this.masterUrl+"/jobs", preader)
 	if err != nil {
 		return
 	}

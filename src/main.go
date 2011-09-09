@@ -44,7 +44,7 @@ func main() {
 
 	configFile := NewConfigurationFile(configurationFile)
 
-    GlobalLogger(configFile)
+	GlobalLogger(configFile)
 	GlobalTls(configFile)
 	StartHtmlHandler(configFile)
 
@@ -62,13 +62,13 @@ func main() {
 // sets global logger based on verbosity level in configuration
 // optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
 func GlobalLogger(configFile ConfigurationFile) {
-    verbose, err := configFile.GetBool("default", "verbose")
-    logger = log4go.NewVerboseLogger(verbose, nil, "")
-    if err != nil {
-        logger.Warn(err)
-        verbose = true
-    }
-    logger.Printf("verbose set [%v]", verbose)
+	verbose, err := configFile.GetBool("default", "verbose")
+	logger = log4go.NewVerboseLogger(verbose, nil, "")
+	if err != nil {
+		logger.Warn(err)
+		verbose = true
+	}
+	logger.Printf("verbose set [%v]", verbose)
 }
 
 // starts master service based on the given configuration file
@@ -84,6 +84,7 @@ func StartMaster(configFile ConfigurationFile) {
 
 	rest.Resource("jobs", MasterJobController{m, password})
 	rest.Resource("nodes", MasterNodeController{m, password})
+	rest.Resource("cluster", MasterClusterController{m})
 	ListenAndServeTLSorNot(hostname)
 }
 
@@ -103,10 +104,11 @@ func StartScribe(configFile ConfigurationFile) {
 		panic(err)
 	}
 
-	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
+	LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
 
 	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url, apikey})
 	rest.Resource("nodes", ProxyNodeController{url, apikey})
+	rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url})
 
 	ListenAndServeTLSorNot(hostname)
 }
