@@ -120,7 +120,9 @@ func RunNode(processes int, master string) {
 	ws := OpenWebSocketToMaster(master)
 
 	mcon := *NewConnection(ws, true)
-	mcon.OutChan <- WorkerMessage{Type: HELLO, Body: fmt.Sprintf("%v", processes)}
+	wm := WorkerMessage{Type: HELLO}
+	wm.BodyFromInterface(HelloMsgBody{JobCapacity: processes, RunningJobs: 0})
+	mcon.OutChan <- wm
 	go CheckIn(&mcon)
 	replyc := make(chan *WorkerMessage)
 
