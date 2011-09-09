@@ -21,7 +21,6 @@ package main
 
 import (
 	"http"
-	"io"
 	"json"
 	"url"
 )
@@ -111,24 +110,12 @@ type ScribeClusterController struct {
 }
 
 // GET /cluster
-func (this ScribeClusterController) Index(rw http.ResponseWriter) {
+func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
 	logger.Debug("Index()")
-	io.WriteString(rw, "{ Items: [{ Uri: '/cluster/stats', Label: 'Cluster Statistics'}], NumberOfItems: 1 }")
-}
 
-// GET /cluster/stats
-func (this ScribeClusterController) Find(rw http.ResponseWriter, id string) {
-	logger.Debug("Find(%v)", id)
-
-	if id == "stats" {
-		clusterStatList := ClusterStatList{}
-		// TODO: lookup in storage
-		if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
-			http.Error(rw, err.String(), http.StatusBadRequest)
-		}
-		return
-	}
-
-	http.Error(rw, "node not found", http.StatusNotImplemented)
-	return
+    clusterStatList := ClusterStatList{}
+    // TODO: lookup in storage
+    if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+        http.Error(rw, err.String(), http.StatusBadRequest)
+    }
 }
