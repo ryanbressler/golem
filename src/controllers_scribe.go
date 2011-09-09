@@ -113,9 +113,9 @@ type ScribeClusterController struct {
 func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
 	logger.Debug("Index()")
 
-    clusterStatList := ClusterStatList{}
-    // TODO: lookup in storage
-    if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
-        http.Error(rw, err.String(), http.StatusBadRequest)
-    }
+	clusterStatList := ClusterStatList{}
+	// TODO: lookup in storage
+	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }
