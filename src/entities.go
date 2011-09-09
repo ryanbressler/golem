@@ -22,6 +22,8 @@ package main
 import (
 	"json"
 	"time"
+	"fmt"
+	"os"
 )
 
 type ItemsHandle struct {
@@ -139,6 +141,17 @@ type WorkerMessage struct {
 	SubId  string
 	Body   string
 	ErrMsg string
+}
+
+func (wm *WorkerMessage) BodyFromInterface(Body interface{}) os.Error {
+	b, err := json.Marshal(Body)
+	if err != nil {
+		logger.Warn(err)
+		return err
+	}
+	wm.Body = fmt.Sprintf("%v", b)
+	return nil
+
 }
 
 //Internal Job Representation used primarily as the body of job related messages
