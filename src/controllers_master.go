@@ -234,9 +234,9 @@ type MasterClusterController struct {
 func (this MasterClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
 	logger.Debug("Index():[%v,%v]", params, header)
 
-    clusterStatList := ClusterStatList{}
-    // TODO : populate from master
-    if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
-        http.Error(rw, err.String(), http.StatusBadRequest)
-    }
+	clusterStatList := ClusterStatList{}
+	// TODO : populate from master
+	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }

@@ -86,9 +86,9 @@ func StartMaster(configFile ConfigurationFile) {
 	rest.Resource("nodes", MasterNodeController{m, password})
 	rest.Resource("cluster", MasterClusterController{m})
 
-    rest.ResourceContentType("jobs", "application/json")
-    rest.ResourceContentType("nodes", "application/json")
-    rest.ResourceContentType("cluster", "application/json")
+	rest.ResourceContentType("jobs", "application/json")
+	rest.ResourceContentType("nodes", "application/json")
+	rest.ResourceContentType("cluster", "application/json")
 
 	ListenAndServeTLSorNot(hostname)
 }
@@ -115,9 +115,9 @@ func StartScribe(configFile ConfigurationFile) {
 	rest.Resource("nodes", ProxyNodeController{url, apikey})
 	rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url})
 
-    rest.ResourceContentType("jobs", "application/json")
-    rest.ResourceContentType("nodes", "application/json")
-    rest.ResourceContentType("cluster", "application/json")
+	rest.ResourceContentType("jobs", "application/json")
+	rest.ResourceContentType("nodes", "application/json")
+	rest.ResourceContentType("cluster", "application/json")
 
 	ListenAndServeTLSorNot(hostname)
 }
