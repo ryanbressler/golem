@@ -84,11 +84,9 @@ func StartMaster(configFile ConfigurationFile) {
 
 	rest.Resource("jobs", MasterJobController{m, password})
 	rest.Resource("nodes", MasterNodeController{m, password})
-	rest.Resource("cluster", MasterClusterController{m})
 
 	rest.ResourceContentType("jobs", "application/json")
 	rest.ResourceContentType("nodes", "application/json")
-	rest.ResourceContentType("cluster", "application/json")
 
 	ListenAndServeTLSorNot(hostname)
 }

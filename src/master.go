@@ -21,7 +21,6 @@ package main
 
 import (
 	"http"
-	"os"
 	"sync"
 	"websocket"
 )
@@ -80,15 +79,4 @@ func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
 	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh, false
 	m.nodeMu.Unlock()
-}
-
-func (m *Master) GetClusterStats() (items []ClusterStat, err os.Error) {
-	logger.Debug("GetClusterStats")
-
-	// TODO : Pickup collected cluster stats
-	for i := 1; i <= 3; i++ {
-		items = append(items, NewClusterStat(10*i, 20*i, 5*i, 10*i))
-	}
-
-	return
 }

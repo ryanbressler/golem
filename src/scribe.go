@@ -163,7 +163,9 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	client := http.Client{}
 	resp, err := client.Do(r)
-	resp.Body.Close()
+	if resp != nil {
+		resp.Body.Close()
+	}
 
 	return
 }

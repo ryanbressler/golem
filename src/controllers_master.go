@@ -23,7 +23,6 @@ import (
 	"http"
 	"json"
 	"strconv"
-	"url"
 )
 
 type MasterJobController struct {
@@ -223,25 +222,5 @@ func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *
 		}
 
 		node.ReSize(numberOfThreads)
-	}
-}
-
-type MasterClusterController struct {
-	master *Master
-}
-
-// GET /cluster
-func (this MasterClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
-	logger.Debug("Index():[%v,%v]", params, header)
-
-	clusterStats, err := this.master.GetClusterStats()
-	if err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
-		return
-	}
-
-	clusterStatList := ClusterStatList{Items: clusterStats, NumberOfItems: len(clusterStats)}
-	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
 }
