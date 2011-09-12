@@ -86,6 +86,14 @@ func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
 	return this.FindJobs(bson.M{"running": true})
 }
 
+func (this *MongoJobStore) CountUnscheduled() (int, os.Error) {
+	return this.CountJobs(bson.M{"scheduled": false})
+}
+
+func (this *MongoJobStore) CountActive() (int, os.Error) {
+	return this.CountJobs(bson.M{"running": true})
+}
+
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 	logger.Debug("Get(%v)", jobId)
 	jobsCollection, err := this.GetCollection(JOBS)
@@ -174,18 +182,27 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 	return
 }
 
-func (this *MongoJobStore) ClusterSnapshots(snapshots []ClusterStat) (err os.Error) {
+func (this *MongoJobStore) CountJobs(m map[string]interface{}) (int, os.Error) {
+	logger.Debug("CountJobs(%v)", m)
+
+	jobsCollection, err := this.GetCollection(JOBS)
+	if err != nil {
+		logger.Warn(err)
+		return 0, err
+	}
+
+	return jobsCollection.Find(m).Count()
+}
+
+func (this *MongoJobStore) SnapshotCluster(snapshot ClusterStat) (err os.Error) {
 	collection, err := this.GetCollection(CLUSTER_STATS)
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
 
-	for _, cs := range snapshots {
-		if err := collection.Insert(cs); err != nil {
-			logger.Warn(err)
-			return
-		}
+	if err := collection.Insert(snapshot); err != nil {
+		logger.Warn(err)
 	}
 
 	return
