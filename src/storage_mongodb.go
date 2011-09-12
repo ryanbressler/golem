@@ -171,24 +171,25 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 	return
 }
 
-func (this *MongoJobStore) ClusterSnapshot(snapshot ClusterStat) (err os.Error) {
+func (this *MongoJobStore) ClusterSnapshots(snapshots []ClusterStat) (err os.Error) {
 	collection, err := this.GetCollection(this.ClusterStatsCollection)
-	if err == nil {
-		err = collection.Insert(snapshot)
-	}
-
 	if err != nil {
 		logger.Warn(err)
+		return
+	}
+
+	for _, cs := range snapshots {
+		if err := collection.Insert(cs); err != nil {
+			logger.Warn(err)
+			return
+		}
 	}
 
 	return
 }
 
 func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []ClusterStat, err os.Error) {
-	m := make(map[string]string)
-	if numberOfSecondsSince > 0 {
-		m["SnapshotAt"] = fmt.Sprintf("$gt:%d", time.Seconds()-numberOfSecondsSince)
-	}
+	logger.Debug("ClusterStats(%d)", numberOfSecondsSince)
 
 	collection, err := this.GetCollection(this.ClusterStatsCollection)
 	if err != nil {
@@ -196,6 +197,13 @@ func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []Clu
 		return
 	}
 
+	m := bson.M{}
+	if numberOfSecondsSince > 0 {
+		timeSince := time.Seconds() - numberOfSecondsSince
+		m = bson.M{"snapshotat": fmt.Sprintf("{$gt:%d}", timeSince)}
+	}
+
+	logger.Debug("m=%v", m)
 	iter, err := collection.Find(m).Iter()
 	if err != nil {
 		logger.Warn(err)
@@ -208,7 +216,10 @@ func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []Clu
 			logger.Warn(nexterr)
 			break
 		}
+		logger.Debug("ClusterStats(%d):%v", numberOfSecondsSince, cs)
 		items = append(items, cs)
 	}
+
+	logger.Debug("ClusterStats(%d):%d", numberOfSecondsSince, len(items))
 	return
 }
