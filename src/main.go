@@ -123,7 +123,7 @@ func StartScribe(configFile ConfigurationFile) {
 		numberOfSeconds = pollingSecs
 	}
 
-	logger.Print("polling for cluster stats every %s secs", numberOfSeconds)
+	logger.Printf("polling for cluster stats every %d secs", numberOfSeconds)
 	go MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore}, target, int64(numberOfSeconds))
 
 	ListenAndServeTLSorNot(hostname)
