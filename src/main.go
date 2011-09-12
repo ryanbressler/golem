@@ -101,34 +101,30 @@ func StartScribe(configFile ConfigurationFile) {
 	target := configFile.GetRequiredString("scribe", "target")
 	dbhost := configFile.GetRequiredString("mgodb", "server")
 	dbstore := configFile.GetRequiredString("mgodb", "store")
-	collectionJobs := configFile.GetRequiredString("mgodb", "jobcollection")
-	collectionTasks := configFile.GetRequiredString("mgodb", "taskcollection")
 
 	url, err := url.Parse(target)
 	if err != nil {
 		panic(err)
 	}
 
-	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
+	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore}, target, apikey)
 
-	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url, apikey})
+	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore}, url, apikey})
 	rest.ResourceContentType("jobs", "application/json")
 
 	rest.Resource("nodes", ProxyNodeController{url, apikey})
 	rest.ResourceContentType("nodes", "application/json")
 
-	if collectionClusterStats, _ := configFile.GetString("mgodb", "clusterstatscollection"); collectionClusterStats != "" {
-		numberOfSeconds, oops := configFile.GetInt("scribe", "clusterStatsPollingInSeconds")
-		if oops != nil {
-			numberOfSeconds = 10
-		}
+	rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore}, url})
+	rest.ResourceContentType("cluster", "application/json")
 
-		logger.Print("cluster stats storage enabled")
-		go MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, target, int64(numberOfSeconds))
-
-		rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, url})
-		rest.ResourceContentType("cluster", "application/json")
+	var numberOfSeconds int = 10
+	if pollingSecs, oops := configFile.GetInt("scribe", "clusterStatsPollingInSeconds"); oops == nil {
+		numberOfSeconds = pollingSecs
 	}
+
+	logger.Print("polling for cluster stats every %s secs", numberOfSeconds)
+	go MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore}, target, int64(numberOfSeconds))
 
 	ListenAndServeTLSorNot(hostname)
 }
