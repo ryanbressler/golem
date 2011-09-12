@@ -109,7 +109,7 @@ func StartScribe(configFile ConfigurationFile) {
 		panic(err)
 	}
 
-	LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
+	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, target, apikey)
 
 	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore, JobsCollection: collectionJobs, TasksCollection: collectionTasks}, url, apikey})
 	rest.ResourceContentType("jobs", "application/json")
@@ -124,7 +124,7 @@ func StartScribe(configFile ConfigurationFile) {
 		}
 
 		logger.Print("cluster stats storage enabled")
-		MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, target, int64(numberOfSeconds))
+		go MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, target, int64(numberOfSeconds))
 
 		rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore, ClusterStatsCollection: collectionClusterStats}, url})
 		rest.ResourceContentType("cluster", "application/json")

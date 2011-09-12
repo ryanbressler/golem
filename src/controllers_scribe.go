@@ -112,7 +112,7 @@ type ScribeClusterController struct {
 
 // GET /cluster
 func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
-	logger.Debug("Index()")
+	logger.Debug("Index():[%v,%v]", params, header)
 
 	var numberOfSecondsSince int64 = 0
 	value, err := strconv.Atoi(params.Get("numberOfSecondsSince"))
@@ -120,8 +120,11 @@ func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Val
 		numberOfSecondsSince = int64(value)
 	}
 
+	logger.Printf("Index(): %d", numberOfSecondsSince)
+
 	items, err := this.store.ClusterStats(numberOfSecondsSince)
 	if err != nil {
+		logger.Warn(err)
 		http.Error(rw, err.String(), http.StatusInternalServerError)
 		return
 	}
@@ -129,6 +132,7 @@ func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Val
 	clusterStatList := ClusterStatList{Items: items, NumberOfItems: len(items)}
 	// TODO: lookup in storage
 	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+		logger.Warn(err)
 		http.Error(rw, err.String(), http.StatusBadRequest)
 	}
 }
