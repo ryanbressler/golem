@@ -30,7 +30,11 @@ type JobStore interface {
 
 	Active() ([]JobDetails, os.Error)
 
+	CountActive() (int, os.Error)
+
 	Unscheduled() ([]JobDetails, os.Error)
+
+	CountUnscheduled() (int, os.Error)
 
 	Get(jobId string) (JobDetails, os.Error)
 
@@ -38,7 +42,7 @@ type JobStore interface {
 
 	Update(JobDetails) os.Error
 
-	ClusterSnapshots([]ClusterStat) os.Error
+	SnapshotCluster(ClusterStat) os.Error
 
 	ClusterStats(numberOfSecondsSince int64) ([]ClusterStat, os.Error)
 }

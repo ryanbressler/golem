@@ -47,12 +47,30 @@ func MonitorClusterStats(store JobStore, target string, numberOfSeconds int64) {
 	s := Scribe{store: store, masterUrl: target}
 
 	for {
-		clusterStats, err := s.GetClusterStats()
-		if err == nil {
-			logger.Debug("clusterStats=%v", clusterStats)
-			s.store.ClusterSnapshots(clusterStats)
-		}
 		time.Sleep(numberOfSeconds * second)
+
+		workerNodes, err := s.GetWorkerNodes()
+		if err != nil {
+			logger.Warn(err)
+			continue
+		}
+
+		totalJobsRunning, _ := s.store.CountActive()
+		totalJobsPending, _ := s.store.CountUnscheduled()
+		logger.Debug("MonitorClusterStats jobs:[%d,%d]", totalJobsRunning, totalJobsPending)
+
+		totalWorkersRunning := 0
+		totalWorkersAvailable := 0
+		for _, wn := range workerNodes {
+			totalWorkersRunning += wn.RunningJobs
+			totalWorkersAvailable += (wn.MaxJobs - wn.RunningJobs)
+		}
+
+		logger.Debug("MonitorClusterStats [%d,%d,%d,%d]", totalJobsRunning, totalJobsPending, totalWorkersRunning, totalWorkersAvailable)
+		clusterStat := NewClusterStat(totalJobsRunning, totalJobsPending, totalWorkersRunning, totalWorkersAvailable)
+		logger.Debug("clusterStat=%v", clusterStat)
+
+		s.store.SnapshotCluster(clusterStat)
 	}
 }
 
@@ -83,9 +101,9 @@ func (this *Scribe) GetJobs() []JobDetails {
 	return lst.Items
 }
 
-func (this *Scribe) GetClusterStats() (items []ClusterStat, err os.Error) {
-	logger.Debug("GetClusterStats()")
-	resp, err := http.Get(this.masterUrl + "/cluster")
+func (this *Scribe) GetWorkerNodes() (items []WorkerNode, err os.Error) {
+	logger.Debug("GetWorkerNodes()")
+	resp, err := http.Get(this.masterUrl + "/nodes")
 	if err != nil {
 		logger.Warn(err)
 		return
@@ -94,13 +112,14 @@ func (this *Scribe) GetClusterStats() (items []ClusterStat, err os.Error) {
 	rb := resp.Body
 	defer rb.Close()
 
-	lst := ClusterStatList{Items: make([]ClusterStat, 0, 0)}
-	if err := json.NewDecoder(rb).Decode(&lst); err != nil {
+	workerNodes := WorkerNodeList{Items: make([]WorkerNode, 0, 0)}
+	if err := json.NewDecoder(rb).Decode(&workerNodes); err != nil {
 		logger.Warn(err)
 		return
 	}
 
-	items = lst.Items
+	items = workerNodes.Items
+	logger.Debug("GetWorkerNodes():%d", len(items))
 	return
 }
 
