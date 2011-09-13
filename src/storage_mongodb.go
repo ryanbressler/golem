@@ -78,19 +78,24 @@ func (this *MongoJobStore) All() ([]JobDetails, os.Error) {
 }
 
 func (this *MongoJobStore) Unscheduled() ([]JobDetails, os.Error) {
-	return this.FindJobs(bson.M{"scheduled": false})
+	return this.FindJobs(bson.M{"state": NEW})
 }
 
-func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
-	return this.FindJobs(bson.M{"running": true})
-}
-
-func (this *MongoJobStore) CountPending() (int, os.Error) {
-	return this.CountJobs(bson.M{"scheduled": true, "running": false})
+func (this *MongoJobStore) CountPending() (pending int, err os.Error) {
+	var newOnes int
+	var scheduledOnes int
+	if newOnes, err = this.CountJobs(bson.M{"state": NEW}); err != nil {
+		return
+	}
+	if scheduledOnes, err = this.CountJobs(bson.M{"state": SCHEDULED}); err != nil {
+		return
+	}
+	pending = newOnes + scheduledOnes
+	return
 }
 
 func (this *MongoJobStore) CountActive() (int, os.Error) {
-	return this.CountJobs(bson.M{"running": true})
+	return this.CountJobs(bson.M{"state": RUNNING})
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
@@ -149,8 +154,8 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 	existing.LastModified = time.LocalTime().String()
 	existing.Progress.Finished = item.Progress.Finished
 	existing.Progress.Errored = item.Progress.Errored
-	existing.Running = item.Running
-	existing.Scheduled = item.Scheduled
+	existing.State = item.State
+	existing.Status = item.Status
 
 	logger.Debug("Update(%v): %v", item, existing)
 	return jobsCollection.Update(bson.M{"jobid": item.JobId}, existing)
