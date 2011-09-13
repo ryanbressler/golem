@@ -2,7 +2,6 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
     constructor: function(config) {
         this.itemPointers = [];
         this.gridData = [];
-        this.groupField = "Running";
 
         Ext.apply(this, config);
 
