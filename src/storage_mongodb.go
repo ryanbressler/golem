@@ -20,7 +20,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 	"launchpad.net/mgo"
@@ -220,7 +219,7 @@ func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []Clu
 	m := bson.M{}
 	if numberOfSecondsSince > 0 {
 		timeSince := time.Seconds() - numberOfSecondsSince
-		m = bson.M{"snapshotat": fmt.Sprintf("{$gt:%d}", timeSince)}
+		m = bson.M{"snapshotat": bson.M{"$gt": timeSince}}
 	}
 
 	logger.Debug("m=%v", m)
