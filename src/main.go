@@ -23,9 +23,11 @@ import (
 	"flag"
 	"http"
 	"url"
+	"runtime"
 	"github.com/codeforsystemsbiology/rest.go"
 	"github.com/codeforsystemsbiology/verboselogger.go"
-)
+	)
+	
 
 var logger *log4go.VerboseLogger
 
@@ -46,6 +48,7 @@ func main() {
 
 	GlobalLogger(configFile)
 	GlobalTls(configFile)
+	GlobalConBufferSize(configFile)
 	StartHtmlHandler(configFile)
 
 	if isMaster {
@@ -79,7 +82,9 @@ func StartMaster(configFile ConfigurationFile) {
 
 	hostname := configFile.GetRequiredString("default", "hostname")
 	password := configFile.GetRequiredString("default", "password")
-
+	if gomaxproc, err := configFile.GetInt("master","gomaxproc"); err==nil {
+		runtime.GOMAXPROCS(gomaxproc)
+	}
 	m := NewMaster()
 
 	rest.Resource("jobs", MasterJobController{m, password})

@@ -22,6 +22,7 @@ package main
 import (
 	"json"
 	"strconv"
+	"time"
 )
 
 type NodeHandle struct {
@@ -138,10 +139,28 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 		logger.Debug("CHECKIN [%v]", nh.Hostname)
 	case COUT:
 		logger.Debug("COUT [%v]", nh.Hostname)
-		nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body
+		blocked := true
+		for blocked==true {
+			select {
+			case nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body:
+				blocked = false
+			case <-time.After(1 * second):
+				logger.Printf("Sending  COUT to subid %v blocked for more then 1 second.", msg.SubId)
+			}
+		}
+		
 	case CERROR:
 		logger.Debug("CERROR [%v]", nh.Hostname)
-		nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body
+		blocked := true
+		for blocked==true {
+			select {
+			case nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body:
+				blocked = false
+			case <-time.After(1 * second):
+				logger.Printf("Sending  CERROR to subid %v blocked for more then 1 second.", msg.SubId)
+			}
+		}
+		
 	case JOBFINISHED:
 		logger.Debug("JOBFINISHED [%v]", nh.Hostname)
 		running := <-nh.Running

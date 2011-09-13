@@ -29,6 +29,7 @@ const (
 )
 
 var iobuffersize = 1000
+var conbuffersize = 10
 var useTls bool = true
 var certpath string = ""
 var certorg string = "golem.googlecode.com"
@@ -74,4 +75,17 @@ func GlobalBufferSize(configFile ConfigurationFile) {
 	}
 
 	logger.Printf("buffersize=[%v]", iobuffersize)
+}
+
+// Sets global variable to configure buffersize for channels wrapping connections between worker and master (stdout, stderr)
+// optional parameters:  master.buffersize
+func GlobalConBufferSize(configFile ConfigurationFile) {
+	bufsize, err := configFile.GetInt("default", "conbuffersize")
+	if err != nil {
+		logger.Warn(err)
+	} else {
+		conbuffersize = bufsize
+	}
+
+	logger.Printf("conbuffersize=[%v]", conbuffersize)
 }
