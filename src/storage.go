@@ -34,7 +34,7 @@ type JobStore interface {
 
 	Unscheduled() ([]JobDetails, os.Error)
 
-	CountUnscheduled() (int, os.Error)
+	CountPending() (int, os.Error)
 
 	Get(jobId string) (JobDetails, os.Error)
 

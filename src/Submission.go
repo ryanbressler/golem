@@ -113,6 +113,7 @@ func (s Submission) MonitorWorkTasks() {
 			logger.Debug("COMPLETED [%v]", dtls.JobId)
 			dtls = <-s.Details
 			dtls.Running = false
+			dtls.Scheduled = false
 			dtls.LastModified = time.LocalTime().String()
 			s.Details <- dtls
 			//send three messages to stop chan to stop all things plus one

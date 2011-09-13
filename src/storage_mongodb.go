@@ -85,8 +85,8 @@ func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
 	return this.FindJobs(bson.M{"running": true})
 }
 
-func (this *MongoJobStore) CountUnscheduled() (int, os.Error) {
-	return this.CountJobs(bson.M{"scheduled": false})
+func (this *MongoJobStore) CountPending() (int, os.Error) {
+	return this.CountJobs(bson.M{"scheduled": true, "running": false})
 }
 
 func (this *MongoJobStore) CountActive() (int, os.Error) {
