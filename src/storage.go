@@ -28,11 +28,9 @@ type JobStore interface {
 
 	All() ([]JobDetails, os.Error)
 
-	Active() ([]JobDetails, os.Error)
+	Unscheduled() ([]JobDetails, os.Error)
 
 	CountActive() (int, os.Error)
-
-	Unscheduled() ([]JobDetails, os.Error)
 
 	CountPending() (int, os.Error)
 
