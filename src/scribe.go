@@ -1,0 +1,171 @@
+/*
+   Copyright (C) 2003-2011 Institute for Systems Biology
+                           Seattle, Washington, USA.
+
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with this library; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
+
+*/
+package main
+
+import (
+	"http"
+	"json"
+	"os"
+	"io"
+	"time"
+	"mime/multipart"
+)
+
+type Scribe struct {
+	store     JobStore
+	masterUrl string
+	apikey    string
+}
+
+func LaunchScribe(store JobStore, target string, apikey string) {
+	s := Scribe{store: store, masterUrl: target, apikey: apikey}
+
+	for {
+		s.PollJobs()
+		time.Sleep(10 * second)
+	}
+}
+
+func MonitorClusterStats(store JobStore, target string, numberOfSeconds int64) {
+	s := Scribe{store: store, masterUrl: target}
+
+	for {
+		time.Sleep(numberOfSeconds * second)
+
+		workerNodes, err := s.GetWorkerNodes()
+		if err != nil {
+			logger.Warn(err)
+			continue
+		}
+
+		totalJobsRunning, _ := s.store.CountActive()
+		totalJobsPending, _ := s.store.CountUnscheduled()
+		logger.Debug("MonitorClusterStats jobs:[%d,%d]", totalJobsRunning, totalJobsPending)
+
+		totalWorkersRunning := 0
+		totalWorkersAvailable := 0
+		for _, wn := range workerNodes {
+			totalWorkersRunning += wn.RunningJobs
+			totalWorkersAvailable += (wn.MaxJobs - wn.RunningJobs)
+		}
+
+		logger.Debug("MonitorClusterStats [%d,%d,%d,%d]", totalJobsRunning, totalJobsPending, totalWorkersRunning, totalWorkersAvailable)
+		clusterStat := NewClusterStat(totalJobsRunning, totalJobsPending, totalWorkersRunning, totalWorkersAvailable)
+		logger.Debug("clusterStat=%v", clusterStat)
+
+		s.store.SnapshotCluster(clusterStat)
+	}
+}
+
+func (this *Scribe) PollJobs() {
+	logger.Debug("PollJobs")
+	for _, jd := range this.GetJobs() {
+		this.store.Update(jd)
+	}
+
+	unscheduled, _ := this.store.Unscheduled()
+	logger.Debug("unsheduled=%d", len(unscheduled))
+	for _, u := range unscheduled {
+		this.PostJob(u)
+	}
+}
+
+func (this *Scribe) GetJobs() []JobDetails {
+	logger.Debug("GetJobs()")
+	resp, err := http.Get(this.masterUrl + "/jobs")
+	if err != nil {
+		return nil
+	}
+
+	rb := resp.Body
+	defer rb.Close()
+	lst := JobDetailsList{Items: make([]JobDetails, 0, 0)}
+	json.NewDecoder(rb).Decode(&lst)
+	return lst.Items
+}
+
+func (this *Scribe) GetWorkerNodes() (items []WorkerNode, err os.Error) {
+	logger.Debug("GetWorkerNodes()")
+	resp, err := http.Get(this.masterUrl + "/nodes")
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	rb := resp.Body
+	defer rb.Close()
+
+	workerNodes := WorkerNodeList{Items: make([]WorkerNode, 0, 0)}
+	if err := json.NewDecoder(rb).Decode(&workerNodes); err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	items = workerNodes.Items
+	logger.Debug("GetWorkerNodes():%d", len(items))
+	return
+}
+
+func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
+	logger.Debug("PostJob(%v)", jd.JobId)
+
+	tasks, err := this.store.Tasks(jd.JobId)
+	if err != nil {
+		return
+	}
+
+	preader, pwriter := io.Pipe()
+
+	r, err := http.NewRequest("POST", this.masterUrl+"/jobs", preader)
+	if err != nil {
+		return
+	}
+
+	multipartWriter := multipart.NewWriter(pwriter)
+
+	r.Header.Set("Content-Type", multipartWriter.FormDataContentType())
+	r.Header.Set("x-golem-job-preassigned-id", jd.JobId)
+	r.Header.Set("x-golem-apikey", this.apikey)
+
+	if jd.Owner != "" {
+		r.Header.Set("x-golem-job-owner", jd.Owner)
+	}
+	if jd.Label != "" {
+		r.Header.Set("x-golem-job-label", jd.Label)
+	}
+	if jd.Type != "" {
+		r.Header.Set("x-golem-job-type", jd.Type)
+	}
+
+	go func() {
+		jsonFileWriter, _ := multipartWriter.CreateFormFile("jsonfile", "data.json")
+		json.NewEncoder(jsonFileWriter).Encode(tasks)
+		multipartWriter.Close()
+		pwriter.Close()
+	}()
+
+	client := http.Client{}
+	resp, err := client.Do(r)
+	if resp != nil {
+		resp.Body.Close()
+	}
+
+	return
+}
