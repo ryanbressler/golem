@@ -43,10 +43,10 @@ func main() {
 	flag.StringVar(&configurationFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
-    configFile, err := conf.ReadConfigFile(configurationFile)
-    if err != nil {
-        panic(err)
-    }
+	configFile, err := conf.ReadConfigFile(configurationFile)
+	if err != nil {
+		panic(err)
+	}
 
 	GlobalLogger(configFile)
 	GlobalTls(configFile)
