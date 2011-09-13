@@ -16,8 +16,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
             { header: "Total", width: 10, sortable: true, dataIndex: 'Total' },
             { header: "Finished", width: 10, sortable: true, dataIndex: 'Finished' },
             { header: "Errored", width: 10, sortable: true, dataIndex: 'Errored' },
-            { header: "State", width: 10, sortable: true, dataIndex: 'State', hidden: false },
-            { header: "Status", width: 10, sortable: true, dataIndex: 'Status', hidden: true }
+            { header: "State", width: 10, sortable: true, dataIndex: 'State', hidden: true },
+            { header: "Status", width: 10, sortable: true, dataIndex: 'Status', hidden: false }
         ];
         this.storeColumns = [
             {name: 'JobId'},
