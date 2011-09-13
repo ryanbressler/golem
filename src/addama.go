@@ -63,8 +63,7 @@ func NewAddamaProxy(addamaConn AddamaConnection) *AddamaProxy {
 }
 
 func NewRegistrar(connectionFilePath string) *Registrar {
-	c, _ := conf.ReadConfigFile(connectionFilePath)
-	connectionFile := ConfigurationFile{c}
+	connectionFile, _ := conf.ReadConfigFile(connectionFilePath)
 	host, _ := connectionFile.GetString("Connection", "host")
 	apikey, _ := connectionFile.GetString("Connection", "apikey")
 	logger.Debug("NewRegistrar(%v):%v,%v", connectionFilePath, host, apikey)

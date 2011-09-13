@@ -21,6 +21,7 @@ package main
 
 import (
 	"os"
+	"goconf.googlecode.com/hg"
 )
 
 const (
@@ -35,7 +36,7 @@ var certorg string = "golem.googlecode.com"
 
 // Sets global variable to enable TLS communications and other related variables (certificate path, organization)
 // optional parameters:  default.certpath, default.organization, default.tls
-func GlobalTls(configFile ConfigurationFile) {
+func GlobalTls(configFile *conf.ConfigFile) {
 	certificatepath, err := configFile.GetString("default", "certpath")
 	if err != nil {
 		logger.Warn(err)
@@ -65,7 +66,7 @@ func GlobalTls(configFile ConfigurationFile) {
 
 // Sets global variable to configure buffersize for master submission channels (stdout, stderr)
 // optional parameters:  master.buffersize
-func GlobalBufferSize(configFile ConfigurationFile) {
+func GlobalBufferSize(configFile *conf.ConfigFile) {
 	bufsize, err := configFile.GetInt("master", "buffersize")
 	if err != nil {
 		logger.Warn(err)
@@ -74,4 +75,12 @@ func GlobalBufferSize(configFile ConfigurationFile) {
 	}
 
 	logger.Printf("buffersize=[%v]", iobuffersize)
+}
+
+func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
+	value, err := config.GetString(section, key)
+	if err != nil {
+		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
+	}
+	return
 }
