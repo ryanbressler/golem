@@ -65,7 +65,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	label := GetHeader(r, "x-golem-job-label", jobId)
 	jobtype := GetHeader(r, "x-golem-job-type", "Unspecified")
 
-	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
+	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks), NEW, READY)
 	if err := this.store.Create(job, tasks); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
 		return

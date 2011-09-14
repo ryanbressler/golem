@@ -21,9 +21,9 @@ package main
 
 import (
 	"http"
-	"json"
 	"os"
 	"io"
+	"json"
 	"time"
 	"mime/multipart"
 )
@@ -56,7 +56,7 @@ func MonitorClusterStats(store JobStore, target string, numberOfSeconds int64) {
 		}
 
 		totalJobsRunning, _ := s.store.CountActive()
-		totalJobsPending, _ := s.store.CountUnscheduled()
+		totalJobsPending, _ := s.store.CountPending()
 		logger.Debug("MonitorClusterStats jobs:[%d,%d]", totalJobsRunning, totalJobsPending)
 
 		totalWorkersRunning := 0
@@ -81,7 +81,7 @@ func (this *Scribe) PollJobs() {
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
-	logger.Debug("unsheduled=%d", len(unscheduled))
+	logger.Debug("unscheduled=%d", len(unscheduled))
 	for _, u := range unscheduled {
 		this.PostJob(u)
 	}
@@ -89,7 +89,7 @@ func (this *Scribe) PollJobs() {
 
 func (this *Scribe) GetJobs() []JobDetails {
 	logger.Debug("GetJobs()")
-	resp, err := http.Get(this.masterUrl + "/jobs")
+	resp, err := http.Get(this.masterUrl + "/jobs/")
 	if err != nil {
 		return nil
 	}
@@ -97,7 +97,9 @@ func (this *Scribe) GetJobs() []JobDetails {
 	rb := resp.Body
 	defer rb.Close()
 	lst := JobDetailsList{Items: make([]JobDetails, 0, 0)}
-	json.NewDecoder(rb).Decode(&lst)
+	if err = json.NewDecoder(rb).Decode(&lst); err != nil {
+		logger.Warn(err)
+	}
 	return lst.Items
 }
 
@@ -128,13 +130,16 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 
 	tasks, err := this.store.Tasks(jd.JobId)
 	if err != nil {
+		logger.Warn(err)
 		return
 	}
 
+	logger.Debug("PostJob(%v):tasks=%d", jd.JobId, len(tasks))
 	preader, pwriter := io.Pipe()
 
-	r, err := http.NewRequest("POST", this.masterUrl+"/jobs", preader)
+	r, err := http.NewRequest("POST", this.masterUrl+"/jobs/", preader)
 	if err != nil {
+		logger.Warn(err)
 		return
 	}
 
@@ -155,17 +160,29 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	}
 
 	go func() {
+		logger.Debug("encoding tasks")
 		jsonFileWriter, _ := multipartWriter.CreateFormFile("jsonfile", "data.json")
-		json.NewEncoder(jsonFileWriter).Encode(tasks)
+		if err := json.NewEncoder(jsonFileWriter).Encode(tasks); err != nil {
+			logger.Warn(err)
+		}
+
 		multipartWriter.Close()
 		pwriter.Close()
 	}()
 
+	logger.Debug("submitting POST to %v/jobs: %v", this.masterUrl, r)
 	client := http.Client{}
 	resp, err := client.Do(r)
+	if err != nil {
+		logger.Warn(err)
+	}
+
+	respcode := 0
 	if resp != nil {
+		respcode = resp.StatusCode
 		resp.Body.Close()
 	}
 
+	logger.Debug("completed POST to %v/jobs: %d", this.masterUrl, respcode)
 	return
 }

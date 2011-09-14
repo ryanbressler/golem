@@ -2,6 +2,7 @@ NodesGrid = Ext.extend(ItemsGrid, {
     constructor: function(config) {
         Ext.apply(this, config);
 
+        this.groupField = "Running";
         this.toolbarButtons = [
             { text: 'Restart All', iconCls:'restart', ref: "../restartButton" },
             { text: 'Suspend New Jobs', iconCls:'stop', ref: "../suspendButton" }

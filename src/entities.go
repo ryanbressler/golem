@@ -58,9 +58,30 @@ type JobDetails struct {
 
 	Progress TaskProgress
 
-	Running   bool
-	Scheduled bool
+	State  string // job state
+	Status string // job status
 }
+
+func (this JobDetails) IsRunning() bool {
+	return this.State == RUNNING
+}
+
+// job state
+const (
+	NEW       = "NEW"       // job received and stored
+	SCHEDULED = "SCHEDULED" // job placed in queue
+	RUNNING   = "RUNNING"   // job assigned to worker
+	COMPLETE  = "COMPLETE"  // job is finished
+)
+
+// job status
+const (
+	READY   = "READY"   // NEW, SCHEDULED, RUNNING job
+	SUCCESS = "SUCCESS" // COMPLETE job
+	FAIL    = "FAIL"    // COMPLETE job
+	ERROR   = "ERROR"   // COMPLETE job
+	STOPPED = "STOPPED" // COMPLETE job
+)
 
 type TaskProgress struct {
 	Total    int
@@ -72,13 +93,13 @@ func (this *TaskProgress) isComplete() bool {
 	return this.Total <= (this.Finished + this.Errored)
 }
 
-func NewJobDetails(jobId string, owner string, label string, jobtype string, totalTasks int) JobDetails {
+func NewJobDetails(jobId string, owner string, label string, jobtype string, totalTasks int, state string, status string) JobDetails {
 	return JobDetails{
 		JobId: jobId, Uri: "/jobs/" + jobId,
 		Owner: owner, Label: label, Type: jobtype,
 		FirstCreated: time.LocalTime().String(),
 		Progress:     TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
-		Running:      false, Scheduled: false}
+		State:        state, Status: status}
 }
 
 func TotalTasks(tasks []Task) (totalTasks int) {

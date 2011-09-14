@@ -21,6 +21,7 @@ package main
 
 import (
 	"os"
+	"goconf.googlecode.com/hg"
 )
 
 const (
@@ -36,7 +37,7 @@ var certorg string = "golem.googlecode.com"
 
 // Sets global variable to enable TLS communications and other related variables (certificate path, organization)
 // optional parameters:  default.certpath, default.organization, default.tls
-func GlobalTls(configFile ConfigurationFile) {
+func GlobalTls(configFile *conf.ConfigFile) {
 	certificatepath, err := configFile.GetString("default", "certpath")
 	if err != nil {
 		logger.Warn(err)
@@ -66,7 +67,7 @@ func GlobalTls(configFile ConfigurationFile) {
 
 // Sets global variable to configure buffersize for master submission channels (stdout, stderr)
 // optional parameters:  master.buffersize
-func GlobalBufferSize(configFile ConfigurationFile) {
+func GlobalBufferSize(configFile *conf.ConfigFile) {
 	bufsize, err := configFile.GetInt("master", "buffersize")
 	if err != nil {
 		logger.Warn(err)
@@ -77,15 +78,28 @@ func GlobalBufferSize(configFile ConfigurationFile) {
 	logger.Printf("buffersize=[%v]", iobuffersize)
 }
 
+<<<<<<< local
 // Sets global variable to configure buffersize for channels wrapping connections between worker and master (stdout, stderr)
 // optional parameters:  master.buffersize
 func GlobalConBufferSize(configFile ConfigurationFile) {
 	bufsize, err := configFile.GetInt("default", "conbuffersize")
+=======
+func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
+	value, err := config.GetString(section, key)
+>>>>>>> other
 	if err != nil {
+<<<<<<< local
 		logger.Warn(err)
 	} else {
 		conbuffersize = bufsize
+=======
+		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
+>>>>>>> other
 	}
+<<<<<<< local
 
 	logger.Printf("conbuffersize=[%v]", conbuffersize)
+}=======
+	return
 }
+>>>>>>> other

@@ -26,8 +26,13 @@ import (
 	"runtime"
 	"github.com/codeforsystemsbiology/rest.go"
 	"github.com/codeforsystemsbiology/verboselogger.go"
+<<<<<<< local
 	)
 	
+=======
+	"goconf.googlecode.com/hg"
+)
+>>>>>>> other
 
 var logger *log4go.VerboseLogger
 
@@ -44,7 +49,10 @@ func main() {
 	flag.StringVar(&configurationFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
-	configFile := NewConfigurationFile(configurationFile)
+	configFile, err := conf.ReadConfigFile(configurationFile)
+	if err != nil {
+		panic(err)
+	}
 
 	GlobalLogger(configFile)
 	GlobalTls(configFile)
@@ -64,7 +72,7 @@ func main() {
 
 // sets global logger based on verbosity level in configuration
 // optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
-func GlobalLogger(configFile ConfigurationFile) {
+func GlobalLogger(configFile *conf.ConfigFile) {
 	verbose, err := configFile.GetBool("default", "verbose")
 	logger = log4go.NewVerboseLogger(verbose, nil, "")
 	if err != nil {
@@ -77,14 +85,20 @@ func GlobalLogger(configFile ConfigurationFile) {
 // starts master service based on the given configuration file
 // required parameters:  default.hostname, default.password
 // optional parameters:  master.buffersize
-func StartMaster(configFile ConfigurationFile) {
+func StartMaster(configFile *conf.ConfigFile) {
 	GlobalBufferSize(configFile)
 
+<<<<<<< local
 	hostname := configFile.GetRequiredString("default", "hostname")
 	password := configFile.GetRequiredString("default", "password")
 	if gomaxproc, err := configFile.GetInt("master","gomaxproc"); err==nil {
 		runtime.GOMAXPROCS(gomaxproc)
 	}
+=======
+	hostname := GetRequiredString(configFile, "default", "hostname")
+	password := GetRequiredString(configFile, "default", "password")
+
+>>>>>>> other
 	m := NewMaster()
 
 	rest.Resource("jobs", MasterJobController{m, password})
@@ -98,12 +112,12 @@ func StartMaster(configFile ConfigurationFile) {
 
 // starts scribe service based on the given configuration file
 // required parameters:  default.hostname, default.password, scribe.target, mgodb.server, mgodb.store, mgodb.jobcollection, mgodb.taskcollection
-func StartScribe(configFile ConfigurationFile) {
-	hostname := configFile.GetRequiredString("default", "hostname")
-	apikey := configFile.GetRequiredString("default", "password")
-	target := configFile.GetRequiredString("scribe", "target")
-	dbhost := configFile.GetRequiredString("mgodb", "server")
-	dbstore := configFile.GetRequiredString("mgodb", "store")
+func StartScribe(configFile *conf.ConfigFile) {
+	hostname := GetRequiredString(configFile, "default", "hostname")
+	apikey := GetRequiredString(configFile, "default", "password")
+	target := GetRequiredString(configFile, "scribe", "target")
+	dbhost := GetRequiredString(configFile, "mgodb", "server")
+	dbstore := GetRequiredString(configFile, "mgodb", "store")
 
 	url, err := url.Parse(target)
 	if err != nil {
@@ -134,17 +148,17 @@ func StartScribe(configFile ConfigurationFile) {
 
 // starts Addama proxy (http://addama.org) based on the given configuration file
 // required parameters:  default.hostname, default.password, addama.target, addama.connectionFile, addama.host, addama.service, addama.uri, addama.label
-func StartAddama(configFile ConfigurationFile) {
-	hostname := configFile.GetRequiredString("default", "hostname")
+func StartAddama(configFile *conf.ConfigFile) {
+	hostname := GetRequiredString(configFile, "default", "hostname")
 
 	addamaConn := AddamaConnection{
-		target:         configFile.GetRequiredString("addama", "target"),
-		connectionFile: configFile.GetRequiredString("addama", "connectionFile"),
-		serviceHost:    configFile.GetRequiredString("addama", "host"),
-		serviceName:    configFile.GetRequiredString("addama", "service"),
-		uri:            configFile.GetRequiredString("addama", "uri"),
-		label:          configFile.GetRequiredString("addama", "label"),
-		apikey:         configFile.GetRequiredString("default", "password")}
+		target:         GetRequiredString(configFile, "addama", "target"),
+		connectionFile: GetRequiredString(configFile, "addama", "connectionFile"),
+		serviceHost:    GetRequiredString(configFile, "addama", "host"),
+		serviceName:    GetRequiredString(configFile, "addama", "service"),
+		uri:            GetRequiredString(configFile, "addama", "uri"),
+		label:          GetRequiredString(configFile, "addama", "label"),
+		apikey:         GetRequiredString(configFile, "default", "password")}
 
 	http.Handle("/", NewAddamaProxy(addamaConn))
 
@@ -154,20 +168,20 @@ func StartAddama(configFile ConfigurationFile) {
 // starts worker based on the given configuration file
 // required parameters:  worker.masterhost
 // optional parameters:  worker.processes
-func StartWorker(configFile ConfigurationFile) {
+func StartWorker(configFile *conf.ConfigFile) {
 	processes, err := configFile.GetInt("worker", "processes")
 	if err != nil {
 		logger.Warn(err)
 		processes = 3
 	}
-	masterhost := configFile.GetRequiredString("worker", "masterhost")
+	masterhost := GetRequiredString(configFile, "worker", "masterhost")
 	logger.Printf("StartWorker() [%v, %d]", masterhost, processes)
 	RunNode(processes, masterhost)
 }
 
 // starts http handlers for HTML content based on the given configuration file
 // optional parameters:  default.contentDirectory (location of html content to be served at https://example.com/ or https://example.com/html/index.html
-func StartHtmlHandler(configFile ConfigurationFile) {
+func StartHtmlHandler(configFile *conf.ConfigFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
 		logger.Printf("StartHtmlHandler(): serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))

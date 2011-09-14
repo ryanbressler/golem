@@ -37,7 +37,7 @@ func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
 			return
 		} else {
 			blocked := true
-			for blocked==true {
+			for blocked == true {
 				select {
 				case ch <- WorkerMessage{Type: msgType, SubId: id, Body: line}:
 					blocked = false
