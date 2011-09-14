@@ -49,7 +49,7 @@ def stall(jobid, composedUrl, loud=True):
         if response.status != 200:
             raise IOError("Unsuccessful status when communicating with server: " + response)
         contentDict = decoder.decode(content)
-        if not contentDict["Running"]:
+        if contentDict["State"] == "COMPLETE":
             return contentDict
         time.sleep(QUERY_INTERVAL)
 
