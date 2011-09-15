@@ -21,6 +21,7 @@ package main
 
 import (
 	"os"
+	"runtime"
 	"goconf.googlecode.com/hg"
 )
 
@@ -67,8 +68,8 @@ func GlobalTls(configFile *conf.ConfigFile) {
 
 // Sets global variable to configure buffersize for master submission channels (stdout, stderr)
 // optional parameters:  master.buffersize
-func GlobalBufferSize(configFile *conf.ConfigFile) {
-	bufsize, err := configFile.GetInt("master", "buffersize")
+func SubIOBufferSize(section string, configFile *conf.ConfigFile) {
+	bufsize, err := configFile.GetInt(section, "subiobuffersize")
 	if err != nil {
 		logger.Warn(err)
 	} else {
@@ -78,28 +79,34 @@ func GlobalBufferSize(configFile *conf.ConfigFile) {
 	logger.Printf("buffersize=[%v]", iobuffersize)
 }
 
-<<<<<<< local
 // Sets global variable to configure buffersize for channels wrapping connections between worker and master (stdout, stderr)
 // optional parameters:  master.buffersize
-func GlobalConBufferSize(configFile ConfigurationFile) {
-	bufsize, err := configFile.GetInt("default", "conbuffersize")
-=======
-func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
-	value, err := config.GetString(section, key)
->>>>>>> other
+func ConBufferSize(section string, config *conf.ConfigFile) {
+	bufsize, err := config.GetInt(section, "conbuffersize")
 	if err != nil {
-<<<<<<< local
-		logger.Warn(err)
+		logger.Printf("conbuffersize not fount in %v", section)
 	} else {
 		conbuffersize = bufsize
-=======
-		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
->>>>>>> other
+		logger.Printf("conbuffersize=[%v]", conbuffersize)
 	}
-<<<<<<< local
+}
 
-	logger.Printf("conbuffersize=[%v]", conbuffersize)
-}=======
+func GoMaxProc(section string, config *conf.ConfigFile) {
+	gomaxproc, err := config.GetInt(section, "gomaxproc")
+	if err != nil {
+		logger.Printf("gomaxproc not fount in %v", section)
+	} else {
+		runtime.GOMAXPROCS(gomaxproc)
+		logger.Printf("gomaxproc=[%v]", conbuffersize)
+	}
+}
+
+func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
+	value, err := config.GetString(section, key)
+	if err != nil {
+
+		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
+
+	}
 	return
 }
->>>>>>> other

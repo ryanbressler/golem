@@ -23,16 +23,10 @@ import (
 	"flag"
 	"http"
 	"url"
-	"runtime"
 	"github.com/codeforsystemsbiology/rest.go"
 	"github.com/codeforsystemsbiology/verboselogger.go"
-<<<<<<< local
-	)
-	
-=======
 	"goconf.googlecode.com/hg"
 )
->>>>>>> other
 
 var logger *log4go.VerboseLogger
 
@@ -56,7 +50,9 @@ func main() {
 
 	GlobalLogger(configFile)
 	GlobalTls(configFile)
-	GlobalConBufferSize(configFile)
+	SubIOBufferSize("default", configFile)
+	GoMaxProc("default", configFile)
+	ConBufferSize("default", configFile)
 	StartHtmlHandler(configFile)
 
 	if isMaster {
@@ -86,19 +82,13 @@ func GlobalLogger(configFile *conf.ConfigFile) {
 // required parameters:  default.hostname, default.password
 // optional parameters:  master.buffersize
 func StartMaster(configFile *conf.ConfigFile) {
-	GlobalBufferSize(configFile)
+	SubIOBufferSize("master", configFile)
+	GoMaxProc("master", configFile)
+	ConBufferSize("master", configFile)
 
-<<<<<<< local
-	hostname := configFile.GetRequiredString("default", "hostname")
-	password := configFile.GetRequiredString("default", "password")
-	if gomaxproc, err := configFile.GetInt("master","gomaxproc"); err==nil {
-		runtime.GOMAXPROCS(gomaxproc)
-	}
-=======
 	hostname := GetRequiredString(configFile, "default", "hostname")
 	password := GetRequiredString(configFile, "default", "password")
 
->>>>>>> other
 	m := NewMaster()
 
 	rest.Resource("jobs", MasterJobController{m, password})
@@ -113,6 +103,8 @@ func StartMaster(configFile *conf.ConfigFile) {
 // starts scribe service based on the given configuration file
 // required parameters:  default.hostname, default.password, scribe.target, mgodb.server, mgodb.store, mgodb.jobcollection, mgodb.taskcollection
 func StartScribe(configFile *conf.ConfigFile) {
+	GoMaxProc("scribe", configFile)
+
 	hostname := GetRequiredString(configFile, "default", "hostname")
 	apikey := GetRequiredString(configFile, "default", "password")
 	target := GetRequiredString(configFile, "scribe", "target")
@@ -169,6 +161,9 @@ func StartAddama(configFile *conf.ConfigFile) {
 // required parameters:  worker.masterhost
 // optional parameters:  worker.processes
 func StartWorker(configFile *conf.ConfigFile) {
+
+	GoMaxProc("worker", configFile)
+	ConBufferSize("worker", configFile)
 	processes, err := configFile.GetInt("worker", "processes")
 	if err != nil {
 		logger.Warn(err)
