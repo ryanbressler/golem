@@ -22,6 +22,7 @@ package main
 import (
 	"http"
 	"json"
+	"strconv"
 	"url"
 )
 
@@ -64,7 +65,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	label := GetHeader(r, "x-golem-job-label", jobId)
 	jobtype := GetHeader(r, "x-golem-job-type", "Unspecified")
 
-	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
+	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks), NEW, READY)
 	if err := this.store.Create(job, tasks); err != nil {
 		http.Error(rw, err.String(), http.StatusBadRequest)
 		return
@@ -102,4 +103,36 @@ func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *h
 	preq.Header.Set("x-golem-apikey", this.apikey)
 	proxy := http.NewSingleHostReverseProxy(this.target)
 	go proxy.ServeHTTP(rw, preq)
+}
+
+type ScribeClusterController struct {
+	store  JobStore
+	target *url.URL
+}
+
+// GET /cluster
+func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Values, header http.Header) {
+	logger.Debug("Index():[%v,%v]", params, header)
+
+	var numberOfSecondsSince int64 = 0
+	value, err := strconv.Atoi(params.Get("numberOfSecondsSince"))
+	if err == nil {
+		numberOfSecondsSince = int64(value)
+	}
+
+	logger.Printf("Index(): %d", numberOfSecondsSince)
+
+	items, err := this.store.ClusterStats(numberOfSecondsSince)
+	if err != nil {
+		logger.Warn(err)
+		http.Error(rw, err.String(), http.StatusInternalServerError)
+		return
+	}
+
+	clusterStatList := ClusterStatList{Items: items, NumberOfItems: len(items)}
+	// TODO: lookup in storage
+	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
+		logger.Warn(err)
+		http.Error(rw, err.String(), http.StatusBadRequest)
+	}
 }

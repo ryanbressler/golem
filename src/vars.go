@@ -21,6 +21,8 @@ package main
 
 import (
 	"os"
+	"runtime"
+	"goconf.googlecode.com/hg"
 )
 
 const (
@@ -28,27 +30,15 @@ const (
 	year   = 60 * 60 * 24 * 365
 )
 
-var verbose = false
 var iobuffersize = 1000
+var conbuffersize = 10
 var useTls bool = true
 var certpath string = ""
 var certorg string = "golem.googlecode.com"
 
-// Sets a global variable for verbosity in logs
-// optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
-func GlobalVerbose(configFile ConfigurationFile) {
-	v, err := configFile.GetBool("default", "verbose")
-	if err != nil {
-		logger.Warn(err)
-	} else {
-		verbose = v
-	}
-	logger.Printf("verbose=[%v]", verbose)
-}
-
 // Sets global variable to enable TLS communications and other related variables (certificate path, organization)
 // optional parameters:  default.certpath, default.organization, default.tls
-func GlobalTls(configFile ConfigurationFile) {
+func GlobalTls(configFile *conf.ConfigFile) {
 	certificatepath, err := configFile.GetString("default", "certpath")
 	if err != nil {
 		logger.Warn(err)
@@ -78,8 +68,8 @@ func GlobalTls(configFile ConfigurationFile) {
 
 // Sets global variable to configure buffersize for master submission channels (stdout, stderr)
 // optional parameters:  master.buffersize
-func GlobalBufferSize(configFile ConfigurationFile) {
-	bufsize, err := configFile.GetInt("master", "buffersize")
+func SubIOBufferSize(section string, configFile *conf.ConfigFile) {
+	bufsize, err := configFile.GetInt(section, "subiobuffersize")
 	if err != nil {
 		logger.Warn(err)
 	} else {
@@ -87,4 +77,36 @@ func GlobalBufferSize(configFile ConfigurationFile) {
 	}
 
 	logger.Printf("buffersize=[%v]", iobuffersize)
+}
+
+// Sets global variable to configure buffersize for channels wrapping connections between worker and master (stdout, stderr)
+// optional parameters:  master.buffersize
+func ConBufferSize(section string, config *conf.ConfigFile) {
+	bufsize, err := config.GetInt(section, "conbuffersize")
+	if err != nil {
+		logger.Printf("conbuffersize not fount in %v", section)
+	} else {
+		conbuffersize = bufsize
+		logger.Printf("conbuffersize=[%v]", conbuffersize)
+	}
+}
+
+func GoMaxProc(section string, config *conf.ConfigFile) {
+	gomaxproc, err := config.GetInt(section, "gomaxproc")
+	if err != nil {
+		logger.Printf("gomaxproc not fount in %v", section)
+	} else {
+		runtime.GOMAXPROCS(gomaxproc)
+		logger.Printf("gomaxproc=[%v]", conbuffersize)
+	}
+}
+
+func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
+	value, err := config.GetString(section, key)
+	if err != nil {
+
+		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
+
+	}
+	return
 }

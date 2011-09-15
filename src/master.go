@@ -21,8 +21,8 @@ package main
 
 import (
 	"http"
-	"websocket"
 	"sync"
+	"websocket"
 )
 
 type Master struct {

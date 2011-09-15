@@ -58,90 +58,79 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 	return &s
 }
 
-func (s *Submission) Stop() bool {
+func (this *Submission) Stop() bool {
 	logger.Debug("Stop()")
-	dtls := s.SniffDetails()
+	dtls := this.SniffDetails()
 	logger.Debug("Stop(): %v", dtls.JobId)
 
-	if dtls.Running {
+	if dtls.State == RUNNING {
 		select {
-		case s.stopChan <- 1:
-			dtls := <-s.Details
-			dtls.Running = false
-			dtls.LastModified = time.LocalTime().String()
-			s.Details <- dtls
-
-			logger.Printf("Stop(): %v", dtls.JobId)
+		case this.stopChan <- 1:
+			this.SetState(COMPLETE, STOPPED)
+			logger.Debug("Stop():%v", this.SniffDetails())
 		case <-time.After(250000000):
 			logger.Printf("Stop(): timeout stopping: %v", dtls.JobId)
 		}
 	}
 
-	return s.SniffDetails().Running
+	return this.SniffDetails().IsRunning()
 }
 
 func (this *Submission) SniffDetails() JobDetails {
-	logger.Debug("SniffDetails()")
 	dtls := <-this.Details
 	this.Details <- dtls
+	logger.Debug("SniffDetails(): dtls=%v", dtls)
 	return dtls
 }
 
-func (s Submission) MonitorWorkTasks() {
+func (this *Submission) MonitorWorkTasks() {
 	logger.Debug("MonitorWorkTasks()")
 	for {
 		select {
-		case <-s.ErrorChan:
-			dtls := <-s.Details
+		case <-this.ErrorChan:
+			dtls := <-this.Details
 			dtls.Progress.Errored = 1 + dtls.Progress.Errored
 			dtls.LastModified = time.LocalTime().String()
-			s.Details <- dtls
+			this.Details <- dtls
 
 			logger.Debug("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
 
-		case <-s.FinishedChan:
-			dtls := <-s.Details
+		case <-this.FinishedChan:
+			dtls := <-this.Details
 			dtls.Progress.Finished = 1 + dtls.Progress.Finished
 			dtls.LastModified = time.LocalTime().String()
-			s.Details <- dtls
+			this.Details <- dtls
 
 			logger.Debug("FINISHED [%v,%v]", dtls.JobId, dtls.Progress.Finished)
 		}
 
-		dtls := s.SniffDetails()
+		dtls := this.SniffDetails()
 		if dtls.Progress.isComplete() {
-			logger.Debug("COMPLETED [%v]", dtls.JobId)
-			dtls = <-s.Details
-			dtls.Running = false
-			dtls.LastModified = time.LocalTime().String()
-			s.Details <- dtls
-			//send three messages to stop chan to stop all things plus one
-			s.stopChan <- 1
-			s.stopChan <- 1
-			s.stopChan <- 1
+			logger.Debug("COMPLETED [%v]", dtls)
+			this.SetState(COMPLETE, SUCCESS)
+			this.stopChan <- 1
+			this.stopChan <- 1
+			this.stopChan <- 1
 			logger.Debug("COMPLETED [%v]: DONE", dtls.JobId)
 			return
 		}
 	}
 }
 
-func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
+func (this *Submission) SubmitJobs(jobChan chan *WorkerJob) {
 	logger.Debug("SubmitJobs()")
 
-	dtls := <-s.Details
-	dtls.Scheduled = true
-	dtls.Running = true
-	dtls.LastModified = time.LocalTime().String()
-	s.Details <- dtls
+	this.SetState(RUNNING, READY)
 
+	dtls := this.SniffDetails()
 	taskId := 0
-	for lineId, vals := range s.Tasks {
+	for lineId, vals := range this.Tasks {
 		logger.Debug("[%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
 			case jobChan <- &WorkerJob{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
 				taskId++
-			case <-s.stopChan:
+			case <-this.stopChan:
 				return //TODO: add indication that we stopped
 			}
 		}
@@ -149,8 +138,8 @@ func (s Submission) SubmitJobs(jobChan chan *WorkerJob) {
 	logger.Printf("tasks submitted [%d, %v]", taskId, dtls.JobId)
 }
 
-func (s Submission) WriteIo() {
-	dtls := s.SniffDetails()
+func (this *Submission) WriteIo() {
+	dtls := this.SniffDetails()
 	logger.Debug("WriteIo(%v)", dtls.JobId)
 
 	var stdOutFile io.WriteCloser = nil
@@ -159,7 +148,7 @@ func (s Submission) WriteIo() {
 
 	for {
 		select {
-		case msg := <-s.CoutFileChan:
+		case msg := <-this.CoutFileChan:
 			if stdOutFile == nil {
 				if stdOutFile, err = os.Create(fmt.Sprintf("%v.out.txt", dtls.JobId)); err != nil {
 					logger.Warn(err)
@@ -170,7 +159,7 @@ func (s Submission) WriteIo() {
 			}
 
 			fmt.Fprint(stdOutFile, msg)
-		case errmsg := <-s.CerrFileChan:
+		case errmsg := <-this.CerrFileChan:
 			if stdErrFile == nil {
 				if stdErrFile, err = os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId)); err != nil {
 					logger.Warn(err)
@@ -184,7 +173,7 @@ func (s Submission) WriteIo() {
 		case <-time.After(1 * second):
 			logger.Debug("checking for done: %v", dtls.JobId)
 			select {
-			case <-s.stopChan:
+			case <-this.stopChan:
 				logger.Debug("stop chan: %v", dtls.JobId)
 				return
 			default:
@@ -192,4 +181,23 @@ func (s Submission) WriteIo() {
 
 		}
 	}
+}
+
+func (this *Submission) SetState(state string, status string) {
+	logger.Debug("SetState(%v,%v):before=%v", state, status, this.SniffDetails())
+	x := <-this.Details
+	x.State = state
+	x.Status = status
+	x.LastModified = time.LocalTime().String()
+	this.Details <- x
+	logger.Debug("SetState(%v,%v):after=%v", state, status, this.SniffDetails())
+}
+
+func (this *Submission) UpdateProgress() {
+	logger.Debug("UpdateProgress():before=%v", this.SniffDetails())
+	x := <-this.Details
+	x.Progress.Errored = 1 + x.Progress.Errored
+	x.LastModified = time.LocalTime().String()
+	this.Details <- x
+	logger.Debug("UpdateProgress():after=%v", this.SniffDetails())
 }

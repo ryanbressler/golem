@@ -20,6 +20,7 @@
 package main
 
 import (
+	"fmt"
 	"http"
 	"json"
 	"strconv"
@@ -70,7 +71,9 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	_, isin := this.master.subMap[jobId]
 	this.master.subMu.RUnlock()
 	if isin {
-		logger.Debug("job already exists: %v", jobId)
+		msg := fmt.Sprintf("job already exists: %v", jobId)
+		logger.Debug(msg)
+		http.Error(rw, msg, http.StatusConflict)
 		return
 	}
 
@@ -78,7 +81,7 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	label := GetHeader(r, "x-golem-job-label", jobId)
 	jobtype := GetHeader(r, "x-golem-job-type", "Unspecified")
 
-	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks))
+	jd := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks), SCHEDULED, READY)
 
 	logger.Debug("creating: %v", jobId)
 	this.master.subMu.Lock()

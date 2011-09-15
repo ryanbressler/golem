@@ -26,11 +26,15 @@ import (
 	"launchpad.net/gobson/bson"
 )
 
+const (
+	JOBS          = "jobs"
+	TASKS         = "tasks"
+	CLUSTER_STATS = "cluster_stats"
+)
+
 type MongoJobStore struct {
-	Host            string
-	Store           string
-	JobsCollection  string
-	TasksCollection string
+	Host  string
+	Store string
 }
 
 func (this *MongoJobStore) GetCollection(collectionName string) (c mgo.Collection, err os.Error) {
@@ -48,7 +52,7 @@ func (this *MongoJobStore) GetCollection(collectionName string) (c mgo.Collectio
 
 func (this *MongoJobStore) Create(item JobDetails, tasks []Task) os.Error {
 	logger.Debug("Create(%v)", item)
-	jobsCollection, err := this.GetCollection(this.JobsCollection)
+	jobsCollection, err := this.GetCollection(JOBS)
 	if err != nil {
 		logger.Warn(err)
 		return err
@@ -60,7 +64,7 @@ func (this *MongoJobStore) Create(item JobDetails, tasks []Task) os.Error {
 		return err
 	}
 
-	tasksCollection, err := this.GetCollection(this.TasksCollection)
+	tasksCollection, err := this.GetCollection(TASKS)
 	if err != nil {
 		logger.Warn(err)
 		return err
@@ -74,16 +78,29 @@ func (this *MongoJobStore) All() ([]JobDetails, os.Error) {
 }
 
 func (this *MongoJobStore) Unscheduled() ([]JobDetails, os.Error) {
-	return this.FindJobs(bson.M{"scheduled": false})
+	return this.FindJobs(bson.M{"state": NEW})
 }
 
-func (this *MongoJobStore) Active() ([]JobDetails, os.Error) {
-	return this.FindJobs(bson.M{"running": true})
+func (this *MongoJobStore) CountPending() (pending int, err os.Error) {
+	var newOnes int
+	var scheduledOnes int
+	if newOnes, err = this.CountJobs(bson.M{"state": NEW}); err != nil {
+		return
+	}
+	if scheduledOnes, err = this.CountJobs(bson.M{"state": SCHEDULED}); err != nil {
+		return
+	}
+	pending = newOnes + scheduledOnes
+	return
+}
+
+func (this *MongoJobStore) CountActive() (int, os.Error) {
+	return this.CountJobs(bson.M{"state": RUNNING})
 }
 
 func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 	logger.Debug("Get(%v)", jobId)
-	jobsCollection, err := this.GetCollection(this.JobsCollection)
+	jobsCollection, err := this.GetCollection(JOBS)
 	if err != nil {
 		logger.Warn(err)
 		return
@@ -98,7 +115,7 @@ func (this *MongoJobStore) Get(jobId string) (item JobDetails, err os.Error) {
 }
 
 func (this *MongoJobStore) Tasks(jobId string) (tasks []Task, err os.Error) {
-	tasksCollection, err := this.GetCollection(this.TasksCollection)
+	tasksCollection, err := this.GetCollection(TASKS)
 	if err != nil {
 		logger.Warn(err)
 		return
@@ -121,7 +138,7 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 		return os.NewError("No Job Id Found")
 	}
 
-	jobsCollection, err := this.GetCollection(this.JobsCollection)
+	jobsCollection, err := this.GetCollection(JOBS)
 	if err != nil {
 		logger.Warn(err)
 		return err
@@ -137,8 +154,8 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 	existing.LastModified = time.LocalTime().String()
 	existing.Progress.Finished = item.Progress.Finished
 	existing.Progress.Errored = item.Progress.Errored
-	existing.Running = item.Running
-	existing.Scheduled = item.Scheduled
+	existing.State = item.State
+	existing.Status = item.Status
 
 	logger.Debug("Update(%v): %v", item, existing)
 	return jobsCollection.Update(bson.M{"jobid": item.JobId}, existing)
@@ -146,7 +163,7 @@ func (this *MongoJobStore) Update(item JobDetails) os.Error {
 
 func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetails, err os.Error) {
 	logger.Debug("FindJobs(%v)", m)
-	jobsCollection, err := this.GetCollection(this.JobsCollection)
+	jobsCollection, err := this.GetCollection(JOBS)
 	if err != nil {
 		logger.Warn(err)
 		return
@@ -166,5 +183,67 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 		}
 		items = append(items, jd)
 	}
+	return
+}
+
+func (this *MongoJobStore) CountJobs(m map[string]interface{}) (int, os.Error) {
+	logger.Debug("CountJobs(%v)", m)
+
+	jobsCollection, err := this.GetCollection(JOBS)
+	if err != nil {
+		logger.Warn(err)
+		return 0, err
+	}
+
+	return jobsCollection.Find(m).Count()
+}
+
+func (this *MongoJobStore) SnapshotCluster(snapshot ClusterStat) (err os.Error) {
+	collection, err := this.GetCollection(CLUSTER_STATS)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	if err := collection.Insert(snapshot); err != nil {
+		logger.Warn(err)
+	}
+
+	return
+}
+
+func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []ClusterStat, err os.Error) {
+	logger.Debug("ClusterStats(%d)", numberOfSecondsSince)
+
+	collection, err := this.GetCollection(CLUSTER_STATS)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	m := bson.M{}
+	if numberOfSecondsSince > 0 {
+		timeSince := time.Seconds() - numberOfSecondsSince
+		m = bson.M{"snapshotat": bson.M{"$gt": timeSince}}
+	}
+
+	logger.Debug("m=%v", m)
+	iter, err := collection.Find(m).Iter()
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	for {
+		cs := ClusterStat{}
+		if nexterr := iter.Next(&cs); nexterr != nil {
+			logger.Warn(nexterr)
+			break
+		}
+		logger.Debug("ClusterStats(%d):%v", numberOfSecondsSince, cs)
+		items = append(items, cs)
+	}
+
+	logger.Debug("ClusterStats(%d):%d", numberOfSecondsSince, len(items))
 	return
 }

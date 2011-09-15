@@ -263,7 +263,9 @@ class Golemizer:
 
             response, content = golem.runBatch(runlist, self.serverPass, self.masterPath, loud)
             jobId = golemBlocking.jobIdFromResponse(content)
-            golemBlocking.stall(jobId, self.masterPath, loud)
+            finalStatus = golemBlocking.stall(jobId, self.masterPath, loud)
+            if loud and (finalStatus["Status"] != "SUCCESS"):
+                print "Uh-oh- job status is", finalStatus["Status"], "and we're probably going to crash soon"
 
             #Note: We're choosing to ignore stdout/stderr. We can revisit this design decision later and decide to
             #do something instead, if we really desperately want to

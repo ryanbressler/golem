@@ -3,7 +3,6 @@ include $(GOROOT)/src/Make.inc
 TARG=golem
 GOFILES=\
 	vars.go\
-	log.go\
 	Connection.go\
 	Submission.go\
 	controllers_master.go\
@@ -21,7 +20,6 @@ GOFILES=\
 	storage.go\
 	storage_mongodb.go\
 	entities.go\
-	config.go\
 	main.go\
 	addama.go\
 	

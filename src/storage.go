@@ -24,17 +24,23 @@ import (
 )
 
 type JobStore interface {
-	Create(item JobDetails, tasks []Task) (err os.Error)
+	Create(JobDetails, []Task) os.Error
 
-	All() (items []JobDetails, err os.Error)
+	All() ([]JobDetails, os.Error)
 
-	Active() (items []JobDetails, err os.Error)
+	Unscheduled() ([]JobDetails, os.Error)
 
-	Unscheduled() (items []JobDetails, err os.Error)
+	CountActive() (int, os.Error)
 
-	Get(jobId string) (item JobDetails, err os.Error)
+	CountPending() (int, os.Error)
 
-	Tasks(jobId string) (tasks []Task, err os.Error)
+	Get(jobId string) (JobDetails, os.Error)
 
-	Update(item JobDetails) (err os.Error)
+	Tasks(jobId string) ([]Task, os.Error)
+
+	Update(JobDetails) os.Error
+
+	SnapshotCluster(ClusterStat) os.Error
+
+	ClusterStats(numberOfSecondsSince int64) ([]ClusterStat, os.Error)
 }

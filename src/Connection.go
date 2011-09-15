@@ -39,8 +39,8 @@ type Connection struct {
 // Wraps a web socket in a connection starts routines that receive and send messages
 func NewConnection(Socket *websocket.Conn, isWorker bool) *Connection {
 	n := Connection{Socket: Socket,
-		OutChan:  make(chan WorkerMessage, 10),
-		InChan:   make(chan WorkerMessage, 10),
+		OutChan:  make(chan WorkerMessage, conbuffersize),
+		InChan:   make(chan WorkerMessage, conbuffersize),
 		DiedChan: make(chan int, 1),
 		isWorker: isWorker}
 	go n.GetMsgs()
