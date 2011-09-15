@@ -103,6 +103,9 @@ func (nh *NodeHandle) SendJob(j *WorkerJob) {
 	}
 	msg := WorkerMessage{Type: START, Body: string(jobjson)}
 	nh.Con.OutChan <- msg
+	running := <-nh.Running
+	nh.Running <- running + 1
+	logger.Debug("assigning [%v, %d]", nh.Hostname, running)
 }
 
 func (nh *NodeHandle) Monitor() {
@@ -110,31 +113,28 @@ func (nh *NodeHandle) Monitor() {
 	//control loop
 	for {
 		processes, running := nh.Stats()
-		logger.Debug("[%v %d %d]", nh.Hostname, processes, running)
+		//logger.Debug("[%v %d %d]", nh.Hostname, processes, running)
 
 		switch {
 		case running < processes:
-			logger.Debug("waiting for job or message [%v, %d]", nh.Hostname, running)
+			//logger.Debug("waiting for job or message [%v, %d]", nh.Hostname, running)
 			select {
 			case bcMsg := <-nh.BroadcastChan:
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case job := <-nh.Master.jobChan:
-				nh.SendJob(job)
-				running := <-nh.Running
-				nh.Running <- running + 1
-				logger.Debug("assigning [%v, %d]", nh.Hostname, running)
+				go nh.SendJob(job)
 			case msg := <-nh.Con.InChan:
-				nh.HandleWorkerMessage(&msg)
+				go nh.HandleWorkerMessage(&msg)
 			}
 		default:
-			logger.Debug("waiting for message [%v, %v]", nh.Hostname, running)
+			//logger.Debug("waiting for message [%v, %v]", nh.Hostname, running)
 			select {
 			case bcMsg := <-nh.BroadcastChan:
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case msg := <-nh.Con.InChan:
-				nh.HandleWorkerMessage(&msg)
+				go nh.HandleWorkerMessage(&msg)
 			}
 		}
 	}
@@ -148,7 +148,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 	case CHECKIN:
 		logger.Debug("CHECKIN [%v]", nh.Hostname)
 	case COUT:
-		logger.Debug("COUT [%v]", nh.Hostname)
+		//logger.Debug("COUT [%v]", nh.Hostname)
 		blocked := true
 		for blocked==true {
 			select {
@@ -160,7 +160,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 		}
 		
 	case CERROR:
-		logger.Debug("CERROR [%v]", nh.Hostname)
+		//logger.Debug("CERROR [%v]", nh.Hostname)
 		blocked := true
 		for blocked==true {
 			select {
