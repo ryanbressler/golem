@@ -2,6 +2,7 @@ JobsGrid = Ext.extend(ItemsGrid, {
     constructor: function(config) {
         Ext.apply(this, config);
 
+        this.groupField = "State";
         this.toolbarButtons = [
             { text: 'Stop Selected', iconCls:'stop', disabled: true, ref: "../stopButton" }
         ];
@@ -15,8 +16,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
             { header: "Total", width: 10, sortable: true, dataIndex: 'Total' },
             { header: "Finished", width: 10, sortable: true, dataIndex: 'Finished' },
             { header: "Errored", width: 10, sortable: true, dataIndex: 'Errored' },
-            { header: "Scheduled", width: 10, sortable: true, dataIndex: 'Scheduled', hidden: true },
-            { header: "Running", width: 10, sortable: true, dataIndex: 'Running', hidden: true }
+            { header: "State", width: 10, sortable: true, dataIndex: 'State', hidden: true },
+            { header: "Status", width: 10, sortable: true, dataIndex: 'Status', hidden: false }
         ];
         this.storeColumns = [
             {name: 'JobId'},
@@ -28,8 +29,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
             {name: 'Total', type: 'int'},
             {name: 'Finished', type: 'int'},
             {name: 'Errored', type: 'int'},
-            {name: 'Scheduled' },
-            {name: 'Running' }
+            {name: 'State' },
+            {name: 'Status' }
         ];
 
         JobsGrid.superclass.constructor.call(this);
@@ -69,8 +70,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
             job.Progress.Total,
             job.Progress.Finished,
             job.Progress.Errored,
-            job.Scheduled,
-            job.Running
+            job.State,
+            job.Status
         ];
     }
 
