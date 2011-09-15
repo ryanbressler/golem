@@ -53,6 +53,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	msg := <-nh.Con.InChan
 
 	if msg.Type == HELLO {
+		logger.Printf("Node Hello Body:%v",msg.Body)
 		val, err := NewHelloMsgBody(msg.Body)
 		if err != nil {
 			logger.Warn(err)

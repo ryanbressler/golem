@@ -22,7 +22,6 @@ package main
 import (
 	"json"
 	"time"
-	"fmt"
 	"os"
 )
 
@@ -135,9 +134,10 @@ type HelloMsgBody struct {
 	UniqueId    string
 }
 
-func NewHelloMsgBody(data string) (rv HelloMsgBody, err os.Error) {
-	err = json.Unmarshal([]byte(data), rv)
-	return
+func NewHelloMsgBody(data string) (*HelloMsgBody, os.Error) {
+	rv :=&HelloMsgBody{}
+	err := json.Unmarshal([]byte(data), rv)
+	return rv, err
 }
 
 type WorkerNodeList struct {
@@ -175,7 +175,7 @@ func (wm *WorkerMessage) BodyFromInterface(Body interface{}) os.Error {
 		logger.Warn(err)
 		return err
 	}
-	wm.Body = fmt.Sprintf("%v", b)
+	wm.Body = string(b)
 	return nil
 
 }

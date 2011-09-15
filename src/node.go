@@ -130,6 +130,7 @@ func RunNode(processes int, master string) {
 	mcon := *NewConnection(ws, true)
 	wm := WorkerMessage{Type: HELLO}
 	wm.BodyFromInterface(HelloMsgBody{JobCapacity: processes, RunningJobs: 0})
+	logger.Printf("Hello msg body: %v",wm.Body)
 	mcon.OutChan <- wm
 	go CheckIn(&mcon)
 	replyc := make(chan *WorkerMessage)
