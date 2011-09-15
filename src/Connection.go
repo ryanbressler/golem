@@ -107,10 +107,15 @@ func (con Connection) GetMsgs() {
 					logger.Printf("Atempting reconnect in %v seconds.",t)
 					<-time.After(int64(t)*second)
 					logger.Printf("Atempting reconnect now.")
-					ws := DialWebSocket(remote)
-					<-time.After(1*second)
-					if _, err2 := con.Socket.Write(msgjson); err2 != nil {
-						logger.Warn(err2)
+					
+					ws, err := DialWebSocket(remote) 
+					if err != nil {
+						logger.Warn(err)
+						continue
+					}
+
+					if _, err = ws.Write(msgjson); err != nil {
+						logger.Warn(err)
 					} else {
 						reconnected=true
 						con.Socket=ws
