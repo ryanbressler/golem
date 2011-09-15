@@ -139,8 +139,9 @@ func RunNode(processes int, master string) {
 		logger.Debug("Waiting for done or msg.")
 		select {
 		case <-mcon.DiedChan:
-			//TODO:reconnect here
-
+			wm = WorkerMessage{Type: HELLO}
+			wm.BodyFromInterface(HelloMsgBody{JobCapacity: processes, RunningJobs: running})
+			mcon.ReConChan<-wm
 		case rv := <-replyc:
 			logger.Debug("Got 'done' signal")
 			mcon.OutChan <- *rv

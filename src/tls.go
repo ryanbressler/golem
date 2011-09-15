@@ -37,10 +37,7 @@ import (
 //connect a web socket to the master as a worker
 func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	logger.Debug("OpenWebSocketToMaster(%v)", master)
-	origin, err := os.Hostname()
-	if err != nil {
-		logger.Warn(err)
-	}
+	
 
 	prot := "ws"
 	if useTls {
@@ -48,6 +45,15 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	}
 
 	url := fmt.Sprintf("%v://%v/master/", prot, master)
+	ws = DialWebSocket(url)
+	return
+}
+
+func DialWebSocket(url string) (ws *websocket.Conn){
+	origin, err := os.Hostname()
+	if err != nil {
+		logger.Warn(err)
+	}
 	if ws, err = websocket.Dial(url, "", origin); err != nil {
 		logger.Warn(err)
 	}

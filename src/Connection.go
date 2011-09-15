@@ -25,6 +25,7 @@ import (
 	"websocket"
 	"json"
 	"bufio"
+	"time"
 )
 
 // represents one end of a web socket and has facilities for sending and receiving messages via chans
@@ -32,6 +33,7 @@ type Connection struct {
 	Socket   *websocket.Conn    //the socket that the connection wraps
 	OutChan  chan WorkerMessage // the out box. send messages with c.OutChan<-msg
 	InChan   chan WorkerMessage // the in box. getmsg:=<-c.InChan
+	ReConChan chan WorkerMessage
 	DiedChan chan int           // send died message out on this
 	isWorker bool               // indicates if this connection is for a worker node
 }
@@ -41,6 +43,7 @@ func NewConnection(Socket *websocket.Conn, isWorker bool) *Connection {
 	n := Connection{Socket: Socket,
 		OutChan:  make(chan WorkerMessage, conbuffersize),
 		InChan:   make(chan WorkerMessage, conbuffersize),
+		ReConChan: make(chan WorkerMessage, 0),
 		DiedChan: make(chan int, 1),
 		isWorker: isWorker}
 	go n.GetMsgs()
@@ -59,9 +62,17 @@ func (con Connection) SendMsgs() {
 			return
 		}
 
-		if _, err := con.Socket.Write(msgjson); err != nil {
-			logger.Warn(err)
+		//try to send over and over.
+		sent := false
+		for ( sent ) {
+			if _, err := con.Socket.Write(msgjson); err != nil {
+				logger.Warn(err)
+			} else {
+				sent= true
+			}
+			<-time.After(25*second)
 		}
+		
 	}
 }
 
@@ -77,11 +88,42 @@ func (con Connection) GetMsgs() {
 
 		switch {
 		case err == os.EOF:
+			remote := con.Socket.RemoteAddr().String()
 			con.Socket.Close()
-			/*if con.isWorker {
-				DieIn(10)
-			}*/
-			con.DiedChan <- 1
+			if con.isWorker {
+				
+			
+				con.DiedChan <- 1
+				msg :=<- con.ReConChan
+				msgjson, err := json.Marshal(msg)
+					if err != nil {
+						logger.Warn(err)
+				}
+				
+				reconnected := false
+				
+				for t:=1;t<16;t=t*2 {
+				
+					logger.Printf("Atempting reconnect in %v seconds.",t)
+					<-time.After(int64(t)*second)
+					logger.Printf("Atempting reconnect now.")
+					ws := DialWebSocket(remote)
+					<-time.After(1*second)
+					if _, err2 := con.Socket.Write(msgjson); err2 != nil {
+						logger.Warn(err2)
+					} else {
+						reconnected=true
+						con.Socket=ws
+						break
+					}
+					
+				}
+				if reconnected != true {
+					DieIn(10)
+				}
+				
+			} 
+
 			return //TODO: recover
 		case err == bufio.ErrBufferFull:
 			decoder = json.NewDecoder(con.Socket)
