@@ -164,7 +164,7 @@ class Golemizer:
         nextPickle.flush()
         nextPickle.close()
 
-    def goDoIt(self, inputSeq, commonData, targetFunction, binplace = True, alternateSource = None, recursive = False, quiet = False):
+    def goDoIt(self, inputSeq, commonData, targetFunction, binplace = True, alternateSource = None, recursive = False, quiet = False, label="", email=""):
         """
         Executes a function on the Golem cluster indicated by the settings for this object.
         Parameters:
@@ -193,6 +193,8 @@ class Golemizer:
             recursive - Deprecated.
             quiet - Suppress server responses from being printed to stdout while waiting for results. Default: False,
                     for backwards compatibility. "True" is more likely to be desirable.
+            label - Alternate identifier for locating the job in the log later. Optional.
+            email - Informational field to identify the person running the job in case they need to be contacted. Optional.
         """
         if len(sys.argv) > 1 and sys.argv[1] == "--golemtask":
             #uh-oh
@@ -261,7 +263,7 @@ class Golemizer:
                     }
                 for n in range(0, pickleCount)]
 
-            response, content = golem.runBatch(runlist, self.serverPass, self.masterPath, loud)
+            response, content = golem.runBatch(runlist, self.serverPass, self.masterPath, loud, label, email)
             jobId = golemBlocking.jobIdFromResponse(content)
             finalStatus = golemBlocking.stall(jobId, self.masterPath, loud)
             if loud and (finalStatus["Status"] != "SUCCESS"):
