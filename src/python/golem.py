@@ -388,12 +388,12 @@ def main():
     url = master+"/jobs/"
 
     if cmd == "run":
-        runOneLine(int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2:], pwd, url, label, email)
+        runOneLine(int(sys.argv[commandIndex+1]), sys.argv[commandIndex+2:], pwd, url, True, label, email)
     elif cmd == "runlist":
-        runList(open(sys.argv[commandIndex + 1]), pwd, url, label, email)
+        runList(open(sys.argv[commandIndex + 1]), pwd, url, True, label, email)
     elif cmd == "runoneach":
         jobs = [{"Args": sys.argv[commandIndex + 1:]}]
-        runOnEach(jobs, pwd, url, label, email)
+        runOnEach(jobs, pwd, url, True, label, email)
     elif cmd == "jobs" or cmd == "list":
         getJobList(url)
     elif cmd == "stop":
