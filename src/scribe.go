@@ -80,9 +80,7 @@ func (this *Scribe) PollJobs() {
 	logger.Debug("PollJobs")
 	for _, jd := range this.GetJobs() {
 		this.store.Update(jd)
-		if jd.State == COMPLETE {
-            this.ArchiveJob(jd)
-		}
+		this.ArchiveJob(jd)
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
@@ -193,7 +191,11 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 }
 
 func (this *Scribe) ArchiveJob(jd JobDetails) (err os.Error) {
-	logger.Debug("ArchiveJob(%v)", jd.JobId)
+	logger.Debug("ArchiveJob(%v)", jd)
+	if jd.State != COMPLETE {
+		logger.Debug("ArchiveJob(%v): NOT COMPLETE", jd)
+		return
+	}
 
 	jobUri := fmt.Sprintf("%v/jobs/%v/archive", this.masterUrl, jd.JobId)
 	r, err := http.NewRequest("POST", jobUri, strings.NewReader(""))
