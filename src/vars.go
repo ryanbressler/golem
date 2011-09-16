@@ -32,6 +32,7 @@ const (
 
 var iobuffersize = 1000
 var conbuffersize = 10
+var iomonitors = 2
 var useTls bool = true
 var certpath string = ""
 var certorg string = "golem.googlecode.com"
@@ -91,16 +92,32 @@ func ConBufferSize(section string, config *conf.ConfigFile) {
 	}
 }
 
+//get the number of IO monitors to run per node
+func IOMOnitors( config *conf.ConfigFile) {
+	iomons, err := config.GetInt("master", "iomonitors")
+	if err != nil {
+		logger.Printf("iomonitors not fount in master")
+	} else {
+		if iomons > 0 {
+			iomonitors=iomons
+		}
+		
+	}
+	logger.Printf("iomonitors=[%v]", iomonitors)
+}
+
+//get the number of proccessors to use for golem itself
 func GoMaxProc(section string, config *conf.ConfigFile) {
 	gomaxproc, err := config.GetInt(section, "gomaxproc")
 	if err != nil {
 		logger.Printf("gomaxproc not fount in %v", section)
 	} else {
 		runtime.GOMAXPROCS(gomaxproc)
-		logger.Printf("gomaxproc=[%v]", conbuffersize)
+		logger.Printf("gomaxproc=[%v]", gomaxproc)
 	}
 }
 
+//conveniance function for requiring a string in ghte config file
 func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
 	value, err := config.GetString(section, key)
 	if err != nil {
