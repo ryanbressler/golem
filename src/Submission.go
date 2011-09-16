@@ -54,7 +54,8 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 	s.Details <- jd
 
 	go s.MonitorWorkTasks()
-	go s.WriteIo()
+	go s.WriteCout()
+	go s.WriteCerror()
 	go s.SubmitJobs(jobChan)
 
 	return &s
@@ -140,12 +141,11 @@ func (this *Submission) SubmitJobs(jobChan chan *WorkerJob) {
 
 }
 
-func (this *Submission) WriteIo() {
+func (this *Submission) WriteCout() {
 	dtls := this.SniffDetails()
-	logger.Debug("WriteIo(%v)", dtls.JobId)
+	logger.Debug("WriteCout(%v)", dtls.JobId)
 
 	var stdOutFile io.WriteCloser = nil
-	var stdErrFile io.WriteCloser = nil
 	var err os.Error
 
 	for {
@@ -161,6 +161,28 @@ func (this *Submission) WriteIo() {
 			}
 
 			fmt.Fprint(stdOutFile, msg)
+		case <-time.After(1 * second):
+			logger.Debug("checking for done: %v", dtls.JobId)
+			select {
+			case <-this.doneChan:
+				logger.Debug("stop chan: %v", dtls.JobId)
+				return
+			default:
+			}
+
+		}
+	}
+}
+
+func (this *Submission) WriteCerror() {
+	dtls := this.SniffDetails()
+	logger.Debug("WriteCerror(%v)", dtls.JobId)
+
+	var stdErrFile io.WriteCloser = nil
+	var err os.Error
+	
+	for {
+		select {
 		case errmsg := <-this.CerrFileChan:
 			if stdErrFile == nil {
 				if stdErrFile, err = os.Create(fmt.Sprintf("%v.err.txt", dtls.JobId)); err != nil {
