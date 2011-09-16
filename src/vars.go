@@ -59,10 +59,12 @@ func GlobalTls(configFile *conf.ConfigFile) {
 	certorg = certificateorg
 	logger.Printf("certorg=[%v]", certorg)
 
-	useTls, err := configFile.GetBool("default", "tls")
+	useTlsl, err := configFile.GetBool("default", "tls")
 	if err != nil {
 		logger.Warn(err)
 		useTls = true
+	} else {
+		useTls=useTlsl
 	}
 	logger.Printf("TLS=[%v]", useTls)
 }
