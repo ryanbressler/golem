@@ -24,7 +24,6 @@ import (
 	"os"
 	"websocket"
 	"json"
-	"bufio"
 	"time"
 )
 
@@ -63,14 +62,13 @@ func (con Connection) SendMsgs() {
 		}
 
 		//try to send over and over.
-		sent := false
-		for ( sent ) {
+		for {
 			if _, err := con.Socket.Write(msgjson); err != nil {
 				logger.Warn(err)
 			} else {
-				sent= true
+				break
 			}
-			<-time.After(25*second)
+			<-time.After(2*second)
 		}
 		
 	}
@@ -130,10 +128,12 @@ func (con Connection) GetMsgs() {
 			} 
 
 			return //TODO: recover
-		case err == bufio.ErrBufferFull:
+
 			decoder = json.NewDecoder(con.Socket)
 		case err != nil:
+			logger.Printf("Connection read error %v", err)
 			continue
+			
 		}
 		con.InChan <- msg
 	}

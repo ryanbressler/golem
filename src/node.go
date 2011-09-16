@@ -30,12 +30,12 @@ import (
 func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
 	logger.Debug("PipeToChan(%d,%v)", msgType, id)
 	bp := bufio.NewReader(r)
-
 	for {
 		line, err := bp.ReadString('\n')
 		if err != nil {
 			return
 		} else {
+			
 			blocked := true
 			for blocked == true {
 				select {
