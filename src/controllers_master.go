@@ -38,7 +38,9 @@ func (this MasterJobController) Index(rw http.ResponseWriter) {
 	logger.Debug("for loop")
 	this.master.subMu.RLock()
 	for _, s := range this.master.subMap {
-		items = append(items, s.SniffDetails())
+		if s != nil {
+			items = append(items, s.SniffDetails())
+		}
 	}
 	this.master.subMu.RUnlock()
 	logger.Debug("for loop done")
@@ -150,7 +152,7 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 		dtls := job.SniffDetails()
 		if dtls.State == COMPLETE {
 			this.master.subMu.RLock()
-			this.master.subMap[jobId] = nil
+			this.master.subMap[jobId] = nil, false
 			this.master.subMu.RUnlock()
 		} else {
 			http.Error(rw, fmt.Sprintf("unable to archive:%v:%v", jobId, dtls), http.StatusConflict)
