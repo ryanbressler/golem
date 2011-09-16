@@ -112,6 +112,7 @@ func (this *Submission) MonitorWorkTasks() {
 			logger.Debug("COMPLETED [%v]", dtls)
 			this.SetState(COMPLETE, SUCCESS)
 			this.doneChan <- 1
+			this.doneChan <- 1
 			logger.Debug("COMPLETED [%v]: DONE", dtls.JobId)
 			return
 		}
