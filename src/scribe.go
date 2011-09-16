@@ -20,10 +20,12 @@
 package main
 
 import (
+	"fmt"
 	"http"
 	"os"
 	"io"
 	"json"
+	"strings"
 	"time"
 	"mime/multipart"
 )
@@ -78,6 +80,9 @@ func (this *Scribe) PollJobs() {
 	logger.Debug("PollJobs")
 	for _, jd := range this.GetJobs() {
 		this.store.Update(jd)
+		if jd.State == COMPLETE {
+            this.ArchiveJob(jd)
+		}
 	}
 
 	unscheduled, _ := this.store.Unscheduled()
@@ -184,5 +189,34 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	}
 
 	logger.Debug("completed POST to %v/jobs: %d", this.masterUrl, respcode)
+	return
+}
+
+func (this *Scribe) ArchiveJob(jd JobDetails) (err os.Error) {
+	logger.Debug("ArchiveJob(%v)", jd.JobId)
+
+	jobUri := fmt.Sprintf("%v/jobs/%v/archive", this.masterUrl, jd.JobId)
+	r, err := http.NewRequest("POST", jobUri, strings.NewReader(""))
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+
+	r.Header.Set("x-golem-apikey", this.apikey)
+
+	logger.Debug("submitting POST to %v: %v", jobUri, r)
+	client := http.Client{}
+	resp, err := client.Do(r)
+	if err != nil {
+		logger.Warn(err)
+	}
+
+	respcode := 0
+	if resp != nil {
+		respcode = resp.StatusCode
+		resp.Body.Close()
+	}
+
+	logger.Debug("completed POST to %v: %d", jobUri, respcode)
 	return
 }
