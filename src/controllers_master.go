@@ -145,6 +145,18 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
 		}
 		this.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
+	} else if parts[1] == "archive" {
+		logger.Debug("archiving: %v", jobId)
+		dtls := job.SniffDetails()
+		if dtls.State == COMPLETE {
+			this.master.subMu.RLock()
+			this.master.subMap[jobId] = nil
+			this.master.subMu.RUnlock()
+		} else {
+			http.Error(rw, fmt.Sprintf("unable to archive:%v:%v", jobId, dtls), http.StatusConflict)
+		}
+	} else {
+		http.Error(rw, r.URL.Path, http.StatusNotImplemented)
 	}
 	logger.Debug("Act(): completed")
 }
