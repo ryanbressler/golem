@@ -93,15 +93,15 @@ func ConBufferSize(section string, config *conf.ConfigFile) {
 }
 
 //get the number of IO monitors to run per node
-func IOMOnitors( config *conf.ConfigFile) {
+func IOMOnitors(config *conf.ConfigFile) {
 	iomons, err := config.GetInt("master", "iomonitors")
 	if err != nil {
 		logger.Printf("iomonitors not fount in master")
 	} else {
 		if iomons > 0 {
-			iomonitors=iomons
+			iomonitors = iomons
 		}
-		
+
 	}
 	logger.Printf("iomonitors=[%v]", iomonitors)
 }

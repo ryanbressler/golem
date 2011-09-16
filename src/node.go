@@ -35,7 +35,7 @@ func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
 		if err != nil {
 			return
 		} else {
-			
+
 			blocked := true
 			for blocked == true {
 				select {
@@ -130,7 +130,7 @@ func RunNode(processes int, master string) {
 	mcon := *NewConnection(ws, true)
 	wm := WorkerMessage{Type: HELLO}
 	wm.BodyFromInterface(HelloMsgBody{JobCapacity: processes, RunningJobs: 0})
-	logger.Printf("Hello msg body: %v",wm.Body)
+	logger.Printf("Hello msg body: %v", wm.Body)
 	mcon.OutChan <- wm
 	go CheckIn(&mcon)
 	replyc := make(chan *WorkerMessage)
@@ -141,7 +141,7 @@ func RunNode(processes int, master string) {
 		case <-mcon.DiedChan:
 			wm = WorkerMessage{Type: HELLO}
 			wm.BodyFromInterface(HelloMsgBody{JobCapacity: processes, RunningJobs: running})
-			mcon.ReConChan<-wm
+			mcon.ReConChan <- wm
 		case rv := <-replyc:
 			logger.Debug("Got 'done' signal")
 			mcon.OutChan <- *rv

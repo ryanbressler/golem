@@ -36,7 +36,7 @@ type Submission struct {
 	ErrorChan    chan *WorkerJob
 	FinishedChan chan *WorkerJob
 	stopChan     chan int
-	doneChan	chan int
+	doneChan     chan int
 }
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submission {
@@ -110,7 +110,7 @@ func (this *Submission) MonitorWorkTasks() {
 		if dtls.Progress.isComplete() {
 			logger.Debug("COMPLETED [%v]", dtls)
 			this.SetState(COMPLETE, SUCCESS)
-			this.doneChan<-1
+			this.doneChan <- 1
 			logger.Debug("COMPLETED [%v]: DONE", dtls.JobId)
 			return
 		}

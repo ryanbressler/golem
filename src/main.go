@@ -86,7 +86,7 @@ func StartMaster(configFile *conf.ConfigFile) {
 	GoMaxProc("master", configFile)
 	ConBufferSize("master", configFile)
 	IOMOnitors(configFile)
-	
+
 	hostname := GetRequiredString(configFile, "default", "hostname")
 	password := GetRequiredString(configFile, "default", "password")
 

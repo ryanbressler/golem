@@ -54,7 +54,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	msg := <-nh.Con.InChan
 
 	if msg.Type == HELLO {
-		logger.Printf("Node Hello Body:%v",msg.Body)
+		logger.Printf("Node Hello Body:%v", msg.Body)
 		val, err := NewHelloMsgBody(msg.Body)
 		if err != nil {
 			logger.Warn(err)
@@ -125,7 +125,7 @@ func (nh *NodeHandle) Monitor() {
 				nh.Con.OutChan <- *bcMsg
 			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
-			case  <-time.After(1000):
+			case <-time.After(1000):
 			}
 		default:
 			//logger.Debug("waiting for message [%v, %v]", nh.Hostname, running)
@@ -134,7 +134,7 @@ func (nh *NodeHandle) Monitor() {
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case <-time.After(1000):
-				
+
 			}
 		}
 	}
@@ -158,7 +158,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 	case COUT:
 		//logger.Debug("COUT [%v]", nh.Hostname)
 		blocked := true
-		for blocked==true {
+		for blocked == true {
 			select {
 			case nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body:
 				blocked = false
@@ -166,11 +166,11 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 				logger.Printf("Sending  COUT to subid %v blocked for more then 1 second.", msg.SubId)
 			}
 		}
-		
+
 	case CERROR:
 		//logger.Debug("CERROR [%v]", nh.Hostname)
 		blocked := true
-		for blocked==true {
+		for blocked == true {
 			select {
 			case nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body:
 				blocked = false
@@ -178,9 +178,9 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 				logger.Printf("Sending  CERROR to subid %v blocked for more then 1 second.", msg.SubId)
 			}
 		}
-		
+
 	case JOBFINISHED:
-		go func(){
+		go func() {
 			logger.Debug("JOBFINISHED [%v]", nh.Hostname)
 			running := <-nh.Running
 			nh.Running <- running - 1
@@ -189,7 +189,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			logger.Printf("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		}()
 	case JOBERROR:
-		go func(){
+		go func() {
 			logger.Debug("JOBERROR %v", nh.Hostname)
 			running := <-nh.Running
 			nh.Running <- running - 1

@@ -135,7 +135,7 @@ type HelloMsgBody struct {
 }
 
 func NewHelloMsgBody(data string) (*HelloMsgBody, os.Error) {
-	rv :=&HelloMsgBody{}
+	rv := &HelloMsgBody{}
 	err := json.Unmarshal([]byte(data), rv)
 	return rv, err
 }
