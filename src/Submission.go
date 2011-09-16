@@ -36,6 +36,7 @@ type Submission struct {
 	ErrorChan    chan *WorkerJob
 	FinishedChan chan *WorkerJob
 	stopChan     chan int
+	doneChan	chan int
 }
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submission {
@@ -47,7 +48,8 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 		CerrFileChan: make(chan string, iobuffersize),
 		ErrorChan:    make(chan *WorkerJob, 1),
 		FinishedChan: make(chan *WorkerJob, 1),
-		stopChan:     make(chan int, 3)}
+		stopChan:     make(chan int, 3),
+		doneChan:     make(chan int, 0)}
 
 	s.Details <- jd
 
@@ -108,9 +110,7 @@ func (this *Submission) MonitorWorkTasks() {
 		if dtls.Progress.isComplete() {
 			logger.Debug("COMPLETED [%v]", dtls)
 			this.SetState(COMPLETE, SUCCESS)
-			this.stopChan <- 1
-			this.stopChan <- 1
-			this.stopChan <- 1
+			this.doneChan<-1
 			logger.Debug("COMPLETED [%v]: DONE", dtls.JobId)
 			return
 		}
@@ -125,17 +125,19 @@ func (this *Submission) SubmitJobs(jobChan chan *WorkerJob) {
 	dtls := this.SniffDetails()
 	taskId := 0
 	for lineId, vals := range this.Tasks {
-		logger.Debug("[%d,%v]", lineId, vals)
+		logger.Debug("Submitting [%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
 			select {
 			case jobChan <- &WorkerJob{SubId: dtls.JobId, LineId: lineId, JobId: taskId, Args: vals.Args}:
 				taskId++
 			case <-this.stopChan:
+				logger.Printf("submission stopped [%d, %v]", taskId, dtls.JobId)
 				return //TODO: add indication that we stopped
 			}
 		}
 	}
 	logger.Printf("tasks submitted [%d, %v]", taskId, dtls.JobId)
+
 }
 
 func (this *Submission) WriteIo() {
@@ -173,7 +175,7 @@ func (this *Submission) WriteIo() {
 		case <-time.After(1 * second):
 			logger.Debug("checking for done: %v", dtls.JobId)
 			select {
-			case <-this.stopChan:
+			case <-this.doneChan:
 				logger.Debug("stop chan: %v", dtls.JobId)
 				return
 			default:

@@ -54,10 +54,18 @@ func (m *Master) GetSub(subId string) *Submission {
 func (m *Master) Listen(ws *websocket.Conn) {
 	logger.Printf("Listen(%v): node connecting", ws.LocalAddr().String())
 	nh := NewNodeHandle(NewConnection(ws, false), m)
+	logger.Printf("Adding Node to Map (%v)", ws.LocalAddr().String())
 	m.nodeMu.Lock()
 	m.NodeHandles[nh.NodeId] = nh
 	m.nodeMu.Unlock()
+	logger.Printf("Calling Remove Node on Death (%v)", ws.LocalAddr().String())
 	go m.RemoveNodeOnDeath(nh)
+	
+	for i:=0; i< iomonitors; i++ {
+		logger.Printf("Starting IOMonitor %v (%v)",i, ws.LocalAddr().String())
+		go nh.MonitorIO()
+	}
+	logger.Printf("Starting Monitor (%v)", ws.LocalAddr().String())
 	nh.Monitor()
 }
 

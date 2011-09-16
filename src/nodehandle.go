@@ -50,6 +50,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 
 	//wait for worker handshake TODO: should this be in monitor???
 	nh.Running <- 0
+	logger.Debug("NewNodeHandle(%v) waiting for first message", n.isWorker)
 	msg := <-nh.Con.InChan
 
 	if msg.Type == HELLO {
@@ -79,7 +80,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 }
 
 func (nh *NodeHandle) Stats() (processes int, running int) {
-	logger.Debug("Stats()")
+	//logger.Debug("Stats()")
 	running = <-nh.Running
 	nh.Running <- running
 	processes = <-nh.MaxJobs
@@ -123,9 +124,8 @@ func (nh *NodeHandle) Monitor() {
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
 			case job := <-nh.Master.jobChan:
-				go nh.SendJob(job)
-			case msg := <-nh.Con.InChan:
-				go nh.HandleWorkerMessage(&msg)
+				nh.SendJob(job)
+			case  <-time.After(1000):
 			}
 		default:
 			//logger.Debug("waiting for message [%v, %v]", nh.Hostname, running)
@@ -133,16 +133,24 @@ func (nh *NodeHandle) Monitor() {
 			case bcMsg := <-nh.BroadcastChan:
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
-			case msg := <-nh.Con.InChan:
-				go nh.HandleWorkerMessage(&msg)
+			case <-time.After(1000):
+				
 			}
 		}
 	}
 }
 
+func (nh *NodeHandle) MonitorIO() {
+	logger.Debug("MonitorIO(): [%v]", nh.Hostname)
+	for {
+		msg := <-nh.Con.InChan
+		nh.HandleWorkerMessage(&msg)
+	}
+}
+
 //handle worker messages and updates the value in nh.Running if appropriate
 func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
-	logger.Debug("message from: %v", nh.Hostname)
+	//logger.Debug("message from: %v", nh.Hostname)
 	switch msg.Type {
 	default:
 	case CHECKIN:
@@ -172,19 +180,23 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 		}
 		
 	case JOBFINISHED:
-		logger.Debug("JOBFINISHED [%v]", nh.Hostname)
-		running := <-nh.Running
-		nh.Running <- running - 1
-		logger.Debug("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
-		nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
-		logger.Printf("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
+		go func(){
+			logger.Debug("JOBFINISHED [%v]", nh.Hostname)
+			running := <-nh.Running
+			nh.Running <- running - 1
+			logger.Debug("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
+			nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
+			logger.Printf("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
+		}()
 	case JOBERROR:
-		logger.Debug("JOBERROR %v", nh.Hostname)
-		running := <-nh.Running
-		nh.Running <- running - 1
-		logger.Debug("JOBERROR running [%v, %v, %v]", nh.Hostname, msg.Body, running)
-		nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
-		logger.Debug("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
+		go func(){
+			logger.Debug("JOBERROR %v", nh.Hostname)
+			running := <-nh.Running
+			nh.Running <- running - 1
+			logger.Debug("JOBERROR running [%v, %v, %v]", nh.Hostname, msg.Body, running)
+			nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
+			logger.Debug("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
+		}()
 	}
-	logger.Debug("message handled: %v", nh.Hostname)
+	//logger.Debug("message handled: %v", nh.Hostname)
 }
