@@ -32,6 +32,7 @@ type NodeHandle struct {
 	Con           Connection
 	MaxJobs       chan int
 	Running       chan int
+	Update        chan int
 	BroadcastChan chan *WorkerMessage
 }
 
@@ -46,6 +47,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 		Con:           con,
 		MaxJobs:       make(chan int, 1),
 		Running:       make(chan int, 1),
+		Update:        make(chan int, 10),
 		BroadcastChan: make(chan *WorkerMessage, 0)}
 
 	//wait for worker handshake TODO: should this be in monitor???
@@ -125,7 +127,8 @@ func (nh *NodeHandle) Monitor() {
 				nh.Con.OutChan <- *bcMsg
 			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
-			case <-time.After(1000):
+			case <-nh.Update:
+			case <-time.After(1*second):
 
 			}
 		default:
@@ -134,8 +137,9 @@ func (nh *NodeHandle) Monitor() {
 			case bcMsg := <-nh.BroadcastChan:
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
+			case <-nh.Update:
 
-			case <-time.After(1000):
+			case <-time.After(1*second):
 
 			}
 		}
@@ -188,6 +192,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			nh.Running <- running - 1
 			logger.Debug("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 			nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
+			nh.Update<-1
 			logger.Printf("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		}()
 	case JOBERROR:
@@ -197,6 +202,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			nh.Running <- running - 1
 			logger.Debug("JOBERROR running [%v, %v, %v]", nh.Hostname, msg.Body, running)
 			nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
+			nh.Update<-1
 			logger.Debug("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		}()
 	}
