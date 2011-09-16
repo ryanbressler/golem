@@ -126,6 +126,7 @@ func (nh *NodeHandle) Monitor() {
 			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
 			case <-time.After(1000):
+
 			}
 		default:
 			//logger.Debug("waiting for message [%v, %v]", nh.Hostname, running)
@@ -133,6 +134,7 @@ func (nh *NodeHandle) Monitor() {
 			case bcMsg := <-nh.BroadcastChan:
 				logger.Debug("broadcasting [%v, %v]", nh.Hostname, *bcMsg)
 				nh.Con.OutChan <- *bcMsg
+
 			case <-time.After(1000):
 
 			}
