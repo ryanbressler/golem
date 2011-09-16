@@ -174,13 +174,13 @@ def canonizeMaster(master, loud = True):
     if master[0:4] != "http":
         if supporttls:
             if loud: print "Using https."
-            canonicalMaster = "https://" + master
+            master = "https://" + master
         else:
             if loud: print "Using http (insecure)."
-            canonicalMaster = "http://" + master
-    if canonicalMaster[0:5] == "https" and supporttls == False:
-        raise ValueError("HTTPS specified, but the SSL package tlslite is not available. Install tlslite.")
-    return canonicalMaster
+            master = "http://" + master	
+	if master[0:5] == "https" and supporttls == False:
+			raise ValueError("HTTPS specified, but the SSL package tlslite is not available. Install tlslite.")
+    return master
 
 
 def runOneLine(count, args, pwd, url, label="", email="", loud = True):
