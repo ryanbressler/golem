@@ -60,9 +60,9 @@ func (m *Master) Listen(ws *websocket.Conn) {
 	m.nodeMu.Unlock()
 	logger.Printf("Calling Remove Node on Death (%v)", ws.LocalAddr().String())
 	go m.RemoveNodeOnDeath(nh)
-	
-	for i:=0; i< iomonitors; i++ {
-		logger.Printf("Starting IOMonitor %v (%v)",i, ws.LocalAddr().String())
+
+	for i := 0; i < iomonitors; i++ {
+		logger.Printf("Starting IOMonitor %v (%v)", i, ws.LocalAddr().String())
 		go nh.MonitorIO()
 	}
 	logger.Printf("Starting Monitor (%v)", ws.LocalAddr().String())

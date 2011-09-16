@@ -37,7 +37,6 @@ import (
 //connect a web socket to the master as a worker
 func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	logger.Debug("OpenWebSocketToMaster(%v)", master)
-	
 
 	prot := "ws"
 	if useTls {
@@ -52,7 +51,7 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	return
 }
 
-func DialWebSocket(url string) (*websocket.Conn, os.Error){
+func DialWebSocket(url string) (*websocket.Conn, os.Error) {
 	origin, err := os.Hostname()
 	if err != nil {
 		logger.Warn(err)
