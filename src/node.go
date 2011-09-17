@@ -25,26 +25,39 @@ import (
 	"fmt"
 	"exec"
 	"time"
+	"os"
 )
 
 func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage) {
 	logger.Debug("PipeToChan(%d,%v)", msgType, id)
 	bp := bufio.NewReader(r)
 	for {
-		line, err := bp.ReadString('\n')
-		if err != nil {
-			return
-		} else {
-
+		
+		line,prefix,err := bp.ReadLine()
+		linestr := string(line)
+		for prefix!=false { //this should almost never happen
+			line,prefix,err = bp.ReadLine()
+			linestr = linestr+string(line)
+		}
+		
+		if linestr != "" {
 			blocked := true
 			for blocked == true {
 				select {
-				case ch <- WorkerMessage{Type: msgType, SubId: id, Body: line}:
+				case ch <- WorkerMessage{Type: msgType, SubId: id, Body: linestr+"\n"}:
 					blocked = false
 				case <-time.After(1 * second):
 					logger.Printf("WARNING PipeToChan() has been blocked for more then 1 second MsgType:%d,id:%v", msgType, id)
 				}
 			}
+		
+		}
+		switch {
+		case err==os.EOF:
+			return
+		case err!=nil:
+			logger.Warn(err)
+			return
 		}
 	}
 
@@ -78,15 +91,15 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		logger.Warn(err)
 		return
 	}
+	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan)
+	
 	errpipe, err := cmd.StderrPipe()
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-
-	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan)
 	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan)
-
+	
 	if err = cmd.Start(); err != nil {
 		logger.Warn(err)
 		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
