@@ -253,7 +253,7 @@ def runList(fo, pwd, url, loud = True, label="", email=""):
         Any failure of the HTTP channel will go uncaught.
     """
     jobs = generateJobList(fo)
-    return runBatch(jobs, pwd, url, label, email, loud)
+    return runBatch(jobs, pwd, url, loud, label, email)
 
 
 def runOnEach(jobs, pwd, url, loud=True, label="", email=""):
