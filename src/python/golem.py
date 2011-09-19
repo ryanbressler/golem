@@ -183,7 +183,7 @@ def canonizeMaster(master, loud = True):
     return master
 
 
-def runOneLine(count, args, pwd, url, label="", email="", loud = True):
+def runOneLine(count, args, pwd, url, loud = True, label="", email=""):
     """
     Runs a single command on a specified Golem cluster.
     Parameters:
