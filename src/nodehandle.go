@@ -128,7 +128,7 @@ func (nh *NodeHandle) Monitor() {
 			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
 			case <-nh.Update:
-			case <-time.After(1*second):
+			case <-time.After(1 * second):
 
 			}
 		default:
@@ -139,7 +139,7 @@ func (nh *NodeHandle) Monitor() {
 				nh.Con.OutChan <- *bcMsg
 			case <-nh.Update:
 
-			case <-time.After(1*second):
+			case <-time.After(1 * second):
 
 			}
 		}
@@ -192,7 +192,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			nh.Running <- running - 1
 			logger.Debug("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 			nh.Master.GetSub(msg.SubId).FinishedChan <- NewWorkerJob(msg.Body)
-			nh.Update<-1
+			nh.Update <- 1
 			logger.Printf("JOBFINISHED [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		}()
 	case JOBERROR:
@@ -202,7 +202,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			nh.Running <- running - 1
 			logger.Debug("JOBERROR running [%v, %v, %v]", nh.Hostname, msg.Body, running)
 			nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
-			nh.Update<-1
+			nh.Update <- 1
 			logger.Debug("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		}()
 	}

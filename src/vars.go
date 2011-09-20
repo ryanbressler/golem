@@ -64,7 +64,7 @@ func GlobalTls(configFile *conf.ConfigFile) {
 		logger.Warn(err)
 		useTls = true
 	} else {
-		useTls=useTlsl
+		useTls = useTlsl
 	}
 	logger.Printf("TLS=[%v]", useTls)
 }
