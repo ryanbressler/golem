@@ -102,7 +102,7 @@ func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *h
 	preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	preq.Header.Set("x-golem-apikey", this.apikey)
 	proxy := http.NewSingleHostReverseProxy(this.target)
-	go proxy.ServeHTTP(rw, preq)
+	proxy.ServeHTTP(rw, preq)
 }
 
 type ScribeClusterController struct {
