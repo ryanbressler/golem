@@ -139,11 +139,19 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 	if parts[1] == "stop" {
 		logger.Debug("stopping: %v", jobId)
 		if job.Stop() == false {
+			logger.Debug("job seems to have already been stopped: %v", jobId)
+		}
+		if job.SniffDetails().IsRunning() {
+			logger.Debug("job seems to still be running: %v", jobId)
 			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
 		}
 	} else if parts[1] == "kill" {
 		logger.Debug("killing: %v", jobId)
 		if job.Stop() == false {
+			logger.Debug("job seems to have already been stopped: %v", jobId)
+		}
+		if job.SniffDetails().IsRunning() {
+			logger.Debug("job seems to still be running: %v", jobId)
 			http.Error(rw, "unable to stop", http.StatusExpectationFailed)
 		}
 		this.master.Broadcast(&WorkerMessage{Type: KILL, SubId: jobId})
