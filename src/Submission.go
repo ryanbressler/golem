@@ -61,6 +61,7 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 	return &s
 }
 
+// stops running job, returns true if job was still running
 func (this *Submission) Stop() bool {
 	logger.Debug("Stop()")
 	dtls := this.SniffDetails()
@@ -74,9 +75,9 @@ func (this *Submission) Stop() bool {
 		case <-time.After(250000000):
 			logger.Printf("Stop(): timeout stopping: %v", dtls.JobId)
 		}
+		return true
 	}
-
-	return this.SniffDetails().IsRunning()
+	return false
 }
 
 func (this *Submission) SniffDetails() JobDetails {
@@ -181,7 +182,7 @@ func (this *Submission) WriteCerror() {
 
 	var stdErrFile io.WriteCloser = nil
 	var err os.Error
-	
+
 	for {
 		select {
 		case errmsg := <-this.CerrFileChan:
