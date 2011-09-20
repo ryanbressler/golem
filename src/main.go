@@ -26,6 +26,7 @@ import (
 	"github.com/codeforsystemsbiology/rest.go"
 	"github.com/codeforsystemsbiology/verboselogger.go"
 	"goconf.googlecode.com/hg"
+	"launchpad.net/mgo"
 )
 
 var logger *log4go.VerboseLogger
@@ -104,6 +105,8 @@ func StartMaster(configFile *conf.ConfigFile) {
 // starts scribe service based on the given configuration file
 // required parameters:  default.hostname, default.password, scribe.target, mgodb.server, mgodb.store, mgodb.jobcollection, mgodb.taskcollection
 func StartScribe(configFile *conf.ConfigFile) {
+	MongoLogger(configFile)
+
 	GoMaxProc("scribe", configFile)
 
 	hostname := GetRequiredString(configFile, "default", "hostname")
@@ -137,6 +140,20 @@ func StartScribe(configFile *conf.ConfigFile) {
 	go MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore}, target, int64(numberOfSeconds))
 
 	ListenAndServeTLSorNot(hostname)
+}
+
+func MongoLogger(configFile *conf.ConfigFile) {
+	verbose, err := configFile.GetBool("mgodb", "verbose")
+	if err != nil {
+		logger.Warn(err)
+		verbose = false
+	}
+
+	logger.Printf("mongo logger verbose set [%v]", verbose)
+	if verbose {
+	    mgo.SetLogger(logger)
+		mgo.SetDebug(verbose)
+	}
 }
 
 // starts Addama proxy (http://addama.org) based on the given configuration file
