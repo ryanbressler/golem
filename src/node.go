@@ -54,15 +54,15 @@ func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage, done
 		}
 		switch {
 		case err == os.EOF:
-			done<-1
+			done <- 1
 			return
 		case err != nil:
-			done<-1
+			done <- 1
 			logger.Warn(err)
 			return
 		}
 	}
-	done<-1
+	done <- 1
 
 }
 
@@ -94,16 +94,16 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		logger.Warn(err)
 		return
 	}
-	coutchan:=make(chan int, 0)
-	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan,coutchan)
+	coutchan := make(chan int, 0)
+	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan, coutchan)
 
 	errpipe, err := cmd.StderrPipe()
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	cerrorchan:=make(chan int, 0)
-	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan,cerrorchan)
+	cerrorchan := make(chan int, 0)
+	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan, cerrorchan)
 
 	if err = cmd.Start(); err != nil {
 		logger.Warn(err)
@@ -116,7 +116,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 	defer func() {
 		jk.Donechan <- kb
 	}()
-	
+
 	<-coutchan
 	<-cerrorchan
 	if err = cmd.Wait(); err != nil {

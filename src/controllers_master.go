@@ -160,15 +160,15 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 		logger.Debug("archiving: %v", jobId)
 		dtls := job.SniffDetails()
 		if dtls.State == COMPLETE {
-		go func(){
-			<-time.After(900*second)
-			this.master.subMu.Lock()
-			_, isin := this.master.subMap[jobId]
-			if isin {
-				this.master.subMap[jobId] = nil, false
-			}
-			this.master.subMu.Unlock()
-		}()
+			go func() {
+				<-time.After(900 * second)
+				this.master.subMu.Lock()
+				_, isin := this.master.subMap[jobId]
+				if isin {
+					this.master.subMap[jobId] = nil, false
+				}
+				this.master.subMu.Unlock()
+			}()
 		} else {
 			http.Error(rw, fmt.Sprintf("unable to archive:%v:%v", jobId, dtls), http.StatusConflict)
 		}

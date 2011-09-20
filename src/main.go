@@ -151,7 +151,7 @@ func MongoLogger(configFile *conf.ConfigFile) {
 
 	logger.Printf("mongo logger verbose set [%v]", verbose)
 	if verbose {
-	    mgo.SetLogger(logger)
+		mgo.SetLogger(logger)
 		mgo.SetDebug(verbose)
 	}
 }
