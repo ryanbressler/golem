@@ -120,15 +120,15 @@ func StartScribe(configFile *conf.ConfigFile) {
 		panic(err)
 	}
 
-	go LaunchScribe(&MongoJobStore{Host: dbhost, Store: dbstore}, target, apikey)
+	go LaunchScribe(NewMongoJobStore(dbhost, dbstore), target, apikey)
 
-	rest.Resource("jobs", ScribeJobController{&MongoJobStore{Host: dbhost, Store: dbstore}, url, apikey})
+	rest.Resource("jobs", ScribeJobController{NewMongoJobStore(dbhost, dbstore), url, apikey})
 	rest.ResourceContentType("jobs", "application/json")
 
 	rest.Resource("nodes", ProxyNodeController{url, apikey})
 	rest.ResourceContentType("nodes", "application/json")
 
-	rest.Resource("cluster", ScribeClusterController{&MongoJobStore{Host: dbhost, Store: dbstore}, url})
+	rest.Resource("cluster", ScribeClusterController{NewMongoJobStore(dbhost, dbstore), url})
 	rest.ResourceContentType("cluster", "application/json")
 
 	var numberOfSeconds int = 10
@@ -137,7 +137,7 @@ func StartScribe(configFile *conf.ConfigFile) {
 	}
 
 	logger.Printf("polling for cluster stats every %d secs", numberOfSeconds)
-	go MonitorClusterStats(&MongoJobStore{Host: dbhost, Store: dbstore}, target, int64(numberOfSeconds))
+	go MonitorClusterStats(NewMongoJobStore(dbhost, dbstore), target, int64(numberOfSeconds))
 
 	ListenAndServeTLSorNot(hostname)
 }
