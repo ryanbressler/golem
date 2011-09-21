@@ -1,21 +1,20 @@
-function drawchart(vis,data) {
+function drawchart(vis,data,mx) {
 	var color = d3.interpolateRgb("#aad", "#556"),
 	 w = 960,
 		h = 500,
-		mx = m - 1,
 		my = d3.max(data, function(d) {
 		  return d3.max(d, function(d) {
 			return d.y0 + d.y;
 		  });
 		});
-	
+		
 	var area = d3.svg.area()
 		.x(function(d) { return d.x * w / mx; })
 		.y0(function(d) { return h - d.y0 * h / my; })
 		.y1(function(d) { return h - (d.y + d.y0) * h / my; });
 	
-
-	vis.append("svg:svg")
+var vis = d3.select("#chart")
+	.append("svg:svg")
 		.attr("width", w)
 		.attr("height", h);
 	
@@ -31,22 +30,23 @@ function drawchart(vis,data) {
 function transition() {
 	 Ext.Ajax.request({
 		method: "GET",
-		url: "/cluster",
+		url: "/html/cluster",
 		success: function(o) {
-			alert("data")
 			var json = Ext.util.JSON.decode(o.responseText);
 			var jobdata = [];
 			var workerdata = [];
 			var nodedata = [];
+			var mintime=json.Items[0].SnapshotAt
+			var maxtime=json.Items[json.NumberOfItems-1].SnapshotAt-mintime
 			for (i=0;i<json.NumberOfItems;i++) {
-				jobdata.push([json[i].SnapshotAt,json[i].JobsRunning]);
-				workerdata.push([json[i].SnapshotAt,json[i].WorkersRunning]);
-				nodedata.push([json[i].SnapshotAt,json[i].WorkersRunning+json[i].WorkersAvailable]);
+				jobdata.push({x:json.Items[i].SnapshotAt-mintime,y:json.Items[i].JobsRunning});
+				workerdata.push({x:json.Items[i].SnapshotAt-mintime,y:json.Items[i].WorkersRunning});
+				nodedata.push({x:json.Items[i].SnapshotAt-mintime,y:json.Items[i].WorkersRunning+json.Items[i].WorkersAvailable});
 			
 			}
-			drawchart(d3.select("#chart"),jobdata);
-			drawchart(d3.select("#chart"),workerdata);
-			drawchart(d3.select("#chart"),nodedata);
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([jobdata]),maxtime);
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata]),maxtime);
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([nodedata]),maxtime);
 			
 		}})
 }
