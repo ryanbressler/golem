@@ -12,9 +12,11 @@
         </style>
         <script type="text/javascript">
             Ext.onReady(function() {
-                Ext.Ajax.request({
+               var timen = document.getElementById("numberOfSecondsSince");
+               var url = "/cluster/?numberOfSecondsSince="+timen
+               Ext.Ajax.request({
                     method: "GET",
-                    url: "/html/cluster",
+                    url: url,
                     success: function(o) {
                         var json = Ext.util.JSON.decode(o.responseText);
                         if (json && json.Items) {
@@ -27,7 +29,8 @@
     </head>
     <body>
         <div class="body">
-        	 <button class="first last" onclick="transition()">Update</button><p/>
+        	Show Last <input type="text" id="numberOfSecondsSince" value="900" /> Seconds
+        	<button class="first last" onclick="transition()">Update</button><p/>
             <div id="chart">
                
             </div>
