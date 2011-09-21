@@ -31,7 +31,7 @@ function drawchart(vis,data) {
 function transition() {
 	 Ext.Ajax.request({
 		method: "GET",
-		url: "http://glados:8084/cluster",
+		url: "/cluster",
 		success: function(o) {
 			alert("data")
 			var json = Ext.util.JSON.decode(o.responseText);
