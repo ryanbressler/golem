@@ -6,15 +6,15 @@
         <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/ext-js-3.3.1/adapter/ext/ext-base.js"></script>
         <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/ext-js-3.3.1/ext-all.js"></script>
         <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/d3js-2.1.3/d3.js?2.1.3"></script>
-        <style type="text/css">
+        <!--style type="text/css">
                 @import url("https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/style.css?1.10.0");
                 @import url("https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/syntax.css?1.6.0");
-        </style>
+        </style-->
         <script type="text/javascript">
             Ext.onReady(function() {
                 Ext.Ajax.request({
                     method: "GET",
-                    url: "/cluster",
+                    url: "http://glados:8084/cluster",
                     success: function(o) {
                         var json = Ext.util.JSON.decode(o.responseText);
                         if (json && json.Items) {
@@ -27,14 +27,13 @@
     </head>
     <body>
         <div class="body">
-            <div class="gallery" id="chart">
+            <div id="chart">
                 <button class="first last" onclick="transition()">Update</button><p/>
             </div>
             <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/d3js-2.1.3/d3.layout.js?2.1.3"></script>
-            <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/stream/stream_layers.js"></script>
-            <script type="text/javascript" src="https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/stream/stream.js"></script>
-            <link href="https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/stream/stream.css" rel="stylesheet" type="text/css" />
-            <link href="https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/button.css" rel="stylesheet" type="text/css" />
+            <script type="text/javascript" src="/html/js/stream.js"></script>
+            <!--link href="https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/stream/stream.css" rel="stylesheet" type="text/css" /-->
+            <!--link href="https://informatics-apps.systemsbiology.net/d3js-2.1.3/examples/button.css" rel="stylesheet" type="text/css" /-->
         </div>
         <div id="dataout"></div>
     </body>
