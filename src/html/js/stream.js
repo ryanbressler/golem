@@ -28,9 +28,11 @@ var vis = d3.select("#chart")
 
 
 function transition() {
+	 var timen = document.getElementById("numberOfSecondsSince").value;
+     var url = "/cluster/?numberOfSecondsSince="+timen
 	 Ext.Ajax.request({
 		method: "GET",
-		url: "/html/cluster",
+		url: url,
 		success: function(o) {
 			var json = Ext.util.JSON.decode(o.responseText);
 			var jobdata = [];
