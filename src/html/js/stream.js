@@ -1,8 +1,27 @@
 noderesponses=[];
 jobresponses=[];
 
+function fillindata(jobhash,len){
+	var jobdata = [];
+			
+			for (jobid in jobhash) {
+				minx=jobhash[jobid][0].x;
+				maxx=jobhash[jobid].length-1;
+				for(var i = 0; i<len; i++) {
+					if ( i < minx) {
+						jobhash[jobid].unshift({x:i,y:0});
+					}
+					if (i > maxx){
+						jobhash[jobid].push({x:i,y:0});
+					}
+				}
+				jobdata.push(jobhash[jobid]);
+			
+			}
+}
+
 function pollnodesandjobs(){
-	 /*Ext.Ajax.request({
+	 Ext.Ajax.request({
 		method: "GET",
 		url: "/jobs/",
 		success: function(o) {
@@ -18,18 +37,15 @@ function pollnodesandjobs(){
 					jobhash[job.JobId].push({x:i,y:(job.Progress.Total-job.Progress.Finished-job.Progress.Errored)})
 					
 				}
+				
 			}
-			var jobdata = [];
-			for (jobid in jobhash) {
-				jobdata.push(jobhash[jobid]);
 			
-			}
-
+			jobdata=fillindata(jobhash,jobresponses.length)
 			d3.select("#jobs").html("")
 			
 			drawchart("#jobs",d3.layout.stack().offset("silhouette")(jobdata),jobresponses.length);
 			
-		}});*/
+		}});
 	Ext.Ajax.request({
 		method: "GET",
 		url: "/nodes/",
@@ -60,7 +76,7 @@ function pollnodesandjobs(){
 }
 
 function drawchart(vis,data,mx) {
-	var color = d3.interpolateRgb("#aad", "#556"),
+	var color = d3.interpolateRgb("black", "green"),
 	 w = 960,
 		h = 200,
 		my = d3.max(data, function(d) {
@@ -73,7 +89,9 @@ function drawchart(vis,data,mx) {
 		.x(function(d) { return d.x * w / mx; })
 		.y0(function(d) { return h - d.y0 * h / my; })
 		.y1(function(d) { return h - (d.y + d.y0) * h / my; });
-	
+
+var i = 0;
+var len = data.length;
 var vis = d3.select(vis)
 	.append("svg:svg")
 		.attr("width", w)
@@ -82,7 +100,7 @@ var vis = d3.select(vis)
 	vis.selectAll("path")
 		.data(data)
 	  .enter().append("svg:path")
-		.style("fill", function() { return color(Math.random()); })
+		.style("fill", function() { return color(i++/len); })
 		.attr("d", area);
 }
 
@@ -91,7 +109,6 @@ var vis = d3.select(vis)
 function transition() {
 	 var timen = document.getElementById("numberOfSecondsSince").value;
      var url = "/cluster/?numberOfSecondsSince="+timen
-     url = "/html/cluster"
 	 Ext.Ajax.request({
 		method: "GET",
 		url: url,
