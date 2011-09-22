@@ -4,20 +4,21 @@ jobresponses=[];
 function fillindata(jobhash,len){
 	var jobdata = [];
 			
-			for (jobid in jobhash) {
-				minx=jobhash[jobid][0].x;
-				maxx=jobhash[jobid].length-1;
-				for(var i = 0; i<len; i++) {
-					if ( i < minx) {
-						jobhash[jobid].unshift({x:i,y:0});
-					}
-					if (i > maxx){
-						jobhash[jobid].push({x:i,y:0});
-					}
-				}
-				jobdata.push(jobhash[jobid]);
-			
+	for (jobid in jobhash) {
+		minx=jobhash[jobid][0].x;
+		maxx=jobhash[jobid].length-1;
+		for(var i = 0; i<len; i++) {
+			if ( i < minx) {
+				jobhash[jobid].unshift({x:i,y:0});
 			}
+			if (i > maxx){
+				jobhash[jobid].push({x:i,y:0});
+			}
+		}
+		jobdata.push(jobhash[jobid]);
+	
+	}
+	return jobdata;
 }
 
 function pollnodesandjobs(){
