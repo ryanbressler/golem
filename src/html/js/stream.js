@@ -49,11 +49,12 @@ function pollnodesandjobs(){
 					if (jobhash.hasOwnProperty(job.JobId)==false) {
 						jobhash[job.JobId]=[]
 					}
-					jobhash[job.JobId].push({x:i-starti,y:(job.Progress.Total-job.Progress.Finished-job.Progress.Errored)})
+					jobhash[job.JobId].push({x:(i-starti),y:(job.Progress.Total-job.Progress.Finished-job.Progress.Errored)})
 					
 				}
 				
 			}
+			jobresponses=jobresponses.slice(starti)
 			
 			jobdata=fillindata(jobhash,timen)
 			d3.select("#jobs").html("")
@@ -78,10 +79,11 @@ function pollnodesandjobs(){
 					if (nodehash.hasOwnProperty(node.NodeId)==false) {
 						nodehash[node.NodeId]=[]
 					}
-					nodehash[node.NodeId].push({x:i-starti,y:node.RunningJobs})
+					nodehash[node.NodeId].push({x:(i-starti),y:node.RunningJobs})
 					
 				}
 			}
+			noderesponses=noderesponses.slice(starti)
 			var nodedata = fillindata(nodehash,timen);
 			d3.select("#nodes").html("")
 			drawchart("#nodes",d3.layout.stack().offset("silhouette")(nodedata),timen,"dimgrey", "deepskyblue");
