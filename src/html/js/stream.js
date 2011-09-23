@@ -58,7 +58,7 @@ function pollnodesandjobs(){
 			jobdata=fillindata(jobhash,timen)
 			d3.select("#jobs").html("")
 			
-			drawchart("#jobs",d3.layout.stack().offset("silhouette")(jobdata),timen,"red", "dimgrey");
+			drawchart("#jobs",d3.layout.stack().offset("silhouette")(jobdata),timen,"red", "black");
 			
 		}});
 	Ext.Ajax.request({
@@ -93,7 +93,7 @@ function pollnodesandjobs(){
 function drawchart(vis,data,mx,color1,color2) {
 	var color = d3.interpolateRgb(color1,color2),
 	 w = 960,
-		h = 300,
+		h = 200,
 		my = d3.max(data, function(d) {
 		  return d3.max(d, function(d) {
 			return d.y0 + d.y;
