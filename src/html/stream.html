@@ -18,7 +18,7 @@
             Ext.onReady(function() {
                Ext.TaskMgr.start({
 					run: pollnodesandjobs,
-					interval: 500
+					interval: 1000
 				});
                var timen = document.getElementById("numberOfSecondsSince");
                var url = "/cluster/?numberOfSecondsSince="+timen
