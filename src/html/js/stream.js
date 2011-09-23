@@ -31,7 +31,7 @@ function fillindata(jobhash,len){
 }
 
 function pollnodesandjobs(){
-	var timen = 2*parseInt(document.getElementById("realtimesecs").value);
+	var timen = parseInt(document.getElementById("realtimesecs").value);
 	 Ext.Ajax.request({
 		method: "GET",
 		url: "/jobs/",
