@@ -5,46 +5,60 @@ function fillindata(jobhash,len){
 	var jobdata = [];
 			
 	for (jobid in jobhash) {
-		minx=jobhash[jobid][0].x;
-		maxx=jobhash[jobid].length-1;
-		for(var i = 0; i<len; i++) {
-			if ( i < minx) {
-				jobhash[jobid].unshift({x:i,y:0});
-			}
-			if (i > maxx){
-				jobhash[jobid].push({x:i,y:0});
+		nonzero=false;
+		for(var i = 0; i<jobhash[jobid].length; i++) {
+			if (jobhash[jobid][i].y!=0){
+				nonzero=true;
 			}
 		}
-		jobdata.push(jobhash[jobid]);
+		if (nonzero) {
+			minx=jobhash[jobid][0].x;
+			maxx=jobhash[jobid][jobhash[jobid].length-1].x;
+			
+			for(var i = 1; i<len; i++) {
+				if ( i <= minx) {
+					jobhash[jobid].unshift({x:minx-i,y:0});
+				}
+				if (i > maxx){
+					jobhash[jobid].push({x:i,y:0});
+				}
+			}
+			jobdata.push(jobhash[jobid]);
+		}
 	
 	}
 	return jobdata;
 }
 
 function pollnodesandjobs(){
+	var timen = 2*parseInt(document.getElementById("realtimesecs").value);
 	 Ext.Ajax.request({
 		method: "GET",
 		url: "/jobs/",
 		success: function(o) {
 			var json = Ext.util.JSON.decode(o.responseText);
-			jobresponses.push(json)
-			jobhash = {}
-			for(var i = 0; i<jobresponses.length; i++) {
+			jobresponses.push(json);
+			jobhash = {};
+			var starti=0;
+			if (timen < jobresponses.length) {
+				starti=jobresponses.length-timen;
+			}
+			for(var i = starti; i<jobresponses.length; i++) {
 				for(var j=0;j<jobresponses[i].NumberOfItems;j++){
-					job = jobresponses[i].Items[j];
+					var job = jobresponses[i].Items[j];
 					if (jobhash.hasOwnProperty(job.JobId)==false) {
 						jobhash[job.JobId]=[]
 					}
-					jobhash[job.JobId].push({x:i,y:(job.Progress.Total-job.Progress.Finished-job.Progress.Errored)})
+					jobhash[job.JobId].push({x:i-starti,y:(job.Progress.Total-job.Progress.Finished-job.Progress.Errored)})
 					
 				}
 				
 			}
 			
-			jobdata=fillindata(jobhash,jobresponses.length)
+			jobdata=fillindata(jobhash,timen)
 			d3.select("#jobs").html("")
 			
-			drawchart("#jobs",d3.layout.stack().offset("silhouette")(jobdata),jobresponses.length);
+			drawchart("#jobs",d3.layout.stack().offset("silhouette")(jobdata),timen,"red", "dimgrey");
 			
 		}});
 	Ext.Ajax.request({
@@ -54,32 +68,32 @@ function pollnodesandjobs(){
 			var json = Ext.util.JSON.decode(o.responseText);
 			noderesponses.push(json)
 			nodehash = {}
-			for(var i = 0; i<noderesponses.length; i++) {
+			var starti=0;
+			if (timen < noderesponses.length) {
+				starti=noderesponses.length-timen;
+			}
+			for(var i = starti; i<noderesponses.length; i++) {
 				for(var j=0;j<noderesponses[i].NumberOfItems;j++){
 					node = noderesponses[i].Items[j];
 					if (nodehash.hasOwnProperty(node.NodeId)==false) {
 						nodehash[node.NodeId]=[]
 					}
-					nodehash[node.NodeId].push({x:i,y:node.RunningJobs})
+					nodehash[node.NodeId].push({x:i-starti,y:node.RunningJobs})
 					
 				}
 			}
-			var nodedata = [];
-			for (nodeid in nodehash) {
-				nodedata.push(nodehash[nodeid]);
-			
-			}
+			var nodedata = fillindata(nodehash,timen);
 			d3.select("#nodes").html("")
-			drawchart("#nodes",d3.layout.stack().offset("silhouette")(nodedata),noderesponses.length);
+			drawchart("#nodes",d3.layout.stack().offset("silhouette")(nodedata),timen,"dimgrey", "deepskyblue");
 			
 		}});
 
 }
 
-function drawchart(vis,data,mx) {
-	var color = d3.interpolateRgb("black", "green"),
+function drawchart(vis,data,mx,color1,color2) {
+	var color = d3.interpolateRgb(color1,color2),
 	 w = 960,
-		h = 200,
+		h = 300,
 		my = d3.max(data, function(d) {
 		  return d3.max(d, function(d) {
 			return d.y0 + d.y;
@@ -128,11 +142,11 @@ function transition() {
 				available.push({x:json.Items[i].SnapshotAt-mintime,y:json.Items[i].WorkersAvailable});
 			
 			}
-			drawchart("#chart",d3.layout.stack().offset("silhouette")([jobdata]),maxtime);
-			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata]),maxtime);
-			drawchart("#chart",d3.layout.stack().offset("silhouette")([nodedata]),maxtime);
-			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata,nodedata]),maxtime);
-			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata,available]),maxtime);
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([jobdata]),maxtime,"dimgrey", "deepskyblue");
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata]),maxtime,"dimgrey", "deepskyblue");
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([nodedata]),maxtime,"dimgrey", "deepskyblue");
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata,nodedata]),maxtime,"dimgrey", "deepskyblue");
+			drawchart("#chart",d3.layout.stack().offset("silhouette")([workerdata,available]),maxtime,"dimgrey", "deepskyblue");
 			
 		}})
 }
