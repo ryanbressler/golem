@@ -18,7 +18,7 @@
             Ext.onReady(function() {
                Ext.TaskMgr.start({
 					run: pollnodesandjobs,
-					interval: 1000
+					interval: 500
 				});
                var timen = document.getElementById("numberOfSecondsSince");
                var url = "/cluster/?numberOfSecondsSince="+timen
@@ -37,17 +37,25 @@
     </head>
     <body>
         <div class="body">
-        	Show Last <input type="text" id="numberOfSecondsSince" value="900" /> Seconds
+        	For Realtime Show Last <input type="text" id="realtimesecs" value="30" /> Seconds<br/>
+            Remaining Tasks Per Job:<br/>
+            <div id="jobs" style="width:960px; height:300px">
+               
+            </div><br/>
+            Tasks Running Per Worker Node:<br/>
+            <div id="nodes" style="width:960px; height:300px">
+               
+            </div>
+            <br/>
+            <br/>
+            
+        	For History Show Last <input type="text" id="numberOfSecondsSince" value="900" /> Seconds
         	<button class="first last" onclick="transition()">Update</button><p/>
             <div id="chart">
                
             </div>
-            <div id="jobs">
-               
-            </div>
-            <div id="nodes">
-               
-            </div>
+            
+            
             
         </div>
         <div id="dataout"></div>
