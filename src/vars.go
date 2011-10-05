@@ -87,7 +87,7 @@ func SubIOBufferSize(section string, configFile *conf.ConfigFile) {
 func ConBufferSize(section string, config *conf.ConfigFile) {
 	bufsize, err := config.GetInt(section, "conbuffersize")
 	if err != nil {
-		logger.Printf("conbuffersize not fount in %v", section)
+		logger.Warn(err)
 	} else {
 		conbuffersize = bufsize
 		logger.Printf("conbuffersize=[%v]", conbuffersize)
@@ -98,34 +98,31 @@ func ConBufferSize(section string, config *conf.ConfigFile) {
 func IOMOnitors(config *conf.ConfigFile) {
 	iomons, err := config.GetInt("master", "iomonitors")
 	if err != nil {
-		logger.Printf("iomonitors not fount in master")
+		logger.Warn(err)
 	} else {
 		if iomons > 0 {
 			iomonitors = iomons
 		}
-
 	}
 	logger.Printf("iomonitors=[%v]", iomonitors)
 }
 
-//get the number of proccessors to use for golem itself
+//get the number of processors to use for golem itself
 func GoMaxProc(section string, config *conf.ConfigFile) {
 	gomaxproc, err := config.GetInt(section, "gomaxproc")
 	if err != nil {
-		logger.Printf("gomaxproc not fount in %v", section)
+		logger.Warn(err)
 	} else {
 		runtime.GOMAXPROCS(gomaxproc)
 		logger.Printf("gomaxproc=[%v]", gomaxproc)
 	}
 }
 
-//conveniance function for requiring a string in ghte config file
+//convenience function for requiring a string in the config file
 func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
 	value, err := config.GetString(section, key)
 	if err != nil {
-
 		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
-
 	}
 	return
 }
