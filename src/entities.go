@@ -84,6 +84,13 @@ const (
 	STOPPED = "STOPPED" // COMPLETE job
 )
 
+// TASK STATUS
+const (
+	PENDING = "PENDING"
+	FAILED = "FAILED"
+	DONE = "DONE"
+)
+
 type TaskProgress struct {
 	Total    int
 	Finished int
@@ -186,6 +193,7 @@ type WorkerJob struct {
 	LineId int
 	JobId  int
 	Args   []string
+	Status string
 }
 
 // NewJob creates a job from a json string (usually a message body)
