@@ -87,8 +87,8 @@ const (
 // TASK STATUS
 const (
 	PENDING = "PENDING"
-	FAILED = "FAILED"
-	DONE = "DONE"
+	FAILED  = "FAILED"
+	DONE    = "DONE"
 )
 
 type TaskProgress struct {

@@ -28,8 +28,8 @@ import (
 
 // TODO: Kill submissions once they finish.
 type Submission struct {
-	Details chan JobDetails
-	Tasks   []*WorkerJob
+	Details      chan JobDetails
+	Tasks        []*WorkerJob
 	CoutFileChan chan string
 	CerrFileChan chan string
 	ErrorChan    chan *WorkerJob
@@ -40,11 +40,10 @@ type Submission struct {
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submission {
 	logger.Debug("NewSubmission(%v)", jd)
-	
 
 	s := Submission{
 		Details:      make(chan JobDetails, 1),
-		Tasks:        make([]*WorkerJob,0,len(tasks)),
+		Tasks:        make([]*WorkerJob, 0, len(tasks)),
 		CoutFileChan: make(chan string, iobuffersize),
 		CerrFileChan: make(chan string, iobuffersize),
 		ErrorChan:    make(chan *WorkerJob, 1),
@@ -56,7 +55,7 @@ func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submis
 	for lineId, vals := range tasks {
 		logger.Debug("Submitting [%d,%v]", lineId, vals)
 		for i := 0; i < vals.Count; i++ {
-			s.Tasks=append(s.Tasks, &WorkerJob{SubId: jd.JobId, LineId: lineId, JobId: taskId, Args: vals.Args, Status: PENDING})
+			s.Tasks = append(s.Tasks, &WorkerJob{SubId: jd.JobId, LineId: lineId, JobId: taskId, Args: vals.Args, Status: PENDING})
 			taskId++
 		}
 	}
@@ -137,14 +136,14 @@ func (this *Submission) SubmitJobs(jobChan chan *WorkerJob) {
 
 	dtls := this.SniffDetails()
 	for _, task := range this.Tasks {
-			select {
-			case jobChan <- task:
+		select {
+		case jobChan <- task:
 
-			case <-this.stopChan:
-				logger.Printf("submission stopped [%v]", dtls.JobId)
-				return //TODO: add indication that we stopped
-			}
-		
+		case <-this.stopChan:
+			logger.Printf("submission stopped [%v]", dtls.JobId)
+			return //TODO: add indication that we stopped
+		}
+
 	}
 	logger.Printf("tasks submitted [ %v]", dtls.JobId)
 
