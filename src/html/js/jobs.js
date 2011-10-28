@@ -2,6 +2,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
     constructor: function(config) {
         Ext.apply(this, config);
 
+        var dateRenderer = Ext.util.Format.dateRenderer('m/d/Y H:i:s');
+
         this.groupField = "State";
         this.toolbarButtons = [
             { text: 'Stop Selected', iconCls:'stop', disabled: true, ref: "../stopButton" }
@@ -11,8 +13,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
             { header: "Label", width: 25, dataIndex: 'Label', sortable: false },
             { header: "Owner", width: 25, dataIndex: 'Owner', sortable: false, hidden:true },
             { header: "Type", width: 25, dataIndex: 'Type', sortable: false, hidden:true },
-            { header: "Created", width: 25, dataIndex: 'FirstCreated', sortable: false },
-            { header: "Modified", width: 25, dataIndex: 'LastModified', sortable: false },
+            { header: "Created", width: 15, dataIndex: 'FirstCreated', sortable: true, renderer: dateRenderer  },
+            { header: "Modified", width: 15, dataIndex: 'LastModified', sortable: true, renderer: dateRenderer },
             { header: "Total", width: 10, sortable: true, dataIndex: 'Total' },
             { header: "Finished", width: 10, sortable: true, dataIndex: 'Finished' },
             { header: "Errored", width: 10, sortable: true, dataIndex: 'Errored' },
@@ -24,8 +26,8 @@ JobsGrid = Ext.extend(ItemsGrid, {
             {name: 'Label'},
             {name: 'Owner'},
             {name: 'Type'},
-            {name: 'FirstCreated'},
-            {name: 'LastModified'},
+            {name: 'FirstCreated', type: "date"},
+            {name: 'LastModified', type: "date"},
             {name: 'Total', type: 'int'},
             {name: 'Finished', type: 'int'},
             {name: 'Errored', type: 'int'},
@@ -59,14 +61,18 @@ JobsGrid = Ext.extend(ItemsGrid, {
         this.selectionModel.clearSelections(true);
     },
 
+    getFormattedDate: function(v) {
+        return Date.parseExact(v, "ddd MMM dd HH:mm:ss PDT yyyy");
+    },
+
     getItemAsArray: function(job) {
         return [
             job.JobId,
             job.Label,
             job.Owner,
             job.Type,
-            job.FirstCreated,
-            job.LastModified,
+            this.getFormattedDate(job.FirstCreated),
+            this.getFormattedDate(job.LastModified),
             job.Progress.Total,
             job.Progress.Finished,
             job.Progress.Errored,
