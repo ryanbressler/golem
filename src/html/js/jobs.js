@@ -62,7 +62,11 @@ JobsGrid = Ext.extend(ItemsGrid, {
     },
 
     getFormattedDate: function(v) {
-        return Date.parseExact(v, "ddd MMM dd HH:mm:ss PDT yyyy");
+       if (v) {
+           var dt = v.replace("  ", " ");
+           return Date.parseExact(dt, "ddd MMM d HH:mm:ss PDT yyyy"); 
+       }
+       return new Date();
     },
 
     getItemAsArray: function(job) {
