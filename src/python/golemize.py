@@ -308,6 +308,83 @@ class Golemizer:
         finally:
             os.chdir(restoreThisCwdOrPeopleWillHateMePassionately)
 
+    def _extract_job_results(self, jobId):
+      """
+      Internal method to pull in the result file list of a job with Golem ID jobId.
+      Does not check for completeness of results.
+      """
+      golemDirPattern = re.compile("golem_\\d+")
+      resultPathGenerator = (os.path.abspath(
+        os.path.join(self.golemOutPath, foo))\
+      for foo in os.listdir(self.golemOutPath)\
+      if golemDirPattern.match(foo))
+      resultFilesNumbered = []
+      filenamePattern = re.compile("^{0}_(\\d+)\\.out\\.pkl$".format(jobId))
+      for resultPath in resultPathGenerator:
+        #print "==>", resultPath
+        for file in os.listdir(resultPath):
+          match = filenamePattern.match(file)
+          if match:
+            #print "====>", file
+            resultFilesNumbered.append((int(match.group(1)), os.path.join(resultPath, file)))
+      resultFilesNumbered.sort();
+      return resultFilesNumbered
+
+    def salvage(self, jobId):
+        """
+        Pull in what Golemize results exist from a given Golem job ID and return them as a sequence.
+
+        Parameter:
+            jobID - Golem ID of the job to pick up results for. Must be a Golemize job.
+
+        salvage makes no attempt to check for the completeness of the results. If no Golemize results exist for
+        the given job ID, an empty generator will be returned. If files that look like Golemize results for the given
+        job but aren't exist, salvage's behavior is undefined but will probably result in a TypeError somewhere.
+
+        salvage exists to pick up results without recalculating the data set when the client-side aggregation
+        and post-Golemize computation code crashes. It also allows for partial results in case of an ExecutionFailure.
+        Be careful in that latter use case, as salvage doesn't express anything about what's missing.
+
+        salvage provides no insulation against exceptions in golemize's output. These will still be thrown
+        and kill the generator the way they would from the results of a normal goDoIt call.
+        """
+        resultFilesNumbered = self._extract_job_results(jobId)
+        return _unpickleSequence((pair[1] for pair in resultFilesNumbered))
+
+    def ultra_salvage(self, jobId):
+        """
+        Pull in what Golemize results exist from a given Golem job ID and return them and any exceptions contained.
+
+        Parameter:
+          jobID - Golem ID of the job to pick up results for. Must be a Golemize job.
+
+        ultra_salvage has the same caveats as salvage. Please read its docstring for details.
+
+        ultra_salvage also allows you to suck results (or more exceptions) out of a job that had an
+        exception during processing. goDoIt and salvage both return a generator object that, by design, dies
+        (by throwing an exception) when it reaches a record containing an exception instead of a result of the function.
+        ultra_salvage will simply yield the exception instead.
+
+        Check your types. If you need ultra_salvage, which should not be a part of any sane workflow, then at
+        least one of your results (if not all of them) will be some object that extends Exception instead of
+        whatever result type you wanted. If your results are actually of type Exception, there is no way to
+        determine which results are actual results and which are thrown exceptions; you should sincerely reconsider
+        your design if you are trying to do this.
+        """
+
+        resultFilesNumbered = self._extract_job_results(jobId)
+        def _unpickleSequenceWithExceptions(pickleFiles):
+          for filePath in pickleFiles:
+              picklefile = open(filePath, "rb")
+              try:
+                  seq = cPickle.load(picklefile)
+                  for errorflag, data in seq:
+                    yield data
+              finally:
+                  picklefile.close()
+
+        return _unpickleSequenceWithExceptions((pair[1] for pair in resultFilesNumbered))
+
 def dictToGolemizer(config):
     """Constructs a Golemizer from a group of settings stored in  a dictionary, keyed by string.
     Parameters:
@@ -364,6 +441,25 @@ def jsonToGolemizer(jsonfile):
     """
     return dictToGolemizer(json.load(jsonfile))
 
+
+def _abort_task(error):
+  """
+  Internal method used when golemize.py is invoked as a job execution script but something goes wrong
+  before calculation begins.
+
+  Parameter:
+    error - exception to throw into the output stream
+  """
+  trunc = (os.path.basename(sys.argv[3]))[:-4] #truncates ".pkl"
+  outFileName = sys.argv[6] + "_" + trunc + ".out.pkl" #this name is sacred to finding the results, including the jobID
+  outFileName = os.path.join(sys.argv[4], outFileName)
+  outFile = open(outFileName, "wb")
+  cPickle.dump([(True, error)], outFile, 2)
+  outFile.flush()
+  outFile.close()
+  raise error
+
+
 def _jumpToTask():
     """
     Internal method used when golemize.py is invoked as a script to execute a single job.
@@ -408,14 +504,16 @@ def _jumpToTask():
         targetModule = __import__(modname)
     except InfiniteRecursionError as emergencyBrake:
         #provide a useful explanation for the kill
-        trunc = (os.path.basename(sys.argv[3]))[:-4] #truncates ".pkl"
-        outFileName = sys.argv[6]+"_"+trunc+".out.pkl" #this name is sacred to finding the results, including the jobID
-        outFileName = os.path.join(sys.argv[4], outFileName)
-        outFile = open(outFileName, "wb")
-        cPickle.dump([(True, emergencyBrake)], outFile, 2)
-        outFile.flush()
-        outFile.close()
-        raise emergencyBrake
+        _abort_task(emergencyBrake)
+    except ImportError as missingLib:
+        #provide a useful explanation
+        #this usually means a missing library, or a multi-file script that wasn't properly handled
+        missingLib.message = missingLib.message + "\n\t==> This error came from a worker node. \n" +\
+             "\t==> Either the workers don't have a library you're relying on (contact your cluster admin)," +\
+             "\n\t==> or your script spans multiple files and you tried to use the binplace feature." +\
+             "\n\t==> Please read GoDoIt's docstring on binplace (and set it to false after making sure" +\
+             "\n\t==> your script is in a right path) and try again."
+        _abort_task(missingLib)
 
     # this is the nasty part
     # The next four statements recreate the environment out of which the computation method was pickled
