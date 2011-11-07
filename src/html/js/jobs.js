@@ -34,6 +34,10 @@ JobsGrid = Ext.extend(ItemsGrid, {
             {name: 'State' },
             {name: 'Status' }
         ];
+        this.multiSortInfo = [
+            {field: "State", direction: "DESC"},
+            {field: "FirstCreated", direction: "DESC"}
+        ];
 
         JobsGrid.superclass.constructor.call(this);
 

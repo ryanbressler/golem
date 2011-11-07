@@ -8,7 +8,7 @@ NodesGrid = Ext.extend(ItemsGrid, {
             { text: 'Suspend New Jobs', iconCls:'stop', ref: "../suspendButton" }
         ];
         this.gridColumns = [
-            { header: "Node Id", width: 25, dataIndex: 'NodeId', sortable: false },
+            { header: "Node Id", width: 25, dataIndex: 'NodeId', sortable: false, hidden: true },
             { header: "Hostname", width: 10, sortable: true, dataIndex: 'Hostname' },
             { header: "Max Jobs", width: 10, sortable: true, dataIndex: 'MaxJobs' },
             { header: "Running Jobs", width: 10, sortable: true, dataIndex: 'RunningJobs' },
@@ -20,6 +20,10 @@ NodesGrid = Ext.extend(ItemsGrid, {
             {name: 'MaxJobs', type: 'int'},
             {name: 'RunningJobs', type: 'int'},
             {name: 'Running' }
+        ];
+        this.multiSortInfo = [
+            {field: "Running", direction: "DESC"},
+            {field: "Hostname", direction: "ASC"}
         ];
         NodesGrid.superclass.constructor.call(this);
     },
