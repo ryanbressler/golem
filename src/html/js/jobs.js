@@ -61,22 +61,14 @@ JobsGrid = Ext.extend(ItemsGrid, {
         this.selectionModel.clearSelections(true);
     },
 
-    getFormattedDate: function(v) {
-       if (v) {
-           var dt = v.replace("  ", " ");
-           return Date.parseExact(dt, "ddd MMM d HH:mm:ss PDT yyyy"); 
-       }
-       return new Date();
-    },
-
     getItemAsArray: function(job) {
         return [
             job.JobId,
             job.Label,
             job.Owner,
             job.Type,
-            this.getFormattedDate(job.FirstCreated),
-            this.getFormattedDate(job.LastModified),
+            Date.parse(job.FirstCreated),
+            Date.parse(job.LastModified),
             job.Progress.Total,
             job.Progress.Finished,
             job.Progress.Errored,
