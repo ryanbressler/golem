@@ -12,7 +12,7 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
         if (!this.gridPanelConfig) {
             this.gridPanelConfig = {};
         }
-
+        
         this.on("fetched", this.refreshGrid, this);
         this.renderGrid();
         this.fetchData();
@@ -35,7 +35,9 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
             groupOnSort: false,
             groupDir: "DESC"
         });
-
+        if (this.multiSortInfo) {
+            this.store.multiSort(this.multiSortInfo);
+        }
         var defaultConfig = {
             store: this.store,
             columns: gc,
@@ -118,3 +120,4 @@ ItemsGrid = Ext.extend(Ext.util.Observable, {
         return a3;
     }
 });
+
