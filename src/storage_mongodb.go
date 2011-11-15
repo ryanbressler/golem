@@ -133,16 +133,12 @@ func (this *MongoJobStore) FindJobs(m map[string]interface{}) (items []JobDetail
 	logger.Debug("FindJobs(%v)", m)
 
 	jobsCollection := this.Database.C(JOBS)
-	iter, err := jobsCollection.Find(m).Iter()
-	if err != nil {
-		logger.Warn(err)
-		return
-	}
-
+	iter := jobsCollection.Find(m).Iter()
+	
 	for {
 		jd := JobDetails{}
-		if nexterr := iter.Next(&jd); nexterr != nil {
-			logger.Warn(nexterr)
+		if ! iter.Next(&jd) {
+			logger.Warn(iter.Err())
 			break
 		}
 		items = append(items, jd)
@@ -173,16 +169,13 @@ func (this *MongoJobStore) ClusterStats(numberOfSecondsSince int64) (items []Clu
 		m = bson.M{"snapshotat": bson.M{"$gt": timeSince}}
 	}
 
-	iter, err := collection.Find(m).Iter()
-	if err != nil {
-		logger.Warn(err)
-		return
-	}
+	iter := collection.Find(m).Iter()
+	
 
 	for {
 		cs := ClusterStat{}
-		if nexterr := iter.Next(&cs); nexterr != nil {
-			logger.Warn(nexterr)
+		if ! iter.Next(&cs) {
+			logger.Warn(iter.Err())
 			break
 		}
 		items = append(items, cs)
