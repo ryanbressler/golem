@@ -24,6 +24,7 @@ import sys
 import inspect
 import cPickle
 import uuid
+import traceback
 
 def _unpickleSequence(pickleFiles):
     """Generator function that unpickles results from job runs.
@@ -36,8 +37,8 @@ def _unpickleSequence(pickleFiles):
         that function threw an exception, the generator throws that exception at the corresponding point.
 
     A result is a tuple of (boolean, anything), where the boolean is interpreted as an error flag. If the flag is
-    not set, the other data is a standard result, which is yielded. If the flag is set, the result was a caught
-    exception, which will be reraised (killing the generator, but allowing user debugging of their code).
+    not set, the other data is a standard result, which is yielded. If the flag is set, the executed function crashed.
+    The original stack trace is printed, and the exception is rethrown.
     """
     for filePath in pickleFiles:
         picklefile = open(filePath, "rb")
@@ -45,7 +46,9 @@ def _unpickleSequence(pickleFiles):
             seq = cPickle.load(picklefile)
             for errorflag, data in seq:
                 if errorflag:
-                    raise data
+                    #data contains tuple: (exception, traceback string)
+                    print >> sys.stderr, data[1]
+                    raise data[0]
                 else:
                     yield data
         finally:
@@ -370,6 +373,8 @@ class Golemizer:
         whatever result type you wanted. If your results are actually of type Exception, there is no way to
         determine which results are actual results and which are thrown exceptions; you should sincerely reconsider
         your design if you are trying to do this.
+
+        Exceptions from your function will have their tracebacks printed to stderr before they are returned.
         """
 
         resultFilesNumbered = self._extract_job_results(jobId)
@@ -379,7 +384,11 @@ class Golemizer:
               try:
                   seq = cPickle.load(picklefile)
                   for errorflag, data in seq:
-                    yield data
+                    if not errorflag:
+                      yield data
+                    else:
+                      print >> sys.stderr, data[1] #the traceback
+                      yield data[0] #the exception
               finally:
                   picklefile.close()
 
@@ -454,7 +463,7 @@ def _abort_task(error):
   outFileName = sys.argv[6] + "_" + trunc + ".out.pkl" #this name is sacred to finding the results, including the jobID
   outFileName = os.path.join(sys.argv[4], outFileName)
   outFile = open(outFileName, "wb")
-  cPickle.dump([(True, error)], outFile, 2)
+  cPickle.dump([(True, (error, "An internal error has occured, for which no stack trace is available, but the message should be sufficient."))], outFile, 2)
   outFile.flush()
   outFile.close()
   raise error
@@ -547,7 +556,16 @@ def _jumpToTask():
         except Exception as miserableFailure:
             errored = True
             result = miserableFailure
+            excType, excVal, excTrace = None, None, None
+            trace = None
+            try:
+              excType, excVal, excTrace = sys.exc_info()
+              traceList = traceback.format_exception(excType, excVal, excTrace)
+              trace = "".join(traceList)
+            finally:
+              del excType, excVal, excTrace #clean up circular reference
             failureCount += 1
+            result = (result, trace)
         ret.append((errored, result))
 
     trunc = (os.path.basename(sys.argv[3]))[:-4] #truncates ".pkl"
