@@ -352,6 +352,15 @@ def getNodesStatus(master, loud=True):
     """
     return doGet(master + "/nodes/", loud)
 
+def resize(nodeid,size,master,pwd):
+    doPost(master+"/nodes/"+nodeid+"/resize/"+"%s"%(size),{},"",pwd)
+
+def resizeAll(size,master,pwd):
+    nodes=json.JSONDecoder().decode(getNodesStatus(master,False)[1])["Items"]
+    for node in nodes:
+        print("Resizing %s from %i to %s")%(node["Hostname"],node["MaxJobs"],size)
+        doPost(master+"/nodes/"+node["NodeId"]+"/resize/"+"%s"%(size),{},"",pwd)
+
 
 def main():
     """
@@ -408,8 +417,9 @@ def main():
     elif cmd == "nodes":
         getNodesStatus(master)
     elif cmd == "resize":
-        #TODO refactor once I understand what this does
-        doPost(master+"/nodes/"+sys.argv[commandIndex+1]+"/resize/"+sys.argv[commandIndex+2],{},"",pwd)
+        resize(sys.argv[commandIndex+1],sys.argv[commandIndex+2],master,pwd)
+    elif cmd == "resizeall":
+        resizeAll(sys.argv[commandIndex+1],master,pwd)
     elif cmd == "restart":
         input = raw_input("This will kill all jobs on the cluster and is only used for updating golem version. Enter \"Y\" to continue.>")
         if input == "Y":
