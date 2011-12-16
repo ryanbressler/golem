@@ -358,7 +358,7 @@ def resize(nodeid,size,master,pwd):
 def resizeName(nodename,size,master,pwd):
     nodes=json.JSONDecoder().decode(getNodesStatus(master,False)[1])["Items"]
     for node in nodes:
-        if(node["Hostname"].startswith(nodename)):
+        if(node["Hostname"].split(".")[0]==nodename):
             print("Resizing %s from %i to %s")%(node["Hostname"],node["MaxJobs"],size)
             doPost(master+"/nodes/"+node["NodeId"]+"/resize/"+"%s"%(size),{},"",pwd)
 
