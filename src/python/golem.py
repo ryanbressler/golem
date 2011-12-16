@@ -355,6 +355,13 @@ def getNodesStatus(master, loud=True):
 def resize(nodeid,size,master,pwd):
     doPost(master+"/nodes/"+nodeid+"/resize/"+"%s"%(size),{},"",pwd)
 
+def resizeName(nodename,size,master,pwd):
+    nodes=json.JSONDecoder().decode(getNodesStatus(master,False)[1])["Items"]
+    for node in nodes:
+        if(node["Hostname"].startswith(nodename)):
+            print("Resizing %s from %i to %s")%(node["Hostname"],node["MaxJobs"],size)
+            doPost(master+"/nodes/"+node["NodeId"]+"/resize/"+"%s"%(size),{},"",pwd)
+
 def resizeAll(size,master,pwd):
     nodes=json.JSONDecoder().decode(getNodesStatus(master,False)[1])["Items"]
     for node in nodes:
@@ -418,6 +425,8 @@ def main():
         getNodesStatus(master)
     elif cmd == "resize":
         resize(sys.argv[commandIndex+1],sys.argv[commandIndex+2],master,pwd)
+    elif cmd == "resizehost":
+        resizeName(sys.argv[commandIndex+1],sys.argv[commandIndex+2],master,pwd)
     elif cmd == "resizeall":
         resizeAll(sys.argv[commandIndex+1],master,pwd)
     elif cmd == "restart":
@@ -427,7 +436,7 @@ def main():
         else:
             print "Canceled"
     elif cmd == "die":
-        input = raw_input("This kill the entire cluster down and is almost never used. Enter \"Y\" to continue.>")
+        input = raw_input("This brings the entire cluster down and is almost never used. Enter \"Y\" to continue.>")
         if input == "Y":
             doPost(master+"/nodes/die",{},"",pwd)
         else:
