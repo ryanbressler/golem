@@ -125,7 +125,7 @@ func (con Connection) GetMsgs() {
 				}
 
 			}
-
+			con.DiedChan <- 1
 			return //TODO: recover
 
 			decoder = json.NewDecoder(con.Socket)
