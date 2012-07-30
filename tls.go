@@ -44,6 +44,7 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	}
 
 	url := fmt.Sprintf("%v://%v/master/", prot, master)
+	logger.Debug("Dialing Web Socket to (%v)", url)
 	var err error
 	if ws, err = DialWebSocket(url); err != nil {
 		logger.Warn(err)
@@ -56,7 +57,7 @@ func DialWebSocket(url string) (*websocket.Conn, error) {
 	if err != nil {
 		logger.Warn(err)
 	}
-	return websocket.Dial(url, "", origin)
+	return websocket.Dial(url, "", fmt.Sprintf("http://%v",origin))
 }
 
 //returns our custom tls configuration
