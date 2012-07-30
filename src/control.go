@@ -21,14 +21,14 @@ package main
 
 import (
 	"os"
-	"exec"
+	"os/exec"
 	"time"
 )
 
 // restarts process using the original commands after wait time in nanoseconds, then die
 func RestartIn(waitn int64) {
 	logger.Printf("RestartIn(%v secs)", waitn)
-	time.Sleep(waitn * second)
+	time.Sleep(time.Duration(waitn)*time.Second)
 	logger.Printf("RestartIn(): restarting")
 
 	cmd, err := exec.LookPath(os.Args[0])
@@ -51,7 +51,7 @@ func RestartIn(waitn int64) {
 //exit this process after given wait time in seconds
 func DieIn(waitn int64) {
 	logger.Printf("DieIn(%v secs)", waitn)
-	time.Sleep(waitn * second)
+	time.Sleep(time.Duration(waitn)*time.Second)
 	logger.Printf("DieIn(): exiting")
 	os.Exit(0)
 }

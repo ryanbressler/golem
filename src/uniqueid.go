@@ -20,8 +20,8 @@
 package main
 
 import (
-	"fmt"
 	"crypto/rand"
+	"fmt"
 )
 
 func UniqueId() string {

@@ -20,7 +20,7 @@
 package main
 
 import (
-	"json"
+	"encoding/json"
 	"time"
 )
 
@@ -128,7 +128,7 @@ func (nh *NodeHandle) Monitor() {
 			case job := <-nh.Master.jobChan:
 				nh.SendJob(job)
 			case <-nh.Update:
-			case <-time.After(1 * second):
+			case <-time.After(time.Second):
 
 			}
 		default:
@@ -139,7 +139,7 @@ func (nh *NodeHandle) Monitor() {
 				nh.Con.OutChan <- *bcMsg
 			case <-nh.Update:
 
-			case <-time.After(1 * second):
+			case <-time.After(1 * time.Second):
 
 			}
 		}
@@ -168,7 +168,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			select {
 			case nh.Master.GetSub(msg.SubId).CoutFileChan <- msg.Body:
 				blocked = false
-			case <-time.After(1 * second):
+			case <-time.After(1 * time.Second):
 				logger.Printf("Sending  COUT to subid %v blocked for more then 1 second.", msg.SubId)
 			}
 		}
@@ -180,7 +180,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			select {
 			case nh.Master.GetSub(msg.SubId).CerrFileChan <- msg.Body:
 				blocked = false
-			case <-time.After(1 * second):
+			case <-time.After(1 * time.Second):
 				logger.Printf("Sending  CERROR to subid %v blocked for more then 1 second.", msg.SubId)
 			}
 		}

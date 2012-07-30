@@ -21,8 +21,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"io"
+	"os"
 	"time"
 )
 
@@ -94,7 +94,7 @@ func (this *Submission) MonitorWorkTasks() {
 		case <-this.ErrorChan:
 			dtls := <-this.Details
 			dtls.Progress.Errored = 1 + dtls.Progress.Errored
-			dtls.LastModified = time.LocalTime().String()
+			dtls.LastModified = time.Now().String()
 			this.Details <- dtls
 
 			logger.Debug("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
@@ -102,7 +102,7 @@ func (this *Submission) MonitorWorkTasks() {
 		case <-this.FinishedChan:
 			dtls := <-this.Details
 			dtls.Progress.Finished = 1 + dtls.Progress.Finished
-			dtls.LastModified = time.LocalTime().String()
+			dtls.LastModified = time.Now().String()
 			this.Details <- dtls
 
 			logger.Debug("FINISHED [%v,%v]", dtls.JobId, dtls.Progress.Finished)
@@ -148,7 +148,7 @@ func (this *Submission) WriteCout() {
 	logger.Debug("WriteCout(%v)", dtls.JobId)
 
 	var stdOutFile io.WriteCloser = nil
-	var err os.Error
+	var err error
 
 	for {
 		select {
@@ -163,7 +163,7 @@ func (this *Submission) WriteCout() {
 			}
 
 			fmt.Fprint(stdOutFile, msg)
-		case <-time.After(1 * second):
+		case <-time.After(time.Second):
 			logger.Debug("checking for done: %v", dtls.JobId)
 			select {
 			case <-this.doneChan:
@@ -181,7 +181,7 @@ func (this *Submission) WriteCerror() {
 	logger.Debug("WriteCerror(%v)", dtls.JobId)
 
 	var stdErrFile io.WriteCloser = nil
-	var err os.Error
+	var err error
 
 	for {
 		select {
@@ -196,7 +196,7 @@ func (this *Submission) WriteCerror() {
 			}
 
 			fmt.Fprint(stdErrFile, errmsg)
-		case <-time.After(1 * second):
+		case <-time.After(time.Second):
 			logger.Debug("checking for done: %v", dtls.JobId)
 			select {
 			case <-this.doneChan:
@@ -214,7 +214,7 @@ func (this *Submission) SetState(state string, status string) {
 	x := <-this.Details
 	x.State = state
 	x.Status = status
-	x.LastModified = time.LocalTime().String()
+	x.LastModified = time.Now().String()
 	this.Details <- x
 	logger.Debug("SetState(%v,%v):after=%v", state, status, this.SniffDetails())
 }
@@ -223,7 +223,7 @@ func (this *Submission) UpdateProgress() {
 	logger.Debug("UpdateProgress():before=%v", this.SniffDetails())
 	x := <-this.Details
 	x.Progress.Errored = 1 + x.Progress.Errored
-	x.LastModified = time.LocalTime().String()
+	x.LastModified = time.Now().String()
 	this.Details <- x
 	logger.Debug("UpdateProgress():after=%v", this.SniffDetails())
 }

@@ -20,10 +20,11 @@
 package main
 
 import (
-	"http"
-	"json"
+	"encoding/json"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strconv"
-	"url"
 )
 
 type ScribeJobController struct {
@@ -37,15 +38,16 @@ func (this ScribeJobController) Index(rw http.ResponseWriter) {
 	logger.Debug("Index()")
 	items, err := this.store.All()
 	if err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // POST /jobs
 func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) {
 	logger.Debug("Create()")
@@ -56,7 +58,7 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 
 	tasks := make([]Task, 0, 100)
 	if err := LoadTasksFromJson(r, &tasks); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -67,25 +69,27 @@ func (this ScribeJobController) Create(rw http.ResponseWriter, r *http.Request) 
 
 	job := NewJobDetails(jobId, owner, label, jobtype, TotalTasks(tasks), NEW, READY)
 	if err := this.store.Create(job, tasks); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := json.NewEncoder(rw).Encode(job); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // GET /jobs/id
 func (this ScribeJobController) Find(rw http.ResponseWriter, id string) {
 	logger.Debug("Find(%v)", id)
 	jd, err := this.store.Get(id)
 	if err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := json.NewEncoder(rw).Encode(jd); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
 	logger.Debug("Act(%v):%v", r.URL.Path, parts)
@@ -101,7 +105,7 @@ func (this ScribeJobController) Act(rw http.ResponseWriter, parts []string, r *h
 
 	preq, _ := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	preq.Header.Set("x-golem-apikey", this.apikey)
-	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy := httputil.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }
 
@@ -125,7 +129,7 @@ func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Val
 	items, err := this.store.ClusterStats(numberOfSecondsSince)
 	if err != nil {
 		logger.Warn(err)
-		http.Error(rw, err.String(), http.StatusInternalServerError)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -133,6 +137,6 @@ func (this ScribeClusterController) Index(rw http.ResponseWriter, params url.Val
 	// TODO: lookup in storage
 	if err := json.NewEncoder(rw).Encode(clusterStatList); err != nil {
 		logger.Warn(err)
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }

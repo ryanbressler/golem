@@ -20,9 +20,8 @@
 package main
 
 import (
-	"json"
+	"encoding/json"
 	"time"
-	"os"
 )
 
 type ItemsHandle struct {
@@ -98,7 +97,7 @@ func NewJobDetails(jobId string, owner string, label string, jobtype string, tot
 	return JobDetails{
 		JobId: jobId, Uri: "/jobs/" + jobId,
 		Owner: owner, Label: label, Type: jobtype,
-		FirstCreated: time.LocalTime().String(),
+		FirstCreated: time.Now().String(),
 		Progress:     TaskProgress{Total: totalTasks, Finished: 0, Errored: 0},
 		State:        state, Status: status}
 }
@@ -134,7 +133,7 @@ type HelloMsgBody struct {
 	UniqueId    string
 }
 
-func NewHelloMsgBody(data string) (*HelloMsgBody, os.Error) {
+func NewHelloMsgBody(data string) (*HelloMsgBody, error) {
 	rv := &HelloMsgBody{}
 	err := json.Unmarshal([]byte(data), rv)
 	return rv, err
@@ -169,7 +168,7 @@ type WorkerMessage struct {
 	ErrMsg string
 }
 
-func (wm *WorkerMessage) BodyFromInterface(Body interface{}) os.Error {
+func (wm *WorkerMessage) BodyFromInterface(Body interface{}) error {
 	b, err := json.Marshal(Body)
 	if err != nil {
 		logger.Warn(err)
@@ -212,7 +211,7 @@ type ClusterStat struct {
 }
 
 func NewClusterStat(running int, pending int, workers int, available int) ClusterStat {
-	return ClusterStat{SnapshotAt: time.Seconds(),
+	return ClusterStat{SnapshotAt: time.Now().UnixNano(),
 		JobsRunning: running, JobsPending: pending,
 		WorkersRunning: workers, WorkersAvailable: available}
 }

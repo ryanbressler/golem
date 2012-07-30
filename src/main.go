@@ -21,12 +21,12 @@ package main
 
 import (
 	"flag"
-	"http"
-	"url"
 	"github.com/codeforsystemsbiology/rest.go"
 	"github.com/codeforsystemsbiology/verboselogger.go"
-	"goconf.googlecode.com/hg"
-	"launchpad.net/mgo"
+	"github.com/dlintw/goconf"
+	"labix.org/v1/mgo"
+	"net/http"
+	"net/url"
 )
 
 var logger *log4go.VerboseLogger
@@ -44,7 +44,7 @@ func main() {
 	flag.StringVar(&configurationFile, "config", "golem.config", "A configuration file for golem services")
 	flag.Parse()
 
-	configFile, err := conf.ReadConfigFile(configurationFile)
+	configFile, err := goconf.ReadConfigFile(configurationFile)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +69,7 @@ func main() {
 
 // sets global logger based on verbosity level in configuration
 // optional parameter:  default.verbose (defaults to true if not present or incorrectly set)
-func GlobalLogger(configFile *conf.ConfigFile) {
+func GlobalLogger(configFile *goconf.ConfigFile) {
 	verbose, err := configFile.GetBool("default", "verbose")
 	logger = log4go.NewVerboseLogger(verbose, nil, "")
 	if err != nil {
@@ -82,7 +82,7 @@ func GlobalLogger(configFile *conf.ConfigFile) {
 // starts master service based on the given configuration file
 // required parameters:  default.hostname, default.password
 // optional parameters:  master.buffersize
-func StartMaster(configFile *conf.ConfigFile) {
+func StartMaster(configFile *goconf.ConfigFile) {
 	SubIOBufferSize("master", configFile)
 	GoMaxProc("master", configFile)
 	ConBufferSize("master", configFile)
@@ -104,7 +104,7 @@ func StartMaster(configFile *conf.ConfigFile) {
 
 // starts scribe service based on the given configuration file
 // required parameters:  default.hostname, default.password, scribe.target, mgodb.server, mgodb.store, mgodb.jobcollection, mgodb.taskcollection
-func StartScribe(configFile *conf.ConfigFile) {
+func StartScribe(configFile *goconf.ConfigFile) {
 	MongoLogger(configFile)
 
 	GoMaxProc("scribe", configFile)
@@ -142,7 +142,7 @@ func StartScribe(configFile *conf.ConfigFile) {
 	ListenAndServeTLSorNot(hostname)
 }
 
-func MongoLogger(configFile *conf.ConfigFile) {
+func MongoLogger(configFile *goconf.ConfigFile) {
 	verbose, err := configFile.GetBool("mgodb", "verbose")
 	if err != nil {
 		logger.Warn(err)
@@ -158,7 +158,7 @@ func MongoLogger(configFile *conf.ConfigFile) {
 
 // starts Addama proxy (http://addama.org) based on the given configuration file
 // required parameters:  default.hostname, default.password, addama.target, addama.connectionFile, addama.host, addama.service, addama.uri, addama.label
-func StartAddama(configFile *conf.ConfigFile) {
+func StartAddama(configFile *goconf.ConfigFile) {
 	hostname := GetRequiredString(configFile, "default", "hostname")
 
 	addamaConn := AddamaConnection{
@@ -178,7 +178,7 @@ func StartAddama(configFile *conf.ConfigFile) {
 // starts worker based on the given configuration file
 // required parameters:  worker.masterhost
 // optional parameters:  worker.processes
-func StartWorker(configFile *conf.ConfigFile) {
+func StartWorker(configFile *goconf.ConfigFile) {
 
 	GoMaxProc("worker", configFile)
 	ConBufferSize("worker", configFile)
@@ -194,7 +194,7 @@ func StartWorker(configFile *conf.ConfigFile) {
 
 // starts http handlers for HTML content based on the given configuration file
 // optional parameters:  default.contentDirectory (location of html content to be served at https://example.com/ or https://example.com/html/index.html
-func StartHtmlHandler(configFile *conf.ConfigFile) {
+func StartHtmlHandler(configFile *goconf.ConfigFile) {
 	if contentDir, _ := configFile.GetString("default", "contentDirectory"); contentDir != "" {
 		logger.Printf("StartHtmlHandler(): serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))

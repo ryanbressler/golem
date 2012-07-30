@@ -20,12 +20,11 @@
 package main
 
 import (
-	"io"
 	"bufio"
 	"fmt"
-	"exec"
+	"io"
+	"os/exec"
 	"time"
-	"os"
 )
 
 func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage, done chan int) {
@@ -46,14 +45,14 @@ func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage, done
 				select {
 				case ch <- WorkerMessage{Type: msgType, SubId: id, Body: linestr + "\n"}:
 					blocked = false
-				case <-time.After(1 * second):
+				case <-time.After(time.Second):
 					logger.Printf("WARNING PipeToChan() has been blocked for more then 1 second MsgType:%d,id:%v", msgType, id)
 				}
 			}
 
 		}
 		switch {
-		case err == os.EOF:
+		case err == io.EOF:
 			done <- 1
 			return
 		case err != nil:
@@ -107,7 +106,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 
 	if err = cmd.Start(); err != nil {
 		logger.Warn(err)
-		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
+		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.Error()}
 		return
 	}
 
@@ -121,7 +120,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 	<-cerrorchan
 	if err = cmd.Wait(); err != nil {
 		logger.Warn(err)
-		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.String()}
+		replyc <- &WorkerMessage{Type: JOBERROR, SubId: job.SubId, Body: jsonjob, ErrMsg: err.Error()}
 		return
 	}
 
@@ -133,7 +132,7 @@ func CheckIn(c *Connection) {
 	logger.Debug("CheckIn(%v)", c.isWorker)
 	con := *c
 	for {
-		<-time.After(60 * second)
+		<-time.After(time.Duration(60)*time.Second)
 		logger.Debug("CheckIn(%v) after sleep", c.isWorker)
 		con.OutChan <- WorkerMessage{Type: CHECKIN}
 	}

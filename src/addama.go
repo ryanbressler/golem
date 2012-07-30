@@ -21,11 +21,12 @@ package main
 
 import (
 	"fmt"
-	"http"
-	"strings"
-	"goconf.googlecode.com/hg"
 	"github.com/codeforsystemsbiology/httplib.go"
-	"url"
+	"github.com/dlintw/goconf"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
 )
 
 type AddamaConnection struct {
@@ -63,7 +64,7 @@ func NewAddamaProxy(addamaConn AddamaConnection) *AddamaProxy {
 }
 
 func NewRegistrar(connectionFilePath string) *Registrar {
-	connectionFile, _ := conf.ReadConfigFile(connectionFilePath)
+	connectionFile, _ := goconf.ReadConfigFile(connectionFilePath)
 	host, _ := connectionFile.GetString("Connection", "host")
 	apikey, _ := connectionFile.GetString("Connection", "apikey")
 	logger.Debug("NewRegistrar(%v):%v,%v", connectionFilePath, host, apikey)
@@ -114,6 +115,6 @@ func (this *AddamaProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	preq, _ := http.NewRequest(r.Method, uri, r.Body)
 	preq.Header.Set("x-golem-apikey", this.apikey)
 
-	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy := httputil.NewSingleHostReverseProxy(this.target)
 	go proxy.ServeHTTP(w, preq)
 }
