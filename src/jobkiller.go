@@ -71,7 +71,7 @@ func (jk *JobKiller) KillJobs() {
 			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb
 		case kb := <-jk.Donechan:
 			logger.Debug("removing: %v", kb)
-			jk.killables[fmt.Sprintf("%v%v", kb.SubId, kb.JobId)] = kb, false
+			delete(jk.killables, fmt.Sprintf("%v%v", kb.SubId, kb.JobId))
 		}
 	}
 }

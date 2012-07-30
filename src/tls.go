@@ -20,18 +20,18 @@
 package main
 
 import (
-	"fmt"
-	"websocket"
-	"big"
-	"os"
-	"crypto/tls"
+	"code.google.com/p/go.net/websocket"
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"crypto/rand"
 	"encoding/pem"
+	"fmt"
+	"math/big"
+	"net/http"
+	"os"
 	"time"
-	"http"
 )
 
 //connect a web socket to the master as a worker
@@ -44,14 +44,14 @@ func OpenWebSocketToMaster(master string) (ws *websocket.Conn) {
 	}
 
 	url := fmt.Sprintf("%v://%v/master/", prot, master)
-	var err os.Error
+	var err error
 	if ws, err = DialWebSocket(url); err != nil {
 		logger.Warn(err)
 	}
 	return
 }
 
-func DialWebSocket(url string) (*websocket.Conn, os.Error) {
+func DialWebSocket(url string) (*websocket.Conn, error) {
 	origin, err := os.Hostname()
 	if err != nil {
 		logger.Warn(err)
@@ -70,11 +70,11 @@ func GetTlsConfig() *tls.Config {
 		certs = append(certs, GenerateTlsCert())
 	}
 
-	return &tls.Config{Certificates: certs, AuthenticateClient: true}
+	return &tls.Config{Certificates: certs}
 }
 
 // replacement for ListenAndServeTLS that loads our custom configuration usage is identical to http.ListenAndServe
-func ConfigListenAndServeTLS(hostname string) (err os.Error) {
+func ConfigListenAndServeTLS(hostname string) (err error) {
 	logger.Printf("ConfigListenAndServeTLS(%v)", hostname)
 	listener, err := tls.Listen("tcp", hostname, GetTlsConfig())
 	if err != nil {
@@ -89,8 +89,8 @@ func ConfigListenAndServeTLS(hostname string) (err os.Error) {
 }
 
 func GenerateX509KeyPair(certpath string) tls.Certificate {
-	certf := os.ShellExpand(certpath + "/certificate.pem")
-	keyf := os.ShellExpand(certpath + "/key.pem")
+	certf := os.ExpandEnv(certpath + "/certificate.pem")
+	keyf := os.ExpandEnv(certpath + "/key.pem")
 
 	cert, err := tls.LoadX509KeyPair(certf, keyf)
 	if err != nil {
@@ -111,7 +111,7 @@ func GenerateTlsCert() tls.Certificate {
 		panic(err)
 	}
 
-	now := time.Seconds()
+	now := time.Now()
 
 	randomSerialNum, err := rand.Int(rand.Reader, big.NewInt(9223372036854775807))
 	if err != nil {
@@ -125,8 +125,8 @@ func GenerateTlsCert() tls.Certificate {
 			CommonName:   hostname,
 			Organization: []string{certorg},
 		},
-		NotBefore:    time.SecondsToUTC(now - 300),
-		NotAfter:     time.SecondsToUTC(now + year),
+		NotBefore:    time.Unix(now.Unix(), 0).UTC(),
+		NotAfter:     time.Unix(now.AddDate(1,0,0).Unix(), 0).UTC(),
 		SubjectKeyId: []byte{1, 2, 3, 4},
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
@@ -144,7 +144,7 @@ func GenerateTlsCert() tls.Certificate {
 }
 
 // setup master, usage is identical to http.ListenAndServe but this relies on global useTls being set
-func ListenAndServeTLSorNot(hostname string) (err os.Error) {
+func ListenAndServeTLSorNot(hostname string) (err error) {
 	logger.Debug("ListenAndServeTLSorNot(%v)", hostname)
 	if useTls {
 		if err = ConfigListenAndServeTLS(hostname); err != nil {

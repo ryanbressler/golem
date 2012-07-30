@@ -20,14 +20,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"http"
-	"os"
 	"io"
-	"json"
+	"mime/multipart"
+	"net/http"
 	"strings"
 	"time"
-	"mime/multipart"
 )
 
 type Scribe struct {
@@ -41,7 +40,7 @@ func LaunchScribe(store JobStore, target string, apikey string) {
 
 	for {
 		s.PollJobs()
-		time.Sleep(10 * second)
+		time.Sleep(time.Duration(10)*time.Second)
 	}
 }
 
@@ -49,7 +48,7 @@ func MonitorClusterStats(store JobStore, target string, numberOfSeconds int64) {
 	s := Scribe{store: store, masterUrl: target}
 
 	for {
-		time.Sleep(numberOfSeconds * second)
+		time.Sleep( time.Duration(numberOfSeconds)*time.Second)
 
 		workerNodes, err := s.GetWorkerNodes()
 		if err != nil {
@@ -106,7 +105,7 @@ func (this *Scribe) GetJobs() []JobDetails {
 	return lst.Items
 }
 
-func (this *Scribe) GetWorkerNodes() (items []WorkerNode, err os.Error) {
+func (this *Scribe) GetWorkerNodes() (items []WorkerNode, err error) {
 	logger.Debug("GetWorkerNodes()")
 	resp, err := http.Get(this.masterUrl + "/nodes")
 	if err != nil {
@@ -118,7 +117,7 @@ func (this *Scribe) GetWorkerNodes() (items []WorkerNode, err os.Error) {
 	defer rb.Close()
 
 	workerNodes := WorkerNodeList{Items: make([]WorkerNode, 0, 0)}
-	if err := json.NewDecoder(rb).Decode(&workerNodes); err != nil {
+	if err = json.NewDecoder(rb).Decode(&workerNodes); err != nil {
 		logger.Warn(err)
 		return
 	}
@@ -128,7 +127,7 @@ func (this *Scribe) GetWorkerNodes() (items []WorkerNode, err os.Error) {
 	return
 }
 
-func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
+func (this *Scribe) PostJob(jd JobDetails) (err error) {
 	logger.Debug("PostJob(%v)", jd.JobId)
 
 	tasks, err := this.store.Tasks(jd.JobId)
@@ -190,7 +189,7 @@ func (this *Scribe) PostJob(jd JobDetails) (err os.Error) {
 	return
 }
 
-func (this *Scribe) ArchiveJob(jd JobDetails) (err os.Error) {
+func (this *Scribe) ArchiveJob(jd JobDetails) (err error) {
 	logger.Debug("ArchiveJob(%v)", jd)
 	if jd.State != COMPLETE {
 		logger.Debug("ArchiveJob(%v): NOT COMPLETE", jd)

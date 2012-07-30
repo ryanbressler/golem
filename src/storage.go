@@ -19,28 +19,24 @@
 */
 package main
 
-import (
-	"os"
-)
-
 type JobStore interface {
-	Create(JobDetails, []Task) os.Error
+	Create(JobDetails, []Task) error
 
-	All() ([]JobDetails, os.Error)
+	All() ([]JobDetails, error)
 
-	Unscheduled() ([]JobDetails, os.Error)
+	Unscheduled() ([]JobDetails, error)
 
-	CountActive() (int, os.Error)
+	CountActive() (int, error)
 
-	CountPending() (int, os.Error)
+	CountPending() (int, error)
 
-	Get(jobId string) (JobDetails, os.Error)
+	Get(jobId string) (JobDetails, error)
 
-	Tasks(jobId string) ([]Task, os.Error)
+	Tasks(jobId string) ([]Task, error)
 
-	Update(JobDetails) os.Error
+	Update(JobDetails) error
 
-	SnapshotCluster(ClusterStat) os.Error
+	SnapshotCluster(ClusterStat) error
 
-	ClusterStats(numberOfSecondsSince int64) ([]ClusterStat, os.Error)
+	ClusterStats(numberOfSecondsSince int64) ([]ClusterStat, error)
 }

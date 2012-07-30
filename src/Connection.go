@@ -21,9 +21,9 @@
 package main
 
 import (
-	"os"
-	"websocket"
-	"json"
+	"code.google.com/p/go.net/websocket"
+	"encoding/json"
+	"io"
 	"time"
 )
 
@@ -68,7 +68,7 @@ func (con Connection) SendMsgs() {
 			} else {
 				break
 			}
-			<-time.After(2 * second)
+			<-time.After(time.Duration(2)*time.Second)
 		}
 
 	}
@@ -85,7 +85,7 @@ func (con Connection) GetMsgs() {
 		}
 
 		switch {
-		case err == os.EOF:
+		case err == io.EOF:
 			remote := con.Socket.RemoteAddr().String()
 			con.Socket.Close()
 			if con.isWorker {
@@ -102,7 +102,7 @@ func (con Connection) GetMsgs() {
 				for t := 1; t < 16; t = t * 2 {
 
 					logger.Printf("Attempting reconnect in %v seconds.", t)
-					<-time.After(int64(t) * second)
+					<-time.After(time.Duration(t)*time.Second)
 					logger.Printf("Attempting reconnect now.")
 
 					ws, err := DialWebSocket(remote)

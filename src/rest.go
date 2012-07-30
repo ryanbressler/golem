@@ -20,9 +20,8 @@
 package main
 
 import (
-	"http"
-	"json"
-	"os"
+	"encoding/json"
+	"net/http"
 )
 
 func GetHeader(r *http.Request, headerName string, defaultValue string) string {
@@ -34,7 +33,7 @@ func GetHeader(r *http.Request, headerName string, defaultValue string) string {
 	return defaultValue
 }
 
-func LoadTasksFromJson(r *http.Request, tasks *[]Task) (err os.Error) {
+func LoadTasksFromJson(r *http.Request, tasks *[]Task) (err error) {
 	logger.Debug("LoadTasksFromJson(%v)", r.URL.Path)
 
 	mpreader, err := r.MultipartReader()

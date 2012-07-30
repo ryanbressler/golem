@@ -20,9 +20,9 @@
 package main
 
 import (
-	"http"
+	"code.google.com/p/go.net/websocket"
+	"net/http"
 	"sync"
-	"websocket"
 )
 
 type Master struct {
@@ -85,6 +85,6 @@ func (m *Master) RemoveNodeOnDeath(nh *NodeHandle) {
 	logger.Debug("RemoveNodeOnDeath(%v)", nh.NodeId)
 	<-nh.Con.DiedChan
 	m.nodeMu.Lock()
-	m.NodeHandles[nh.NodeId] = nh, false
+	delete(m.NodeHandles, nh.NodeId)
 	m.nodeMu.Unlock()
 }

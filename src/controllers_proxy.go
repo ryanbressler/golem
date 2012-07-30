@@ -20,9 +20,10 @@
 package main
 
 import (
-	"http"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
-	"url"
 )
 
 type ProxyNodeController struct {
@@ -34,26 +35,28 @@ type ProxyNodeController struct {
 func (this ProxyNodeController) Index(rw http.ResponseWriter) {
 	preq, err := http.NewRequest("GET", "/nodes/", strings.NewReader(""))
 	if err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	logger.Debug("proxying /nodes to %v", this.target)
-	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy := httputil.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }
+
 // GET /nodes/id
 func (this ProxyNodeController) Find(rw http.ResponseWriter, nodeId string) {
 	preq, err := http.NewRequest("GET", "/nodes/"+nodeId, strings.NewReader(""))
 	if err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	logger.Debug("proxying /nodes/%v to %v", nodeId, this.target)
-	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy := httputil.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }
+
 // POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
 func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
 	if CheckApiKey(this.apikey, r) == false {
@@ -70,13 +73,13 @@ func (this ProxyNodeController) Act(rw http.ResponseWriter, parts []string, r *h
 
 	preq, err := http.NewRequest(r.Method, r.URL.Path, r.Body)
 	if err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	preq.Header.Set("x-golem-apikey", this.apikey)
 
 	logger.Debug("proxying %v to %v", r.URL.Path, this.target)
-	proxy := http.NewSingleHostReverseProxy(this.target)
+	proxy := httputil.NewSingleHostReverseProxy(this.target)
 	proxy.ServeHTTP(rw, preq)
 }

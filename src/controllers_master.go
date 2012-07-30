@@ -20,9 +20,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"http"
-	"json"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -31,6 +31,7 @@ type MasterJobController struct {
 	master *Master
 	apikey string
 }
+
 // GET /jobs
 func (this MasterJobController) Index(rw http.ResponseWriter) {
 	logger.Debug("Index()")
@@ -48,9 +49,10 @@ func (this MasterJobController) Index(rw http.ResponseWriter) {
 
 	jobDetails := JobDetailsList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(jobDetails); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // POST /jobs
 func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) {
 	logger.Debug("Create()")
@@ -61,7 +63,7 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 
 	tasks := make([]Task, 0, 100)
 	if err := LoadTasksFromJson(r, &tasks); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -93,9 +95,10 @@ func (this MasterJobController) Create(rw http.ResponseWriter, r *http.Request) 
 	logger.Debug("created: %v", jobId)
 
 	if err := json.NewEncoder(rw).Encode(jd); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // GET /jobs/id
 func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
 	logger.Debug("Find(%v)", id)
@@ -110,9 +113,10 @@ func (this MasterJobController) Find(rw http.ResponseWriter, id string) {
 	}
 	logger.Debug("job found: %v", id)
 	if err := json.NewEncoder(rw).Encode(s.SniffDetails()); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // POST /jobs/id/stop or POST /jobs/id/kill
 func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
 	logger.Debug("Act(%v)", r.URL.Path)
@@ -161,11 +165,11 @@ func (this MasterJobController) Act(rw http.ResponseWriter, parts []string, r *h
 		dtls := job.SniffDetails()
 		if dtls.State == COMPLETE {
 			go func() {
-				<-time.After(900 * second)
+				<-time.After(time.Duration(900)*time.Second)
 				this.master.subMu.Lock()
 				_, isin := this.master.subMap[jobId]
 				if isin {
-					this.master.subMap[jobId] = nil, false
+					delete(this.master.subMap, jobId)
 				}
 				this.master.subMu.Unlock()
 			}()
@@ -182,6 +186,7 @@ type MasterNodeController struct {
 	master *Master
 	apikey string
 }
+
 // GET /nodes
 func (this MasterNodeController) Index(rw http.ResponseWriter) {
 	logger.Debug("Index()")
@@ -195,9 +200,10 @@ func (this MasterNodeController) Index(rw http.ResponseWriter) {
 	logger.Debug("for loop done")
 	workerNodes := WorkerNodeList{Items: items, NumberOfItems: len(items)}
 	if err := json.NewEncoder(rw).Encode(workerNodes); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // GET /nodes/id
 func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
 	logger.Debug("Find(%v)", nodeId)
@@ -212,9 +218,10 @@ func (this MasterNodeController) Find(rw http.ResponseWriter, nodeId string) {
 
 	logger.Debug("node found: %v", nodeId)
 	if err := json.NewEncoder(rw).Encode(NewWorkerNode(nh)); err != nil {
-		http.Error(rw, err.String(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 }
+
 // POST /nodes/restart or POST /nodes/die or POST /nodes/id/resize/new-size
 func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *http.Request) {
 	logger.Debug("Act(%v):%v", r.URL.Path, parts)
@@ -240,7 +247,7 @@ func (this MasterNodeController) Act(rw http.ResponseWriter, parts []string, r *
 		nodeId := parts[0]
 		numberOfThreads, err := strconv.Atoi(parts[2])
 		if err != nil {
-			http.Error(rw, err.String(), http.StatusBadRequest)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 

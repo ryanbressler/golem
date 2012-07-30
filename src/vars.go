@@ -20,13 +20,12 @@
 package main
 
 import (
+	"github.com/dlintw/goconf"
 	"os"
 	"runtime"
-	"goconf.googlecode.com/hg"
 )
 
 const (
-	second = 1e9 // one second is 1e9 nanoseconds
 	year   = 60 * 60 * 24 * 365
 )
 
@@ -39,7 +38,7 @@ var certorg string = "golem.googlecode.com"
 
 // Sets global variable to enable TLS communications and other related variables (certificate path, organization)
 // optional parameters:  default.certpath, default.organization, default.tls
-func GlobalTls(configFile *conf.ConfigFile) {
+func GlobalTls(configFile *goconf.ConfigFile) {
 	certificatepath, err := configFile.GetString("default", "certpath")
 	if err != nil {
 		logger.Warn(err)
@@ -71,7 +70,7 @@ func GlobalTls(configFile *conf.ConfigFile) {
 
 // Sets global variable to configure buffersize for master submission channels (stdout, stderr)
 // optional parameters:  master.buffersize
-func SubIOBufferSize(section string, configFile *conf.ConfigFile) {
+func SubIOBufferSize(section string, configFile *goconf.ConfigFile) {
 	bufsize, err := configFile.GetInt(section, "subiobuffersize")
 	if err != nil {
 		logger.Warn(err)
@@ -84,7 +83,7 @@ func SubIOBufferSize(section string, configFile *conf.ConfigFile) {
 
 // Sets global variable to configure buffersize for channels wrapping connections between worker and master (stdout, stderr)
 // optional parameters:  master.buffersize
-func ConBufferSize(section string, config *conf.ConfigFile) {
+func ConBufferSize(section string, config *goconf.ConfigFile) {
 	bufsize, err := config.GetInt(section, "conbuffersize")
 	if err != nil {
 		logger.Warn(err)
@@ -95,7 +94,7 @@ func ConBufferSize(section string, config *conf.ConfigFile) {
 }
 
 //get the number of IO monitors to run per node
-func IOMOnitors(config *conf.ConfigFile) {
+func IOMOnitors(config *goconf.ConfigFile) {
 	iomons, err := config.GetInt("master", "iomonitors")
 	if err != nil {
 		logger.Warn(err)
@@ -108,7 +107,7 @@ func IOMOnitors(config *conf.ConfigFile) {
 }
 
 //get the number of processors to use for golem itself
-func GoMaxProc(section string, config *conf.ConfigFile) {
+func GoMaxProc(section string, config *goconf.ConfigFile) {
 	gomaxproc, err := config.GetInt(section, "gomaxproc")
 	if err != nil {
 		logger.Warn(err)
@@ -119,7 +118,7 @@ func GoMaxProc(section string, config *conf.ConfigFile) {
 }
 
 //convenience function for requiring a string in the config file
-func GetRequiredString(config *conf.ConfigFile, section string, key string) (value string) {
+func GetRequiredString(config *goconf.ConfigFile, section string, key string) (value string) {
 	value, err := config.GetString(section, key)
 	if err != nil {
 		logger.Fatalf("[CONFIG] %v is required: [section=%v]", key, section)
