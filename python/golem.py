@@ -58,8 +58,10 @@ jobs                                : same as list
 status subid                        : get status of a single submission
 stop subid                          : stop a submission from submitting more jobs but let running jobs finish
 kill subid                          : stop a submission from submitting more jobs and kill running jobs
-nodes                               : list the nodes connected to the cluster
-resize nodeid newmax                : change the number of jobs a node takes at once
+nodes                               : list the nodes connected to the clus  ter
+resize nodeid newmax                : change the number of tasks a node takes at once
+resizeall newmax                    : change the number of taska of all nodes that aren't set to take 0 tasks
+resizehost cname newmax             : change max tasks of a worker by cname
 restart                             : cycle all golem proccess on the cluster...use only for udating core components
 die                                 : kill everything ... rarelly used
 """
@@ -270,7 +272,7 @@ def resizeName(nodename, size, master, pwd):
 
 def resizeAll(size, master, pwd):
     """
-    Resize all nodes.
+    Resize all nodes that haven't been sized down to zero. 
 
     Paramaters:
         size - an int specifing the new size of the nodes
@@ -283,8 +285,9 @@ def resizeAll(size, master, pwd):
     """
     nodes = json.JSONDecoder().decode(getNodesStatus(master, False)[1])["Items"]
     for node in nodes:
-        print("Resizing %s from %i to %s") % (node["Hostname"], node["MaxJobs"], size)
-        doPost(master + "/nodes/" + node["NodeId"] + "/resize/" + "%s" % (size), {}, "", pwd)
+        if int(node["MaxJobs"])!=0:
+            print("Resizing %s from %i to %s") % (node["Hostname"], node["MaxJobs"], size)
+            doPost(master + "/nodes/" + node["NodeId"] + "/resize/" + "%s" % (size), {}, "", pwd)
 
 
 class HTTPSTLSv1Connection(httplib.HTTPConnection):
