@@ -187,6 +187,11 @@ type WorkerJob struct {
 	Args   []string
 }
 
+type SubmitedWorkerJob struct {
+	wj   *WorkerJob
+	host string
+}
+
 // NewJob creates a job from a json string (usually a message body)
 func NewWorkerJob(jsonjob string) (job *WorkerJob) {
 	logger.Debug("NewWorkerJob(%v)", jsonjob)

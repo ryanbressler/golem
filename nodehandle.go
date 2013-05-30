@@ -109,6 +109,7 @@ func (nh *NodeHandle) SendJob(j *WorkerJob) {
 	running := <-nh.Running
 	nh.Running <- running + 1
 	logger.Debug("assigning [%v, %d]", nh.Hostname, running)
+	nh.Master.GetSub(msg.SubId).SubmittedChan <- &SubmitedWorkerJob{j, nh.Hostname}
 }
 
 func (nh *NodeHandle) Monitor() {
