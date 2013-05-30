@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -31,25 +32,27 @@ type Submission struct {
 	Details chan JobDetails
 	Tasks   []Task
 
-	CoutFileChan chan string
-	CerrFileChan chan string
-	ErrorChan    chan *WorkerJob
-	FinishedChan chan *WorkerJob
-	stopChan     chan int
-	doneChan     chan int
+	CoutFileChan  chan string
+	CerrFileChan  chan string
+	ErrorChan     chan *WorkerJob
+	FinishedChan  chan *WorkerJob
+	SubmittedChan chan *SubmitedWorkerJob
+	stopChan      chan int
+	doneChan      chan int
 }
 
 func NewSubmission(jd JobDetails, tasks []Task, jobChan chan *WorkerJob) *Submission {
 	logger.Debug("NewSubmission(%v)", jd)
 	s := Submission{
-		Details:      make(chan JobDetails, 1),
-		Tasks:        tasks,
-		CoutFileChan: make(chan string, iobuffersize),
-		CerrFileChan: make(chan string, iobuffersize),
-		ErrorChan:    make(chan *WorkerJob, 1),
-		FinishedChan: make(chan *WorkerJob, 1),
-		stopChan:     make(chan int, 3),
-		doneChan:     make(chan int, 0)}
+		Details:       make(chan JobDetails, 1),
+		Tasks:         tasks,
+		CoutFileChan:  make(chan string, iobuffersize),
+		CerrFileChan:  make(chan string, iobuffersize),
+		ErrorChan:     make(chan *WorkerJob, 1),
+		FinishedChan:  make(chan *WorkerJob, 1),
+		SubmittedChan: make(chan *SubmitedWorkerJob, 1),
+		stopChan:      make(chan int, 3),
+		doneChan:      make(chan int, 0)}
 
 	s.Details <- jd
 
@@ -89,27 +92,42 @@ func (this *Submission) SniffDetails() JobDetails {
 
 func (this *Submission) MonitorWorkTasks() {
 	logger.Debug("MonitorWorkTasks()")
+	dtls := <-this.Details
+	logFile, err := os.Create(fmt.Sprintf("%v.log.txt", dtls.JobId))
+	if err != nil {
+		logger.Warn(err)
+	}
+	this.Details <- dtls
+	defer logFile.Close()
+
 	for {
 		select {
-		case <-this.ErrorChan:
+		case wj := <-this.ErrorChan:
 			dtls := <-this.Details
 			dtls.Progress.Errored = 1 + dtls.Progress.Errored
 			dtls.LastModified = time.Now().String()
 			this.Details <- dtls
+			fmt.Fprintf(logFile, "ERRORED %v %v %v %v", wj.SubId, wj.JobId, wj.LineId, strings.Join(wj.Args, " "))
 
 			logger.Debug("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
 
-		case <-this.FinishedChan:
+		case wj := <-this.FinishedChan:
 			dtls := <-this.Details
 			dtls.Progress.Finished = 1 + dtls.Progress.Finished
 			dtls.LastModified = time.Now().String()
 			this.Details <- dtls
 
+			fmt.Fprintf(logFile, "FINISHED %v %v %v %v\n", wj.SubId, wj.JobId, wj.LineId, strings.Join(wj.Args, " "))
+
 			logger.Debug("FINISHED [%v,%v]", dtls.JobId, dtls.Progress.Finished)
+		case swj := <-this.SubmittedChan:
+			fmt.Fprintf(logFile, "SUBMITTED to %v %v %v %v %v\n", swj.host, swj.wj.SubId, swj.wj.JobId, swj.wj.LineId, strings.Join(swj.wj.Args, " "))
+
 		}
 
 		dtls := this.SniffDetails()
 		if dtls.Progress.isComplete() {
+			fmt.Fprintln(logFile, "COMPLETED")
 			logger.Debug("COMPLETED [%v]", dtls)
 			this.SetState(COMPLETE, SUCCESS)
 			this.doneChan <- 1
