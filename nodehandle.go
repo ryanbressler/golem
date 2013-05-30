@@ -203,7 +203,7 @@ func (nh *NodeHandle) HandleWorkerMessage(msg *WorkerMessage) {
 			logger.Debug("JOBERROR running [%v, %v, %v]", nh.Hostname, msg.Body, running)
 			nh.Master.GetSub(msg.SubId).ErrorChan <- NewWorkerJob(msg.Body)
 			nh.Update <- 1
-			logger.Debug("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
+			logger.Printf("JOBERROR finished sent: [%v, %v, %v]", nh.Hostname, msg.Body, running)
 		}()
 	}
 	//logger.Debug("message handled: %v", nh.Hostname)

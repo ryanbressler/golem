@@ -24,10 +24,11 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"time"
 )
 
-func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage, done chan int) {
+func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage, done chan int, prepend string) {
 	logger.Debug("PipeToChan(%d,%v)", msgType, id)
 	bp := bufio.NewReader(r)
 	for {
@@ -43,7 +44,7 @@ func PipeToChan(r io.Reader, msgType int, id string, ch chan WorkerMessage, done
 			blocked := true
 			for blocked == true {
 				select {
-				case ch <- WorkerMessage{Type: msgType, SubId: id, Body: linestr + "\n"}:
+				case ch <- WorkerMessage{Type: msgType, SubId: id, Body: prepend + linestr + "\n"}:
 					blocked = false
 				case <-time.After(time.Second):
 					logger.Printf("WARNING PipeToChan() has been blocked for more then 1 second MsgType:%d,id:%v", msgType, id)
@@ -94,7 +95,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		return
 	}
 	coutchan := make(chan int, 0)
-	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan, coutchan)
+	go PipeToChan(outpipe, COUT, job.SubId, con.OutChan, coutchan, "")
 
 	errpipe, err := cmd.StderrPipe()
 	if err != nil {
@@ -102,7 +103,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		return
 	}
 	cerrorchan := make(chan int, 0)
-	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan, cerrorchan)
+	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan, cerrorchan, "TASK : "+exepath+strings.Join(args, "")+"ERRORED: \n")
 
 	if err = cmd.Start(); err != nil {
 		logger.Warn(err)
@@ -132,7 +133,7 @@ func CheckIn(c *Connection) {
 	logger.Debug("CheckIn(%v)", c.isWorker)
 	con := *c
 	for {
-		<-time.After(time.Duration(60)*time.Second)
+		<-time.After(time.Duration(60) * time.Second)
 		logger.Debug("CheckIn(%v) after sleep", c.isWorker)
 		con.OutChan <- WorkerMessage{Type: CHECKIN}
 	}

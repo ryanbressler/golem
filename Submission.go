@@ -164,7 +164,7 @@ func (this *Submission) WriteCout() {
 
 			fmt.Fprint(stdOutFile, msg)
 		case <-time.After(time.Second):
-			logger.Debug("checking for done: %v", dtls.JobId)
+			//logger.Debug("checking for done: %v", dtls.JobId)
 			select {
 			case <-this.doneChan:
 				logger.Debug("stop chan: %v", dtls.JobId)
@@ -197,7 +197,7 @@ func (this *Submission) WriteCerror() {
 
 			fmt.Fprint(stdErrFile, errmsg)
 		case <-time.After(time.Second):
-			logger.Debug("checking for done: %v", dtls.JobId)
+			//logger.Debug("checking for done: %v", dtls.JobId)
 			select {
 			case <-this.doneChan:
 				logger.Debug("stop chan: %v", dtls.JobId)
