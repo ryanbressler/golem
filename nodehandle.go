@@ -42,7 +42,7 @@ func NewNodeHandle(n *Connection, m *Master) *NodeHandle {
 	id := UniqueId()
 	nh := NodeHandle{NodeId: id,
 		Uri:           "/nodes/" + id,
-		Hostname:      con.Socket.LocalAddr().String(),
+		Hostname:      con.Socket.RemoteAddr().String(),
 		Master:        m,
 		Con:           con,
 		MaxJobs:       make(chan int, 1),

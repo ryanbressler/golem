@@ -27,6 +27,7 @@ import (
 	"labix.org/v1/mgo"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 var logger *log4go.VerboseLogger
@@ -199,5 +200,9 @@ func StartHtmlHandler(configFile *goconf.ConfigFile) {
 		logger.Printf("StartHtmlHandler(): serving HTML content from [%v]", contentDir)
 		http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir(contentDir))))
 		http.Handle("/", http.RedirectHandler("/html/index.html", http.StatusTemporaryRedirect))
+		wd, err := os.Getwd()
+		if err == nil {
+			http.Handle("/output/", http.StripPrefix("/output/", http.FileServer(http.Dir(wd))))
+		}
 	}
 }
