@@ -107,7 +107,7 @@ func (this *Submission) MonitorWorkTasks() {
 			dtls.Progress.Errored = 1 + dtls.Progress.Errored
 			dtls.LastModified = time.Now().String()
 			this.Details <- dtls
-			fmt.Fprintf(logFile, "ERRORED %v %v %v %v", wj.SubId, wj.JobId, wj.LineId, strings.Join(wj.Args, " "))
+			fmt.Fprintf(logFile, "ERRORED %v %v %v %v\n", wj.SubId, wj.JobId, wj.LineId, strings.Join(wj.Args, " "))
 
 			logger.Debug("ERROR [%v,%v]", dtls.JobId, dtls.Progress.Errored)
 
