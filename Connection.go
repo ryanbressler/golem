@@ -68,7 +68,7 @@ func (con Connection) SendMsgs() {
 			} else {
 				break
 			}
-			<-time.After(time.Duration(2)*time.Second)
+			<-time.After(time.Duration(2) * time.Second)
 		}
 
 	}
@@ -102,7 +102,7 @@ func (con Connection) GetMsgs() {
 				for t := 1; t < 16; t = t * 2 {
 
 					logger.Printf("Attempting reconnect in %v seconds.", t)
-					<-time.After(time.Duration(t)*time.Second)
+					<-time.After(time.Duration(t) * time.Second)
 					logger.Printf("Attempting reconnect now.")
 
 					ws, err := DialWebSocket(remote)
