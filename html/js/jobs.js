@@ -2,7 +2,7 @@ JobsGrid = Ext.extend(ItemsGrid, {
     constructor: function(config) {
         Ext.apply(this, config);
 
-        var dateRenderer = Ext.util.Format.dateRenderer('m/d/Y H:i:s');
+        var dateRenderer = Ext.util.Format.dateRenderer('Y/m/d H:i:s');
 
         this.groupField = "State";
         this.toolbarButtons = [

@@ -103,7 +103,7 @@ func StartJob(cn *Connection, replyc chan *WorkerMessage, jsonjob string, jk *Jo
 		return
 	}
 	cerrorchan := make(chan int, 0)
-	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan, cerrorchan, "TASK : "+exepath+strings.Join(args, "")+"ERRORED: \n")
+	go PipeToChan(errpipe, CERROR, job.SubId, con.OutChan, cerrorchan, "TASK : \""+exepath+strings.Join(args, " ")+"\" ERRORED: \n")
 
 	if err = cmd.Start(); err != nil {
 		logger.Warn(err)
