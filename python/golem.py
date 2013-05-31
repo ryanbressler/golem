@@ -30,6 +30,7 @@ For programatic ussage see the doc strings of individual functions
 
 import sys
 import httplib
+import urllib
 import urlparse
 import exceptions
 import socket
@@ -53,6 +54,9 @@ Hosts are assumed to be serving over https unless http is specified.
 Command and args can be:
 run n job_executable exeutable args : run job_executable n times with the supplied args
 runlist listofjobs.txt              : run each line (n n job_executable exeutable args) of the file
+runerrors listofjobs.txt oldjobid   : rerun the tasks that errored during the old job
+rundnf listofjobs.txt oldjobid      : rerun the tasks that did not finish during the old job
+get jobid                           : Download the out, err, and log files for the specified job
 list                                : list statuses of all submissions on cluster
 jobs                                : same as list
 status subid                        : get status of a single submission
@@ -439,6 +443,63 @@ def generateJobList(fo):
         values = line.split()
         yield {"Count": int(values[0]), "Args": values[1:]}
 
+def getOut(url, jobId):
+    """Gets out, err and log for the specified job"""
+    for t in ["log","err","out"]:
+        fn = jobId+"."+t+".txt" 
+        fileurl = url+"output/"+fn
+        urllib.urlretrieve (fileurl, fn)
+
+    
+
+def getLog(url, jobId):
+    """Gets logs for a jobId and parsed them into finished and failed hashes by (int) line number"""
+    failed = {}
+    finished = {}
+    logurl = url+"output/"+jobId+".log.txt"
+    print logurl
+    resp = doGet(logurl, False)
+    for line in resp[1].split("\n"):
+        vs = line.split()
+        if len(vs)>1 and vs[0]=="ERRORED":
+            failed[int(vs[3])]=True
+        if len(vs)>1 and vs[0]=="FINISHED":
+            finished[int()]=True
+    return finished, failed
+
+
+
+
+def reRun(fo, pwd, url, jobId, loud=True, label="", email="", runDNF=False):
+    """
+    Interprets an open file as a runlist, retrieves the log of the specified
+    task and reruns jobs that either DNF or failed.
+
+    then executes it on the specified Golem cluster.
+    Parameters:
+        fo - Readable open file-like-object representing a runlist.
+        pwd - password for the Golem server
+        jobId - jobId to check errors for
+        url - URL to reach the Golem server, including protocol and port
+        label - optional header to label job
+        email - optional email to indicate ownership
+        loud - whether to print status messages on stdout. Defaults to True.
+    Returns:
+        A 2-tuple of the Golem server's response number and the body of the response.
+    Throws:
+        Any failure of the HTTP channel will go uncaught.
+    """
+    jobs = generateJobList(fo)
+    finished, failed = getLog(url[:-5], jobId)
+
+    rerun = []
+    for i, job in enumerate(jobs):
+        if ((not i in finished) and runDNF) or (i in failed):
+            rerun.append(job)
+
+
+    return runBatch(rerun, pwd, url, loud, label, email)
+
 
 
 
@@ -497,6 +558,16 @@ def main():
             fo = open(nonflags[1])
             runList(fo, pwd, url, True, label, email)
             fo.close()
+        elif cmd == "rundnf":
+            fo = open(nonflags[1])
+            reRun(fo, pwd, url, nonflags[2], True, label, email, True)
+            fo.close()
+        elif cmd == "runerrors":
+            fo = open(nonflags[1])
+            reRun(fo, pwd, url, nonflags[2], True, label, email, False)
+            fo.close()
+        elif cmd == "get":
+            getOut(url[:-5], nonflags[1])
         elif cmd == "runoneach":
             jobs = [{"Args": nonflags[1]}]
             runOnEach(jobs, pwd, url, True, label, email)
