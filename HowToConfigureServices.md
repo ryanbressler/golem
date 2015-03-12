@@ -1,0 +1,80 @@
+# Configuring Core Golem Services #
+These are the configuration options for golem services that are set in a configuration file passed at the command line. A more complete [example](http://code.google.com/p/golem/source/browse/src/templates/golem.config) can be found in the source tree.
+```
+#global configuration
+#the location of the master
+hostname = localhost:8083
+#password to require for job submission
+password = test
+#use verbose logging
+verbose = true
+#run the cluster over https using ssl
+tls = true
+#use ssl certificate in the specific location (if not specified golem will generate a self signed certificate)
+#certpath = $HOME/.golem
+#the organization to generate a cert with
+organization = example.org
+#the size of the chanel of strings on either side of a connection
+conbuffersize=10
+
+[master]
+#the number of cpu's to allow the master to use 
+gomaxproc = 8
+#the number of go routines to have parsing io for each job
+iomonitors = 2
+#the size of the channel used
+subiobuffersize = 1000
+#overrides conbuffersize above for master
+conbuffersize=1000
+
+
+
+[worker]
+#the master to connect to
+masterhost = localhost:8083
+#the number of cpu's to allow the worker process itself to use
+gomaxproc = 1
+#the number of tasks to run at once (the number of cpus - gomaxproc is recomended)
+processes = 3
+#overrides conbuffersize above for workers
+conbuffersize=10000
+```
+
+For this configuration to work you will need to  perchase or [generate](GenerateCertificate.md) an ssl certificate manually and out it in the specified location. You can also use tls = false to run the cluster over unsecure channels or leave out the certpath line in which case golem will randomly generate a self signed certificate on startup.
+
+# Configuring The Scribe #
+If you wish to store persistant information about jobs in a database you will need to setup [MongoDB](http://www.mongodb.org/) and add the following sections to a config file.
+
+```
+#Sections below are used only for the scribe and are not needed if the scribe is not used.
+[scribe]
+# the master to keep track of
+target = localhost:8083
+#the number of cpu's to allow the scribe to use 
+gomaxproc = 2
+
+[mgodb]
+server = example.systemsbiology.net
+store = golemstore
+port = 1000
+user = user
+password = password
+```
+
+
+
+# Starting a Master #
+cd to the output directory (where concatenated output will be placed) and:
+```
+golem -m -config=master.config
+```
+
+# Connecting Client Nodes #
+```
+golem -config=worker.config
+```
+
+# Starting a Scribe #
+```
+golem -s -config=scribe.config
+```
